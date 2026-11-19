@@ -11,7 +11,7 @@ Claude Docs で書いた本を Markdown にして置いています。実行は�
 | 第4巻 音・部品・ファイル | `04_sound-parts-files.md` | 掲載済み |
 | 第5巻 ブロックでゲーム | `05_blocks-game.md` | 掲載(図5枚つき) |
 | 第6巻 標準ライブラリと確かめる道具 | `06_stdlib-and-checks.md` | 掲載済み |
-| 第7巻 大きなゲームを読む | `07_reading-suika.md` | 未掲載 |
+| 第7巻 大きなゲームを読む | `07_reading-suika.md` | 掲載済み(図4枚つき) |
 | 第8巻 仕様と実装の違い | [08_spec-vs-impl.md](08_spec-vs-impl.md) | 掲載済み |
 | 第9巻 知らせとエラーの読み方 | [09_messages-and-errors.md](09_messages-and-errors.md) | 掲載済み |
 | 第10巻 資源の上限と、止まり方 | `10_resource-limits.md` | 未掲載 |
