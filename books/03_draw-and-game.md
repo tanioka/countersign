@@ -1,5 +1,9 @@
 # Sign で作る — 描画とゲーム
 
+<!-- nav -->
+[← 前: Sign で作る — ネットワークと保存](02_network-and-storage.md) | [目次](README.md) | [次: Sign で作る — 音・部品・ファイル →](04_sound-parts-files.md)
+<!-- /nav -->
+
 Nov 3, 2026 · @たににゃん
 
 ## 目次
@@ -725,3 +729,9 @@ python3 sign_interp.py turtle_square_anim.sn --display=png:q{n}.png:360x360 --ti
 - `--input=台本` は、`ミリ秒:種類:…` をコンマで並べます。`kd:キー` が押す、`ku:キー` が離す、`md:ボタン:x:y` がマウスを押す、`mu:ボタン:x:y` が離す、`mm:x:y` がマウスを動かす、`close` が窓を閉じるです。キーは文字(`q`)か数(`29`)で書きます。このうち `mm` と `close` は、この本では試していません。
 - `--timer=virtual` は、実際の時間を待たずに、こまの数だけ時計を進めます。台本のミリ秒もこの時計で数えるので、同じ台本はいつでも同じ絵になります。
 - キーの番号は、左 28、右 29、上 30、下 31、スペース 32、文字は ASCII(`a` が 97)です。
+
+---
+
+<!-- nav -->
+[← 前: Sign で作る — ネットワークと保存](02_network-and-storage.md) | [目次](README.md) | [次: Sign で作る — 音・部品・ファイル →](04_sound-parts-files.md)
+<!-- /nav -->

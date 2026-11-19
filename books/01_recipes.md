@@ -1,5 +1,9 @@
 # Sign で作る — 動くレシピ集
 
+<!-- nav -->
+[← 前: Sign入門 — 空白で呼び、再帰で回す言語](00_sign-nyumon.md) | [目次](README.md) | [次: Sign で作る — ネットワークと保存 →](02_network-and-storage.md)
+<!-- /nav -->
+
 2026-11-02 · @たににゃん
 
 ## 目次
@@ -482,3 +486,9 @@ T=23.50 C RH=61.00 %
 | 10 | `python3 sign_console.py led_gpio.sn --display=null --gpio=fake` | 本物のピンを使わずに GPIO を練習する。Ctrl+C で止める【拡張】 |
 | 11 | `python3 sign_interp.py aht25_demo.sn --i2c=aht25:23.5,61` | 模擬のセンサーで I2C を練習する【拡張】 |
 | (どれでも) | `python3 sign_interp.py --version` | 実装の版を表示する。確かめた版と見比べる【拡張】 |
+
+---
+
+<!-- nav -->
+[← 前: Sign入門 — 空白で呼び、再帰で回す言語](00_sign-nyumon.md) | [目次](README.md) | [次: Sign で作る — ネットワークと保存 →](02_network-and-storage.md)
+<!-- /nav -->

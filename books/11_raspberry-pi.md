@@ -1,5 +1,9 @@
 # 第11巻『Raspberry Pi で Sign を動かす』
 
+<!-- nav -->
+[← 前: Sign レシピ集 第10巻 資源の上限と、止まり方](10_resource-limits.md) | [目次](README.md) | [次: 第12巻『Sign のコンパイラ』 →](12_compiler.md)
+<!-- /nav -->
+
 2026-11-08 · @たににゃん
 
 ## はじめに
@@ -322,3 +326,9 @@ python3 sign.py echo_server.sn --net=local
 - 本物の LED、I2C のセンサー、SPI、スピーカー、窓。gpiozero、RPi.GPIO、smbus2、spidev の呼び出しは、文書どおりに書いたもので、実際には呼ばれていません。
 - Pi 側の事柄(OS の版と Python の版の対応、`apt` のパッケージ名、`raspi-config` の項目、ピン配置)。
 - 【拡張】の装置は Sign の仕様書に無い追加で、他の処理系では動きません。
+
+---
+
+<!-- nav -->
+[← 前: Sign レシピ集 第10巻 資源の上限と、止まり方](10_resource-limits.md) | [目次](README.md) | [次: 第12巻『Sign のコンパイラ』 →](12_compiler.md)
+<!-- /nav -->

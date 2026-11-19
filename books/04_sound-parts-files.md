@@ -1,5 +1,9 @@
 # Sign で作る — 音・部品・ファイル
 
+<!-- nav -->
+[← 前: Sign で作る — 描画とゲーム](03_draw-and-game.md) | [目次](README.md) | [次: Sign で作る — ブロックでゲーム →](05_blocks-game.md)
+<!-- /nav -->
+
 Nov 3, 2026 · @たににゃん
 
 ## 目次
@@ -435,3 +439,9 @@ python3 sign_interp.py keys.sn --display=png:ky{n}.png:64x32 --timer=virtual --i
 - `std.sn` は、レシピ3 と レシピ4 で使います。プログラムと同じフォルダに置きます。`chime.wav` はレシピ1 で、同じフォルダに置きます。
 - 装置のオプション(`--sound`、`--gpio`、`--i2c`、`--spi`、`--sys`)は、付けないと、この巻のどのレシピでも、エラーにもならず、装置が無いまま動きます。結果が空でも、実際に失敗しているとは限らず、つけ忘れかもしれません。
 - 実機で動かすときは、`fake` を外して `--gpio`、`--i2c`、`--spi`、`--sound` を付けます。この巻では実機で確かめていません。
+
+---
+
+<!-- nav -->
+[← 前: Sign で作る — 描画とゲーム](03_draw-and-game.md) | [目次](README.md) | [次: Sign で作る — ブロックでゲーム →](05_blocks-game.md)
+<!-- /nav -->

@@ -1,5 +1,9 @@
 # Sign で作る — ブロックでゲーム
 
+<!-- nav -->
+[← 前: Sign で作る — 音・部品・ファイル](04_sound-parts-files.md) | [目次](README.md) | [次: Sign で作る — 標準ライブラリと確かめる道具 →](06_stdlib-and-checks.md)
+<!-- /nav -->
+
 Nov 3, 2026 · @たににゃん
 
 **目次**
@@ -245,3 +249,9 @@ python3 sign_console.py star_rain_ui.sn --display=png:sr{n}.png:96x96 --timer=vi
 | seqN         | N 個の命令を順に実行する【拡張】             |
 
 この巻の結果は、すべて既定のモードで確かめました。
+
+---
+
+<!-- nav -->
+[← 前: Sign で作る — 音・部品・ファイル](04_sound-parts-files.md) | [目次](README.md) | [次: Sign で作る — 標準ライブラリと確かめる道具 →](06_stdlib-and-checks.md)
+<!-- /nav -->

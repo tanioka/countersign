@@ -1,5 +1,9 @@
 # Sign で作る — 仕様と実装の違い
 
+<!-- nav -->
+[← 前: Sign で作る — 大きなゲームを読む](07_reading-suika.md) | [目次](README.md) | [次: Sign で作る — 知らせとエラーの読み方 →](09_messages-and-errors.md)
+<!-- /nav -->
+
 ｓ2026-11-03 · @たににゃん
 
 ### 目次
@@ -387,3 +391,9 @@ grep -l -- "sqlite" *.md *.sn
 - `str_find` が終わらない原因
 - `--strict` が断る他の書き方と、その仕様上の根拠
 - 仕様書は、該当の箇所だけを読んだこと(全文は読んでいません)
+
+---
+
+<!-- nav -->
+[← 前: Sign で作る — 大きなゲームを読む](07_reading-suika.md) | [目次](README.md) | [次: Sign で作る — 知らせとエラーの読み方 →](09_messages-and-errors.md)
+<!-- /nav -->

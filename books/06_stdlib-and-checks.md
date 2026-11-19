@@ -1,5 +1,9 @@
 # Sign で作る — 標準ライブラリと確かめる道具
 
+<!-- nav -->
+[← 前: Sign で作る — ブロックでゲーム](05_blocks-game.md) | [目次](README.md) | [次: Sign で作る — 大きなゲームを読む →](07_reading-suika.md)
+<!-- /nav -->
+
 Nov 3, 2026 · @たににゃん
 
 **目次**
@@ -536,3 +540,9 @@ b 2 3 2 ^ ^ :
 | ファイル | `write_file` `append_file` `read_file` `file_size` `file_exists` |
 
 この一覧に無い関数も `std.sn` にありますが、この巻では動かしていません。すべて【拡張】です。
+
+---
+
+<!-- nav -->
+[← 前: Sign で作る — ブロックでゲーム](05_blocks-game.md) | [目次](README.md) | [次: Sign で作る — 大きなゲームを読む →](07_reading-suika.md)
+<!-- /nav -->
