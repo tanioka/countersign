@@ -1511,6 +1511,7 @@ def loop_plan(g):
                 if e[0] == "seq" and len(e[1]) == len(ps) + 1 and e[1][0][0] == "id" and e[1][0][1] not in ps:
                     if me not in (None, e[1][0][1]): ok = False; break
                     me = e[1][0][1]; table.append((c, "call", e[1][1:]))
+                    if STRICT_GATES and c is not None: ok = False; break      # V9・V10: 最後でない枝の値は末尾でない。輪で回さず、深さを数える普通の道へ
                 else: table.append((c, "val", e))
             if ok and me is not None: plan = (ps, me, table)
     except (IndexError, TypeError): plan = False
@@ -1615,6 +1616,7 @@ def list_plan(g):
                             ai = k; args.append(a[1][1:])
                         else: args.append(a)
                     table.append((c, "call", args))
+                    if STRICT_GATES and c is not None: ok = False; break      # V9・V10: 最後でない枝の値は末尾でない
                 elif e[0] == "id" and e[1] in ps: table.append((c, "ret", e[1]))
                 else: table.append((c, "val", e))
             if ok and me is not None and ai is not None:
