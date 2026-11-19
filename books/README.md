@@ -14,7 +14,7 @@ Claude Docs で書いた本を Markdown にして置いています。実行は�
 | 第7巻 大きなゲームを読む | `07_reading-suika.md` | 掲載済み(図4枚つき) |
 | 第8巻 仕様と実装の違い | [08_spec-vs-impl.md](08_spec-vs-impl.md) | 掲載済み |
 | 第9巻 知らせとエラーの読み方 | [09_messages-and-errors.md](09_messages-and-errors.md) | 掲載済み |
-| 第10巻 資源の上限と、止まり方 | `10_resource-limits.md` | 未掲載 |
+| 第10巻 資源の上限と、止まり方 | `10_resource-limits.md` | 掲載済み |
 | 第11巻 Raspberry Pi で Sign を動かす | [11_raspberry-pi.md](11_raspberry-pi.md) | 掲載済み |
 | 第12巻 Sign のコンパイラ | [12_compiler.md](12_compiler.md) | 掲載済み |
 
