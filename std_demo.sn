@@ -1,0 +1,24 @@
+`std_demo.sn — 標準ライブラリ(std.sn)を使った見本。標準入力から 1 行に 1 つの整数を読み、数・合計・平均・最小・最大・中央値を出す(整数でない行は読み飛ばす)。`
+`  printf '5\n3\n8\nabc\n 10 \n-2\n' | python3 sign_interp.py std_demo.sn`
+
+`std.sn`@~
+
+N : 0x500000
+LINE : 4x00600000
+
+load : n ? load2 n (read_line LINE 64)
+load2 : n len ?
+	len < 0 : n
+	((str_trim LINE) >= 0) & ((str_is_int LINE) = 1) : load3 n
+	load n
+
+load3 : n ?
+	(ia_set N n (str_to_int LINE)) : load (n + 1)
+
+row : label v ? seq3 (print label) (println_int v) 0
+
+report : n ?
+	n = 0 : println `数がありません`
+	seq9 (row `個数    : ` n) (row `合計    : ` (ia_sum N n)) (row `平均    : ` ((ia_sum N n) / n)) (ia_sort N n) (row `最小    : ` (ia_get N 0)) (row `最大    : ` (ia_get N (n - 1))) (row `中央値  : ` (ia_get N (n / 2))) (println `(平均は整数。0 の方へ丸める)`) 0
+
+report (load 0)

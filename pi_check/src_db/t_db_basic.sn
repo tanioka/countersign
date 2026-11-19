@@ -1,0 +1,8 @@
+`std.sn`@~
+`sqlite.sn`@~
+`SQLite を本物の libsqlite3 で: 表・束縛・読み・小数の文字列・エラー・ファイル・外へ出る名前`
+pr : x ? println_int x
+t : z ? t1 (db_open `p.db` 0)
+t1 : h ? seq9 (pr (db_exec h `create table w(id integer primary key, s text, n integer)`)) (pr (db_exec h `insert into w(s,n) values ('abc', 4294967295), ('xyz', -5)`)) (pr (db_exec h `insert into w(id) values (1)`)) (pr (db_open `../x.db` 0)) (pr (db_exec h `attach database 'y.db' as y`)) (pr (db_exec h `select 1; select 2`)) (t2 h (db_prep h `select s, n, 0.1, 1e16 from w order by id`)) 0 0
+t2 : h s ? seq9 (pr (db_step s)) (db_print_row s) (pr (db_step s)) (db_print_row s) (pr (db_step s)) (pr (db_rowid h)) (pr (db_changes h)) (db_close h) 0
+t 0

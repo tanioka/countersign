@@ -1,0 +1,491 @@
+`std.sn — Sign の標準ライブラリ(Sign で書いた、仕様に無い追加)。使い方: 先頭に「 std.sn を バッククォートで囲み @~ を続ける 」と書くと、ここの定義がぜんぶ使える。`
+`  数(abs min max …)・メモリの整数の並び(arr_)・メモリの文字列(str_)・読み書き(print …)・乱数(rand_)・ファイル(file_ …。--sys が要る)。`
+`ことばの約束:`
+`  整数の並び(arr)  = 番地 p から 1 語ずつ、4 バイト刻み。a[i] は @(p + (i * 4))。`
+`  メモリの文字列    = 番地 p から 1 語 = 1 バイト(0〜255)、4 バイト刻み、0 で終わる(C の文字列と同じ。sign_sys.py のバッファと同じ形)。`
+`  Sign の文字列(バッククォートで囲んだ物)は、str_put でメモリへ写してから使う。文字は ASCII だけ。`
+`  失敗は、番号を返す関数なら -1 など(各関数に書く)。引数に __ を渡すと、Sign の規則どおり関数が死んで __ になる。`
+`  くり返しは、「効き目 : 次の呼び出し」の行の末尾再帰で書いてある(深さの限りなし)。`
+`  ここの関数は、並び・文字列を置く場所(番地)を呼ぶ側が決める。内部で使う小さな作業場は 0x7F0000〜0x7FFFFF(使わないでください)。`
+
+seq2 : a b ? b
+seq3 : a b c ? c
+seq4 : a b c d ? d
+seq5 : a b c d e ? e
+seq6 : a b c d e f ? f
+seq7 : a b c d e f g ? g
+seq8 : a b c d e f g h ? h
+seq9 : a b c d e f g h i ? i
+seq10 : a b c d e f g h i j ? j
+
+STD_UART : 0x9000000
+STD_TMP : 4x007F0000
+STD_SEED : 4x007F0F00
+STD_SYS : 0x9400000
+
+`==================== 数 ====================`
+abs : v ?
+	v < 0 : 0 - v
+	v
+
+min : a b ?
+	a < b : a
+	b
+
+max : a b ?
+	a > b : a
+	b
+
+clamp : v lo hi ?
+	v < lo : lo
+	v > hi : hi
+	v
+
+sign : v ?
+	v < 0 : 0 - 1
+	v > 0 : 1
+	0
+
+`床で割る(負の数でも小さい方へ丸める)。/ と % は 0 の方へ丸める。`
+fdiv : a b ?
+	(a % b) = 0 : a / b
+	((a < 0) & (b > 0)) | ((a > 0) & (b < 0)) : (a / b) - 1
+	a / b
+
+fmod : a b ? a - (b * (fdiv a b))
+gcd : a b ?
+	b = 0 : abs a
+	gcd b (a % b)
+
+lcm : a b ?
+	(a = 0) | (b = 0) : 0
+	abs ((a / (gcd a b)) * b)
+
+`整数の平方根(切り捨て)。負の数は -1`
+isqrt : n ?
+	n < 0 : 0 - 1
+	std_isqrt n 0 (n + 1)
+
+std_isqrt : n lo hi ?
+	(hi - lo) <= 1 : lo
+	(((lo + hi) / 2) * ((lo + hi) / 2)) <= n : std_isqrt n ((lo + hi) / 2) hi
+	std_isqrt n lo ((lo + hi) / 2)
+
+`偶数・奇数は 1 / 0`
+even : n ?
+	(n % 2) = 0 : 1
+	0
+
+odd : n ?
+	(n % 2) = 0 : 0
+	1
+
+`n 乗(整数。n は 0 以上)`
+ipow : b n ? std_ipow b n 1
+std_ipow : b n acc ?
+	n <= 0 : acc
+	std_ipow b (n - 1) (acc * b)
+
+`==================== 乱数 ====================`
+rand_seed : n ? seq2 (STD_SEED # (abs n)) 0
+`0 以上 n 未満の整数(n が 1 以下なら 0)`
+rand_int : n ? std_rand n (((((@STD_SEED) | 12345) * 1103515245) + 12345) % 2147483648)
+std_rand : n s ?
+	((STD_SEED # s) | 0) : std_rand2 n s
+
+std_rand2 : n s ?
+	n <= 1 : 0
+	(s / 65536) % n
+
+rand_range : lo hi ? lo + (rand_int (hi - lo))
+
+`==================== 整数の並び(arr) ====================`
+arr_get : p i ? @(p + (i * 4))
+arr_set : p i v ? seq2 ((p + (i * 4)) # v) 0
+arr_fill : p n v ? std_fill p n v 0
+std_fill : p n v i ?
+	i >= n : 0
+	((p + (i * 4)) # v) : std_fill p n v (i + 1)
+
+arr_copy : dst src n ? std_copy dst src n 0
+std_copy : dst src n i ?
+	i >= n : 0
+	((dst + (i * 4)) # (@(src + (i * 4)))) : std_copy dst src n (i + 1)
+
+arr_sum : p n ? std_sum p n 0 0
+std_sum : p n i acc ?
+	i >= n : acc
+	std_sum p n (i + 1) (acc + (@(p + (i * 4))))
+
+`最大・最小(n は 1 以上)`
+arr_max : p n ? std_amax p n 1 (@p)
+std_amax : p n i best ?
+	i >= n : best
+	std_amax p n (i + 1) (max best (@(p + (i * 4))))
+
+arr_min : p n ? std_amin p n 1 (@p)
+std_amin : p n i best ?
+	i >= n : best
+	std_amin p n (i + 1) (min best (@(p + (i * 4))))
+
+`見つけた最初の番号(無ければ -1)`
+arr_find : p n v ? std_afind p n v 0
+std_afind : p n v i ?
+	i >= n : 0 - 1
+	(@(p + (i * 4))) = v : i
+	std_afind p n v (i + 1)
+
+arr_count : p n v ? std_acount p n v 0 0
+std_acount : p n v i acc ?
+	i >= n : acc
+	(@(p + (i * 4))) = v : std_acount p n v (i + 1) (acc + 1)
+	std_acount p n v (i + 1) acc
+
+arr_swap : p i j ? std_swap p i j (@(p + (i * 4))) (@(p + (j * 4)))
+std_swap : p i j a b ?
+	((p + (i * 4)) # b) : seq2 ((p + (j * 4)) # a) 0
+
+arr_reverse : p n ? std_rev p 0 (n - 1)
+std_rev : p i j ?
+	i >= j : 0
+	(arr_swap p i j) : std_rev p (i + 1) (j - 1)
+
+`小さい順に並べる(挿入ソート。同じ値の順は変わらない。n が大きいと遅い: n の 2 乗)`
+arr_sort : p n ? std_isort p n 1
+std_isort : p n i ?
+	i >= n : 0
+	(std_ins p i (@(p + (i * 4)))) : std_isort p n (i + 1)
+
+std_ins : p j key ?
+	(j > 0) & ((@(p + ((j - 1) * 4))) > key) : std_shift p j key
+	seq2 ((p + (j * 4)) # key) 0
+
+std_shift : p j key ?
+	((p + (j * 4)) # (@(p + ((j - 1) * 4)))) : std_ins p (j - 1) key
+
+`並べ終わった並びから値を探す(二分探索)。見つけた番号か -1`
+arr_bsearch : p n v ? std_bs p v 0 (n - 1)
+std_bs : p v lo hi ?
+	lo > hi : 0 - 1
+	(@(p + (((lo + hi) / 2) * 4))) = v : (lo + hi) / 2
+	(@(p + (((lo + hi) / 2) * 4))) < v : std_bs p v (((lo + hi) / 2) + 1) hi
+	std_bs p v lo (((lo + hi) / 2) - 1)
+
+arr_sorted : p n ? std_sorted p n 1
+std_sorted : p n i ?
+	i >= n : 1
+	(@(p + ((i - 1) * 4))) > (@(p + (i * 4))) : 0
+	std_sorted p n (i + 1)
+
+`==================== Int の並び(ia。8 バイト刻み) ====================`
+`arr は 4 バイト刻みで、装置へ渡すバッファや文字列の道具と共有している。仕様では 4 バイトの幅で書くと値は 32 bit に切れる(負の数が戻らない)ので、`
+`負の数も入れる Int の並びは、この ia(1 語 = Int の幅 8 バイト、a[i] は @(p + (i * 8)))を使う。`
+ia_get : p i ? @(p + (i * 8))
+ia_set : p i v ? seq2 ((p + (i * 8)) # v) 0
+ia_sum : p n ? std_isum p n 0 0
+std_isum : p n i acc ?
+	i >= n : acc
+	std_isum p n (i + 1) (acc + (@(p + (i * 8))))
+
+ia_sort : p n ? std_iisort p n 1
+std_iisort : p n i ?
+	i >= n : 0
+	(std_iins p i (@(p + (i * 8)))) : std_iisort p n (i + 1)
+
+std_iins : p j key ?
+	(j > 0) & ((@(p + ((j - 1) * 8))) > key) : std_ishift p j key
+	seq2 ((p + (j * 8)) # key) 0
+
+std_ishift : p j key ?
+	((p + (j * 8)) # (@(p + ((j - 1) * 8)))) : std_iins p (j - 1) key
+
+`==================== メモリの文字列(str) ====================`
+`Sign の文字列 s を dst へ写す。0 で終え、長さを返す(ASCII 以外の文字があると __)`
+str_put : dst s ? std_sput dst s 0
+std_sput : dst s i ?
+	i >= ||s|| : seq2 ((dst + (i * 4)) # 0) i
+	((dst + (i * 4)) # ((s ' i) - 0u0)) : std_sput dst s (i + 1)
+
+str_len : p ? std_slen p 0
+std_slen : p i ?
+	(@(p + (i * 4))) = 0 : i
+	std_slen p (i + 1)
+
+str_cpy : dst src ? std_scpy dst src 0
+std_scpy : dst src i ?
+	(@(src + (i * 4))) = 0 : seq2 ((dst + (i * 4)) # 0) i
+	((dst + (i * 4)) # (@(src + (i * 4)))) : std_scpy dst src (i + 1)
+
+`dst の後ろに src をつなぐ。つないだあとの長さを返す`
+str_cat : dst src ? (str_len dst) + (str_cpy (dst + ((str_len dst) * 4)) src)
+`a と b を比べて -1 / 0 / 1(バイトの順)`
+str_cmp : a b ? std_scmp a b 0
+std_scmp : a b i ?
+	(@(a + (i * 4))) < (@(b + (i * 4))) : 0 - 1
+	(@(a + (i * 4))) > (@(b + (i * 4))) : 1
+	(@(a + (i * 4))) = 0 : 0
+	std_scmp a b (i + 1)
+
+str_eq : a b ?
+	(str_cmp a b) = 0 : 1
+	0
+
+`文字 c(バイト)が最初に出る番号。無ければ -1`
+str_chr : p c ? std_schr p c 0
+std_schr : p c i ?
+	(@(p + (i * 4))) = c : i
+	(@(p + (i * 4))) = 0 : 0 - 1
+	std_schr p c (i + 1)
+
+`hay の中で needle が最初に出る番号。無ければ -1(needle が空なら 0)`
+str_find : hay needle ? std_sfind hay needle 0 (str_len hay) (str_len needle)
+std_sfind : hay needle i hl nl ?
+	(i + nl) > hl : 0 - 1
+	(std_smatch hay needle i 0 nl) = 1 : i
+	std_sfind hay needle (i + 1) hl nl
+
+std_smatch : hay needle i j nl ?
+	j >= nl : 1
+	(@(hay + ((i + j) * 4))) = (@(needle + (j * 4))) : std_smatch hay needle i (j + 1) nl
+	0
+
+str_starts : p prefix ? std_smatch p prefix 0 0 (str_len prefix)
+str_ends : p suffix ?
+	(str_len suffix) > (str_len p) : 0
+	std_smatch p suffix ((str_len p) - (str_len suffix)) 0 (str_len suffix)
+
+`src の start 番から len 文字を dst へ(足りなければ手前まで)。長さを返す`
+str_sub : dst src start len ? std_ssub dst src start 0 len
+std_ssub : dst src start i len ?
+	(i >= len) | ((@(src + ((start + i) * 4))) = 0) : seq2 ((dst + (i * 4)) # 0) i
+	((dst + (i * 4)) # (@(src + ((start + i) * 4)))) : std_ssub dst src start (i + 1) len
+
+`その場で大文字・小文字にする(ASCII の英字だけ)`
+str_upper : p ? std_smap p 0 97 122 (0 - 32)
+str_lower : p ? std_smap p 0 65 90 32
+std_smap : p i lo hi d ?
+	(@(p + (i * 4))) = 0 : 0
+	((@(p + (i * 4))) >= lo) & ((@(p + (i * 4))) <= hi) : std_smap2 p i lo hi d
+	std_smap p (i + 1) lo hi d
+
+std_smap2 : p i lo hi d ?
+	((p + (i * 4)) # ((@(p + (i * 4))) + d)) : std_smap p (i + 1) lo hi d
+
+`その場で前後の空白(空白・タブ・改行)を取る。長さを返す`
+str_trim : p ? std_trim p (std_lead p 0) (str_len p)
+std_isws : c ?
+	c = 32 : 1
+	c = 9 : 1
+	c = 10 : 1
+	c = 13 : 1
+	0
+
+std_lead : p i ?
+	((@(p + (i * 4))) > 0) & ((std_isws (@(p + (i * 4)))) = 0) : i
+	(@(p + (i * 4))) = 0 : i
+	std_lead p (i + 1)
+
+std_trim : p start len ?
+	std_tail p start (std_trimend p start len)
+
+std_trimend : p start len ?
+	(len > start) & ((std_isws (@(p + ((len - 1) * 4)))) = 1) : std_trimend p start (len - 1)
+	len
+
+std_tail : p start end ? std_scopyfwd p start end 0
+std_scopyfwd : p start end i ?
+	(start + i) >= end : seq2 ((p + (i * 4)) # 0) i
+	((p + (i * 4)) # (@(p + ((start + i) * 4)))) : std_scopyfwd p start end (i + 1)
+
+str_reverse : p ? std_rev2 p 0 ((str_len p) - 1)
+std_rev2 : p i j ?
+	i >= j : 0
+	(arr_swap p i j) : std_rev2 p (i + 1) (j - 1)
+
+`delim(バイト)で区切る。p の中の区切りを 0 に書き換え、各欄の始まりの番地を table に並べる。欄の数を返す(mxn まで。空の欄も 1 つ)`
+str_split : p delim table mxn ? std_split p delim table mxn 0 0
+std_split : p delim table mxn i n ?
+	n >= mxn : n
+	((table + (n * 4)) # (p + (i * 4))) : std_split2 p delim table mxn i n (std_nextdelim p delim i)
+
+std_split2 : p delim table mxn i n nd ?
+	nd < 0 : n + 1
+	((p + (nd * 4)) # 0) : std_split p delim table mxn (nd + 1) (n + 1)
+
+std_nextdelim : p delim i ?
+	(@(p + (i * 4))) = 0 : 0 - 1
+	(@(p + (i * 4))) = delim : i
+	std_nextdelim p delim (i + 1)
+
+`整数 n を 10 進で dst へ(0 で終える)。長さを返す`
+str_int : dst n ?
+	n < 0 : std_neg dst n
+	std_uint dst n
+
+std_neg : dst n ?
+	(dst # 45) : 1 + (std_uint (dst + 4) (0 - n))
+
+std_ndig : n d ?
+	n < 10 : d
+	std_ndig (n / 10) (d + 1)
+
+std_uint : dst n ? std_uint2 dst n (std_ndig n 1)
+std_uint2 : dst n nd ? seq3 ((dst + (nd * 4)) # 0) (std_uw dst n nd) nd
+std_uw : dst n i ?
+	i <= 0 : 0
+	((dst + ((i - 1) * 4)) # (48 + (n % 10))) : std_uw dst (n / 10) (i - 1)
+
+`文字列 → 整数。先頭の + か - と数字を読み、数字でない所で止める(数字が無ければ 0)`
+str_to_int : p ?
+	(@p) = 45 : 0 - (std_atoi (p + 4) 0)
+	(@p) = 43 : std_atoi (p + 4) 0
+	std_atoi p 0
+
+std_atoi : p acc ?
+	((@p) >= 48) & ((@p) <= 57) : std_atoi (p + 4) ((acc * 10) + ((@p) - 48))
+	acc
+
+`全体が(符号つきの)整数なら 1、そうでなければ 0`
+str_is_int : p ?
+	((@p) = 45) | ((@p) = 43) : std_isint (p + 4) 0
+	std_isint p 0
+
+std_isint : p n ?
+	((@p) >= 48) & ((@p) <= 57) : std_isint (p + 4) (n + 1)
+	((@p) = 0) & (n > 0) : 1
+	0
+
+`整数 n(負なら 32 ビットの符号なし)を 16 進(小文字)で dst へ。長さを返す`
+str_hex : dst n ? std_hex dst (std_u32 n) (std_hdig (std_u32 n) 1)
+std_u32 : n ?
+	n < 0 : n + 4294967296
+	n
+
+std_hex : dst n nd ? seq3 ((dst + (nd * 4)) # 0) (std_hw dst n nd) nd
+std_hdig : n d ?
+	n < 16 : d
+	std_hdig (n / 16) (d + 1)
+
+std_hw : dst n i ?
+	i <= 0 : 0
+	((dst + ((i - 1) * 4)) # (std_hch (n % 16))) : std_hw dst (n / 16) (i - 1)
+
+std_hch : v ?
+	v < 10 : 48 + v
+	87 + v
+
+`==================== 出す・読む(UART。標準出力・標準入力) ====================`
+`Sign の文字列を出す(println は改行つき)。0 を返す`
+`器を番地へ書く形は仕様にない(参照コンパイラは断る。idiom_to_instructions.md §1.3)ので、1 文字ずつ書く`
+print : s ? std_pr s 0
+std_pr : s i ?
+	i >= ||s|| : 0
+	(STD_UART # (s ' i)) : std_pr s (i + 1)
+	0
+
+println : s ? seq3 (print s) (STD_UART # 10) 0
+`メモリの文字列を出す(ASCII。128 以上のバイトは文字として出る)`
+print_mem : p ? std_pm p
+std_pm : p ?
+	(@p) = 0 : 0
+	(STD_UART # (@p)) : std_pm (p + 4)
+
+println_mem : p ? seq3 (print_mem p) (STD_UART # 10) 0
+`整数 n を出す。整数でない値(List など)は何も出さず __ になる(この std.sn の取り決め。Sign の仕様には無い)`
+print_int : n ?
+	std_isi n : seq2 (str_int STD_TMP n) (print_mem STD_TMP)
+	__
+
+println_int : n ?
+	std_isi n : seq2 (print_int n) (seq2 (STD_UART # 10) 0)
+	__
+
+newline : z ? seq2 (STD_UART # 10) 0
+`整数の List を [2 1] の形で出す(要素の間は空白 1 つ。println_ は改行つき)。整数でない要素(小数・入れ子の List・文字列)が 1 つでもあれば、何も出さずに __。リテラル [] を直に渡すと引数が __ になって関数が死ぬので、これも何も出ない(この std.sn の取り決め。Sign の仕様には無い)`
+print_int_list : l ?
+	std_ilok l 0 : seq3 (STD_UART # 91) (std_pil l 0) (seq2 (STD_UART # 93) 0)
+	__
+
+println_int_list : l ?
+	std_ilok l 0 : seq2 (print_int_list l) (seq2 (STD_UART # 10) 0)
+	__
+
+`整数なら 1、そうでなければ __(整数だけが && の相手になれる。小数・List・文字列は && が __ になり、__ は比べても真にならない)`
+std_isi : n ? std_isi1 (n && n)
+std_isi1 : r ?
+	(r < 0) | (r >= 0) : 1
+	__
+
+std_ilok : l i ?
+	i >= ||l|| : 1
+	std_ilok1 l i (l ' i)
+
+std_ilok1 : l i e ?
+	std_isi e : std_ilok l (i + 1)
+	__
+
+std_pil : l i ?
+	i >= ||l|| : 0
+	i > 0 : seq3 (STD_UART # 32) (print_int (l ' i)) (std_pil l (i + 1))
+	seq2 (print_int (l ' 0)) (std_pil l 1)
+
+`1 行を dst へ読む(改行・CR は入れず、0 で終える)。長さを返す。何も読めずに入力が終わっていたら -1。mxn - 1 文字で切る(残りは次の呼び出しで)`
+read_line : dst mxn ? std_rl dst mxn 0
+std_rl : dst mxn i ?
+	i >= (mxn - 1) : seq2 ((dst + (i * 4)) # 0) i
+	std_rl2 dst mxn i ((@STD_UART) | (0 - 1))
+
+std_rl2 : dst mxn i c ?
+	c < 0 : seq2 ((dst + (i * 4)) # 0) (std_eofval i)
+	c = 10 : seq2 ((dst + (i * 4)) # 0) i
+	c = 13 : std_rl dst mxn i
+	((dst + (i * 4)) # c) : std_rl dst mxn (i + 1)
+
+std_eofval : i ?
+	i = 0 : 0 - 1
+	i
+
+`入力の終わりまで全部を dst へ読む(mxn - 1 バイトまで)。0 で終えて、読んだバイト数を返す`
+read_all : dst mxn ? std_ra dst mxn 0
+std_ra : dst mxn i ?
+	i >= (mxn - 1) : seq2 ((dst + (i * 4)) # 0) i
+	std_ra2 dst mxn i ((@STD_UART) | (0 - 1))
+
+std_ra2 : dst mxn i c ?
+	c < 0 : seq2 ((dst + (i * 4)) # 0) i
+	((dst + (i * 4)) # c) : std_ra dst mxn (i + 1)
+
+`==================== ファイル・時刻(システムコール装置。sign_interp.py / sign_console.py に --sys を付けたときだけ。無いと __) ====================`
+`作業フォルダの中だけ。失敗は -エラー番号(2 見つからない・13 外・9 開いてない・22 引数・24 開きすぎ)。バッファは 1 語 = 1 バイト。`
+sys_call : n x y z ? seq6 (STD_SYS # n) ((STD_SYS + 4) # x) ((STD_SYS + 8) # y) ((STD_SYS + 12) # z) ((STD_SYS + 20) # 1) (@(STD_SYS + 24))
+`開く: mode 0 読む・1 作り直して書く・2 足して書く。fd(3 以上)か -エラー番号。path はメモリの文字列`
+file_open : path mode ? sys_call 3 path (str_len path) mode
+file_read : fd dst n ? sys_call 1 fd dst n
+file_write : fd src n ? sys_call 2 fd src n
+file_close : fd ? sys_call 4 fd 0 0
+file_size : path ? sys_call 7 path (str_len path) 0
+file_exists : path ?
+	(file_size path) >= 0 : 1
+	0
+
+`ファイルを全部 dst へ読む(mxn - 1 バイトまで)。0 で終えて、読んだバイト数か -エラー番号`
+read_file : path dst mxn ? std_rf (file_open path 0) dst mxn
+std_rf : fd dst mxn ?
+	fd < 0 : fd
+	std_rf2 fd dst mxn (file_read fd dst (mxn - 1))
+
+std_rf2 : fd dst mxn n ?
+	n < 0 : seq2 (file_close fd) n
+	seq3 ((dst + (n * 4)) # 0) (file_close fd) n
+
+`src から n バイトを書いて作り直す / 足す。書いたバイト数か -エラー番号`
+write_file : path src n ? std_wf (file_open path 1) src n
+append_file : path src n ? std_wf (file_open path 2) src n
+std_wf : fd src n ?
+	fd < 0 : fd
+	std_wf2 fd (file_write fd src n)
+
+std_wf2 : fd w ? seq2 (file_close fd) w
+`1970 年からの秒・ミリ秒`
+time_s : z ? sys_call 5 0 0 0
+time_ms : z ? sys_call 6 0 0 0

@@ -1,0 +1,94 @@
+`壊れない集計: 欠けた欄・文字の混じった欄・足りない行があっても止まらず、その欄だけが「読めなかった」(-)になる。`
+`単位 __ を実引数に渡すと関数は死ぬ(完全性の公理)ので、欠けは -1 の印で運ぶ。条件の行の値が __ だと --strict ではその行が無かったことになり次の行へ進むので、欠けも __ にせず -1 を返す。合計では -1 を 0 と数えるので、読めた欄だけの合計になる。`
+
+rows : [`alice,30,82` , `bob,x,75` , `carol,,90` , `dave,41` , `eve,28,9z` , `frank,35,100`]
+
+emit : ch ? 0x9000000 # ch
+`本体の行は上から順の文ではなく条件の行なので、順に実行するには seq2 の実引数(左から評価)に並べる`
+seq2 : a b ? 0
+nl : u ? emit 0u0A
+
+`i 番目から文字列を出す`
+pstr : s i ?
+	i >= ||s|| : 0
+	pstr2 s i (s ' i)
+
+pstr2 : s i ch ?
+	seq2 (emit ch) (pstr s (i + 1))
+
+`10 進で出す。読めなかった(負)は - と出す`
+digits : n ?
+	n < 10 : emit (0u30 + n)
+	seq2 (digits (n / 10)) (emit (0u30 + (n % 10)))
+
+pnum : n ?
+	n < 0 : emit 0u2D
+	digits n
+
+`k 列目(0 始まり)の数。読めない欄・空の欄は -1`
+col : s k i c acc bad ?
+	i >= ||s|| : fin acc bad
+	step s k i c acc bad (s ' i)
+
+step : s k i c acc bad ch ?
+	ch = 0u2C : comma s k i c acc bad
+	c = k : digit s k i c acc bad ch
+	col s k (i + 1) c acc bad
+
+comma : s k i c acc bad ?
+	c = k : fin acc bad
+	col s k (i + 1) (c + 1) (0 - 1) bad
+
+fin : acc bad ?
+	(bad = 0) & (acc >= 0) : acc
+	0 - 1
+
+`acc が -1 は「まだ 1 桁も読んでいない」印`
+dig : acc d ?
+	acc < 0 : d
+	(acc * 10) + d
+
+digit : s k i c acc bad ch ?
+	(ch >= 0u30) & (ch <= 0u39) : col s k (i + 1) c (dig acc (ch - 0u30)) bad
+	col s k (i + 1) c acc 1
+
+`名前(最初のコンマまで)`
+pname : s i ?
+	i >= ||s|| : 0
+	(s ' i) = 0u2C : 0
+	pname2 s i (s ' i)
+
+pname2 : s i ch ?
+	seq2 (emit ch) (pname s (i + 1))
+
+line : r ?
+	seq2 (pname r 0) (seq2 (pstr `  age=` 0) (seq2 (pnum ((col r 1 0 0 (0 - 1) 0) | (0 - 1))) (seq2 (pstr `  score=` 0) (seq2 (pnum ((col r 2 0 0 (0 - 1) 0) | (0 - 1))) (nl 0)))))
+
+`読めた値はそのまま、読めなかった(-1)は 0 と数える／1 か 0 で数える`
+val : v ?
+	v >= 0 : v
+	0
+
+ok : v ?
+	v >= 0 : 1
+	0
+
+`列 k の合計と、読めた個数`
+total : k i acc ?
+	i >= ||rows|| : acc
+	total k (i + 1) (acc + (val (col (rows ' i) k 0 0 (0 - 1) 0)))
+
+count : k i acc ?
+	i >= ||rows|| : acc
+	count k (i + 1) (acc + (ok (col (rows ' i) k 0 0 (0 - 1) 0)))
+
+each : i ?
+	i >= ||rows|| : 0
+	seq2 (line (rows ' i)) (each (i + 1))
+
+each 0
+report : k name ?
+	seq2 (pstr name 0) (seq2 (pstr `合計=` 0) (seq2 (pnum (total k 0 0)) (seq2 (pstr `  読めた件数=` 0) (seq2 (pnum (count k 0 0)) (seq2 (pstr `  平均=` 0) (seq2 (pnum (((total k 0 0) / (count k 0 0)) | (0 - 1))) (nl 0)))))))
+
+report 2 `score `
+report 1 `age   `

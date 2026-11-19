@@ -1,0 +1,614 @@
+`suika.sn — スイカゲーム。矢印の左右で位置を決め、スペースで落とす。同じ果物が触れると1つ大きくなる。q か 閉じる で終わる`
+`実行: python3 sign_interp.py suika.sn --display=window:5:80x104 --timer  (窓なしの確認: --display=png:f{n}.png:80x104 --timer=virtual --input=...)`
+`ループは末尾再帰(インタープリタが入れ子を作らない)なので、遊ぶ長さに上限は無い`
+`果物が上の線(TOP)より上に 45 こま続けて出ていると終わり。終わったら q か 閉じる で閉じる。得点は下に 7 セグ風の数字で出る`
+
+LEFT : 8
+RIGHT : 72
+FLOOR : 90
+TOP : 18
+FRAMES : 100000000
+HOLD : 45
+
+`--- 番地。果物 1 つは 1 つの番地に置いた 8 項目の並び [段 x y vx vy 押付 半径 重さ](位置と速さは 1/16 画素)。空き枠は __ のまま ---`
+`    LD(最後に描いた果物)は 0x800000、円の「行のまとめ」の表(RUNS)は 0x5100。果物の数に上限は無い(番地は 0x100000 から並べ、G+60 に今までの最大数を持つ)`
+`    __ を渡された関数は本体を動かさない(完全性)。K 以上の枠は読まない(消えた果物の値は残るが、K で区切って無視する。__ の書き込みは何も起こさない)`
+`    使っている果物は 0 番から K-1 番まで詰めて持つ(K は G+32)。合体で消えたら、最後の 1 つを空いた所へ移す`
+
+F : 0x100000
+G : 0x3000
+LD : 0x800000
+RUNS : 0x5100
+BG : 0x202040
+NONE : [999 999 999]
+
+gfx : 0x9100000
+timer : 0x9200000
+inp : 0x9300000
+color : gfx + 0x08
+px : gfx + 0x0C
+py : gfx + 0x10
+cmd : gfx + 0x14
+arg0 : gfx + 0x18
+arg1 : gfx + 0x1C
+sleep : timer + 0x04
+count : inp + 0x00
+etype : inp + 0x04
+ecode : inp + 0x08
+pop : inp + 0x14
+
+seq2 : a b ? b
+seq3 : a b c ? c
+seq4 : a b c d ? d
+seq5 : a b c d e ? e
+seq6 : a b c d e f ? f
+seq7 : a b c d e f g ? g
+seq8 : a b c d e f g h ? h
+seq9 : a b c d e f g h i ? i
+seq10 : a b c d e f g h i j ? j
+
+get : a ? @a
+cell : i ? get (F + i * 4)
+put : i v ? F + i * 4 # v
+gs : k ? get (G + k)
+ss : k v ? G + k # v
+
+ab : v ?
+	v < 0 : 0 - v
+	v
+mx2 : a b ?
+	a > b : a
+	b
+mn2 : a b ?
+	a < b : a
+	b
+
+`--- 果物の種類(段 0 から 5): 半径と色 ---`
+
+radius : lv ?
+	lv = 0 : 3
+	lv = 1 : 4
+	lv = 2 : 5
+	lv = 3 : 7
+	lv = 4 : 9
+	11
+
+col : lv ?
+	lv = 0 : 0xFF3030
+	lv = 1 : 0xFF80A0
+	lv = 2 : 0xA060E0
+	lv = 3 : 0xFFA030
+	lv = 4 : 0xD8E040
+	0x30C050
+
+`--- 円の半幅の表(平方根が無いので数えて求める) ---`
+
+isq : n k ?
+	((k + 1) * (k + 1)) > n : k
+	isq n (k + 1)
+
+`--- 円は「同じ半幅が続く行」を 1 つの四角にまとめて塗る。段ごとに [dy 高さ 半幅 …] の並びを作っておく ---`
+
+hwf : r dy ? isq (((r * r) + r) - (dy * dy)) 0
+
+mk : r dy sdy shw acc ?
+	dy > r : acc~ sdy ((r + 1) - sdy) shw
+	(hwf r dy) = shw : mk r (dy + 1) sdy shw acc
+	mk r (dy + 1) dy (hwf r dy) (acc~ sdy (dy - sdy) shw)
+
+setruns : lv ? RUNS + lv * 4 # ((mk (radius lv) (1 - (radius lv)) (0 - (radius lv)) (hwf (radius lv) (0 - (radius lv))) [0]) ' 1~)
+
+runs_all : lv ?
+	lv > 5 : 0
+	seq2 (setruns lv) (runs_all (lv + 1))
+
+`--- 描画装置 ---`
+
+clear : c ? seq2 (color # c) (cmd # 2)
+rect : x y w h c ? seq8 (color # c) (px # x) (py # y) (arg0 # w) (arg1 # h) (cmd # 5) 0 0
+present : z ? cmd # 3
+
+`--- 描画は差分。画面は残るので、動いた果物の所だけ消し、重なる果物だけ描き直す ---`
+`    最後に描いた果物を LD + i*4 に [px py 段] で覚える(空きは NONE)。変わった果物の前後の四角を「汚れ」の並びに足し、`
+`    汚れに触れる果物だけ描き直す(描き直した果物の四角も汚れに足すので、後ろの番の果物との重なりの上下が保たれる)。`
+`    何も汚れなければ、消しも描きも present もしない。`
+
+drawruns : x y c rs ?
+	||rs|| <= 3 : rect (x - (rs ' 2)) (y + (rs ' 0)) (((rs ' 2) * 2) + 1) (rs ' 1) c
+	seq2 (rect (x - (rs ' 2)) (y + (rs ' 0)) (((rs ' 2) * 2) + 1) (rs ' 1) c) (drawruns x y c (rs ' 3~))
+
+draw_rec : [px py lv] ? drawruns px py (col lv) (get (RUNS + lv * 4))
+
+eb : px py r ? rect (px - r) (py - r) ((2 * r) + 1) ((2 * r) + 1) BG
+
+boxof : cx cy r ? ss 52 ((@(G + 52))~ (cx - r) (cy - r) (cx + r) (cy + r))
+
+addbox : [px py lv] ?
+	px >= 999 : 0
+	boxof px py (radius lv)
+
+erase_rec : [px py lv] ?
+	px >= 999 : 0
+	eb px py (radius lv)
+
+pr : [lv x y vx vy pin r m] ? [((x + 8) / 16) ((y + 8) / 16) lv]
+
+pixrec : i ?
+	i >= (@(G + 32)) : NONE
+	pr (@(F + (i * 4)))
+
+ldget : i ? get (LD + i * 4)
+ldput : i v ? LD + i * 4 # v
+
+touches : px py r bs ?
+	(((px + r) >= (bs ' 0)) & ((px - r) <= (bs ' 2))) & (((py + r) >= (bs ' 1)) & ((py - r) <= (bs ' 3))) : 1
+	||bs|| <= 4 : 0
+	touches px py r (bs ' 4~)
+
+erase_i : cur old ?
+	cur = old : 0
+	seq4 (erase_rec old) (addbox old) (addbox cur) 0
+
+erase_all : i ?
+	i >= (@(G + 60)) : 0
+	seq2 (erase_i (pixrec i) (ldget i)) (erase_all (i + 1))
+
+draw_j : j cur old ?
+	(cur ' 0) >= 999 : ldput j cur
+	(cur = old) & (((touches (cur ' 0) (cur ' 1) (radius (cur ' 2)) (@(G + 52))) = 0)) : 0
+	seq3 (draw_rec cur) (ldput j cur) (addbox cur)
+
+draw_all : j ?
+	j >= (@(G + 60)) : 0
+	seq2 (draw_j j (pixrec j) (ldget j)) (draw_all (j + 1))
+
+`--- 次に落とす果物(上の見本)・得点・終わりの枠 ---`
+
+sbox : cx lv ?
+	cx < 0 : 0
+	boxof cx 8 (radius lv)
+
+erase_sprite : cx lv ?
+	cx < 0 : 0
+	eb cx 8 (radius lv)
+
+cursor_step : z ?
+	((@(G + 36)) = (@(G + 4))) & ((@(G + 40)) = (@(G + 12))) : 0
+	seq6 (erase_sprite (@(G + 36)) (@(G + 40))) (sbox (@(G + 36)) (@(G + 40))) (sbox (@(G + 4)) (@(G + 12))) (ss 36 (@(G + 4))) (ss 40 (@(G + 12))) 0
+
+draw_sprite : z ? drawruns (@(G + 4)) 8 (col (@(G + 12))) (get (RUNS + (@(G + 12)) * 4))
+
+score_step : z ?
+	(@(G + 0)) = (@(G + 44)) : 0
+	seq4 (rect 2 97 15 5 BG) (number (@(G + 0)) 2 97 0xFFFF00) (ss 44 (@(G + 0))) (ss 56 1)
+
+over_step : z ?
+	(@(G + 24)) = (@(G + 48)) : 0
+	seq3 (banner 0) (ss 48 (@(G + 24))) (ss 56 1)
+
+nb : bs ? ||bs||
+
+chrome : z ? seq6 (rect (LEFT - 1) TOP 1 ((FLOOR - TOP) + 1) 0xFFFFFF) (rect RIGHT TOP 1 ((FLOOR - TOP) + 1) 0xFFFFFF) (rect (LEFT - 1) (FLOOR + 1) ((RIGHT - LEFT) + 2) 1 0xFFFFFF) (rect LEFT TOP (RIGHT - LEFT) 1 0x806060) (draw_sprite 0) (present 0)
+
+finish : z ?
+	(nb (@(G + 52))) > 4 : chrome 0
+	(@(G + 56)) = 1 : chrome 0
+	0
+
+draw_pass : z ?
+	(nb (@(G + 52))) <= 4 : 0
+	draw_all 0
+
+`--- 落下中のこま(早道で動いたのが落ちている 1 つだけ、それが積み上がりの一番高い所より上)は、その 1 つだけ消して描く。他の果物には重ならない ---`
+
+slow_draw : z ? seq2 (erase_all 0) (draw_pass 0)
+
+rfast : a ? seq3 (erase_i (pixrec a) (ldget a)) (draw_j a (pixrec a) (ldget a)) 0
+
+rb2 : a [lv x y vx vy pin r m] ?
+	vy < 0 : slow_draw 0
+	(y + r + 32) >= (@(G + 68)) : slow_draw 0
+	rfast a
+
+idle_draw : z ?
+	(@(G + 68)) > ((8 + (radius 5) + 3) * 16) : 0
+	slow_draw 0
+
+render_body : z ?
+	(@(G + 72)) = 2 : idle_draw 0
+	(@(G + 72)) = 0 : slow_draw 0
+	(nb (@(G + 52))) > 4 : slow_draw 0
+	rb2 (@(G + 76)) (@(F + ((@(G + 76)) * 4)))
+
+render : z ? seq7 (ss 52 [999 999 999 999]) (ss 56 0) (cursor_step 0) (render_body 0) (score_step 0) (over_step 0) (finish 0)
+
+`--- 物理。1 こまに、積分 → (押し戻し → 壁と床)を最大 PASSES 回(重なりが残らなければ途中で止める)。---`
+`    果物は括り仮引数 [段 x y vx vy 押付 半径 重さ] で 1 回で全部受け、新しい並びを返して put で書き戻す。`
+
+GRAV : 6
+VMAX : 96
+PASSES : 4
+`--- 眠り。RS は果物ごとの印: -1 速い(速さの和が FAST より上)・0 動いている(EPS より上)・1 から SLEEP-1 は静止してから数えている・SLEEP 以上は眠り。静止した果物(速さの和が EPS 以下を SLEEP こま続けた)は動かさず、組の検査も両方が眠っている組は飛ばす。速さが出る(押された)か、合体が起きたら起こす ---`
+RS : 0x400000
+AL : 0x500000
+SL : 0x600000
+ALN : 0x700000
+SLN : 0x700004
+ABORT : 0x700008
+CLN : 0x70000C
+CL : 0xA00000
+SLEEP : 6
+EPS : 4
+NEAR : 32
+FAST : 12
+
+`--- 得点は三角数。段 li の合体で tri (li+1) = 1, 3, 6, 10, 15。スイカ同士が消えるときは 21 ---`
+
+tri : n ? (n * (n + 1)) / 2
+
+clampv : v ?
+	v > VMAX : VMAX
+	v < (0 - VMAX) : 0 - VMAX
+	v
+
+mv : [lv x y vx vy pin r m] ?
+	mv2 lv x y r m (clampv ((vx * 31) / 32)) (clampv (vy + GRAV))
+
+mv2 : lv x y r m nvx nvy ? [lv (x + nvx) (y + nvy) nvx nvy 0 r m]
+
+rsget : i ? get (RS + i * 4)
+rsput : i v ? RS + i * 4 # v
+asleep : i ? (rsget i) >= SLEEP
+
+mv_all : i K ?
+	i >= K : 0
+	asleep i : mv_all (i + 1) K
+	seq2 (put i (mv (@(F + (i * 4))))) (mv_all (i + 1) K)
+
+`--- 壁と床。越えた分を戻し、向こうへ向かう速さを 0 にし、押し付けられた印を立てる ---`
+
+fence : [lv x y vx vy pin r m] ? fence_x lv x y vx vy pin r m
+
+fence_x : lv x y vx vy pin r m ?
+	(x - r) < (LEFT * 16) : fence_y lv ((LEFT * 16) + r) y (mx2 0 vx) vy 1 r m
+	(x + r) > (RIGHT * 16) : fence_y lv ((RIGHT * 16) - r) y (mn2 0 vx) vy 1 r m
+	fence_y lv x y vx vy pin r m
+
+fence_y : lv x y vx vy pin r m ?
+	(y + r) > (FLOOR * 16) : [lv x ((FLOOR * 16) - r) vx (mn2 0 vy) 1 r m]
+	[lv x y vx vy pin r m]
+
+fence_all : i K ?
+	i >= K : 0
+	asleep i : fence_all (i + 1) K
+	seq2 (put i (fence (@(F + (i * 4))))) (fence_all (i + 1) K)
+
+`--- 距離。ニュートン法を 2 回(平方根が無い)。始めの値は 軸の長い方 + 短い方 × 3/8 ---`
+
+dist : dx dy d2 ?
+	dist2 d2 (mx2 1 ((mx2 (ab dx) (ab dy)) + (((mn2 (ab dx) (ab dy)) * 3) / 8)))
+
+dist2 : d2 s ?
+	dist3 d2 (mx2 1 ((s + (d2 / s)) / 2))
+
+dist3 : d2 s ?
+	mx2 1 ((s + (d2 / s)) / 2)
+
+`--- 合体。i を 1 段上げて、j を消す(最後の 1 つを j へ移して詰める) ---`
+
+drop_slot : j ?
+	seq2 (put j (@(F + (((@(G + 32)) - 1) * 4)))) (ss 32 ((@(G + 32)) - 1))
+
+wake_all : i K ?
+	i >= K : 0
+	seq2 (rsput i 0) (wake_all (i + 1) K)
+
+merge : i j li xi yi vxi vyi xj yj vxj vyj ?
+	seq7 (put i [(li + 1) ((xi + xj) / 2) ((yi + yj) / 2) ((vxi + vxj) / 2) ((vyi + vyj) / 2) 0 (16 * (radius (li + 1))) ((radius (li + 1)) * (radius (li + 1)))]) (drop_slot j) (ss 0 ((@(G + 0)) + (tri (li + 1)))) (wake_all 0 (@(G + 32))) (ABORT # 1) (ss 28 ((@(G + 28)) + 2)) 0
+
+`--- いちばん上の段(段 5)同士がぶつかったら、2 つとも消える。得点は合体と同じ三角数。後ろの番から詰めて消す ---`
+
+vanish : i j li ? seq7 (drop_slot (mx2 i j)) (drop_slot (mn2 i j)) (ss 0 ((@(G + 0)) + (tri (li + 1)))) (wake_all 0 (@(G + 32))) (ABORT # 1) (ss 28 ((@(G + 28)) + 2)) 0
+
+`--- 押し戻し(重さを分け合う。床や壁に押し付けられた果物は 64 倍重い)と、近づく速さの打ち消し ---`
+
+sh : c dc ov m d mt ? c - ((dc * ov * m) / (d * mt))
+
+bv : v vn dc m d mt ?
+	vn >= 0 : v
+	v + ((vn * dc * m) / (d * mt))
+
+wt : p m ?
+	p = 1 : m * 64
+	m
+
+res2 : i j li xi yi vxi vyi pi ri mi lj xj yj vxj vyj pj rj mj dx dy d ov vn wi wj ?
+	seq4 (put i [li (sh xi dx ov wj d (wi + wj)) (sh yi dy ov wj d (wi + wj)) (bv vxi vn dx wj d (wi + wj)) (bv vyi vn dy wj d (wi + wj)) pi ri mi]) (put j [lj (sh xj (0 - dx) ov wi d (wi + wj)) (sh yj (0 - dy) ov wi d (wi + wj)) (bv vxj vn (0 - dx) wi d (wi + wj)) (bv vyj vn (0 - dy) wi d (wi + wj)) pj rj mj]) (ss 28 ((@(G + 28)) + ov)) 0
+
+resolve : i j [li xi yi vxi vyi pi ri mi] [lj xj yj vxj vyj pj rj mj] ?
+	resolve2 i j li xi yi vxi vyi pi ri mi lj xj yj vxj vyj pj rj mj (xj - xi) (yj - yi) (dist (xj - xi) (yj - yi) ((((xj - xi) * (xj - xi)) + ((yj - yi) * (yj - yi))))) (ri + rj) (wt pi mi) (wt pj mj)
+
+resolve2 : i j li xi yi vxi vyi pi ri mi lj xj yj vxj vyj pj rj mj dx dy d rs wi wj ?
+	res2 i j li xi yi vxi vyi pi ri mi lj xj yj vxj vyj pj rj mj dx dy d (rs - d) ((((vxj - vxi) * dx) + ((vyj - vyi) * dy)) / d) wi wj
+
+chk : i j [li xi yi vxi vyi pi ri mi] [lj xj yj vxj vyj pj rj mj] pa pb ?
+	(li = lj) & (li < 5) : merge i j li xi yi vxi vyi xj yj vxj vyj
+	(li = lj) & (li = 5) : vanish i j li
+	resolve i j pa pb
+
+`--- 組の検査。K と i の記録を持ち回り、触れていない組は 1 回の読みで素通りする(触れた組だけ chk。合体で K が変わるので、触れたあとは読み直す) ---`
+
+`--- 起きている果物の一覧(AL)と眠っている果物の一覧(SL)を 1 パスの頭で作る(ALN・SLN は個数)。組は「起きている i」と「i より後ろの起きている j」「眠っている全部の j」だけ見る。
+`    眠った果物どうしの組は見ない。合体が起きたら添字が詰め替わるので、そのパスの残りは打ち切って(ABORT)次のパスで一覧を作り直す ---`
+
+lists_reset : z ? seq4 (ALN # 0) (SLN # 0) (ABORT # 0) 0
+
+list_add : i ?
+	asleep i : seq2 (SL + ((get SLN) * 4) # i) (SLN # ((get SLN) + 1))
+	seq2 (AL + ((get ALN) * 4) # i) (ALN # ((get ALN) + 1))
+
+lists : i K ?
+	i >= K : 0
+	seq2 (list_add i) (lists (i + 1) K)
+
+pairs_all : p ?
+	p >= (get ALN) : 0
+	(get ABORT) = 1 : 0
+	seq3 (start (get (AL + (p * 4))) AL (p + 1) (get ALN)) (start_s (get (AL + (p * 4)))) (pairs_all (p + 1))
+
+start_s : i ?
+	(get ABORT) = 1 : 0
+	start i SL 0 (get SLN)
+
+start : i base q n ? start2 i (@(F + (i * 4))) base q n
+
+start2 : i ri base q n ? scan i ri (ri ' 1) (ri ' 2) (ri ' 6) (rsget i) base q n
+
+scan : i ri xi yi rr si base q n ?
+	q >= n : 0
+	scan2 i ri xi yi rr si base q n (get (base + (q * 4)))
+
+scan2 : i ri xi yi rr si base q n j ? probe i ri xi yi rr si base q n j (@(F + (j * 4)))
+
+probe : i ri xi yi rr si base q n j [lj xj yj vxj vyj pj rj mj] ? probe2 i ri xi yi rr si base q n j rj ((((xj - xi) * (xj - xi)) + ((yj - yi) * (yj - yi))))
+
+probe2 : i ri xi yi rr si base q n j rj d2 ?
+	d2 >= ((rr + rj + NEAR) * (rr + rj + NEAR)) : scan i ri xi yi rr si base (q + 1) n
+	d2 >= ((rr + rj) * (rr + rj)) : scan i ri xi yi rr (wake1 i j si) base (q + 1) n
+	seq3 (wake1 i j si) (touch i j ri (@(F + (j * 4)))) (after i base (q + 1) n)
+
+after : i base q n ?
+	(get ABORT) = 1 : 0
+	start i base q n
+
+`--- 速い果物の近く(NEAR = 2 画素)にある眠った果物は起こす。下の支えが動いたとき、上の果物が宙に浮かないように。静止しかけの果物は起こさない ---`
+
+wake1 : i j si ?
+	(si >= SLEEP) & ((rsget j) < 0) : seq2 (rsput i 0) 0
+	(si < 0) & ((rsget j) >= SLEEP) : seq2 (rsput j 0) si
+	si
+
+cl_add : i j ? seq4 (CL + ((get CLN) * 8) # i) (CL + (((get CLN) * 8) + 4) # j) (CLN # ((get CLN) + 1)) 0
+
+touch : i j ri rj ? seq2 (cl_add i j) (chk i j ri rj ri rj)
+
+`--- 触れた組の解き直し。最初の 2 パスだけ全部の組を見て、触れた組を CL に控える。3 パス目からは控えた組だけ、まだ重なっていれば chk で解き直す(合体などで ABORT になったら次は全部見直す) ---`
+
+redo : p ?
+	p >= (get CLN) : 0
+	(get ABORT) = 1 : 0
+	seq2 (redo2 (get (CL + (p * 8))) (get (CL + ((p * 8) + 4)))) (redo (p + 1))
+
+redo2 : i j ? redo3 i j (@(F + (i * 4))) (@(F + (j * 4)))
+
+redo3 : i j ri rj ? redo4 i j ri rj ((((rj ' 1) - (ri ' 1)) * ((rj ' 1) - (ri ' 1))) + (((rj ' 2) - (ri ' 2)) * ((rj ' 2) - (ri ' 2)))) ((ri ' 6) + (rj ' 6))
+
+redo4 : i j ri rj d2 rs ?
+	d2 >= (rs * rs) : 0
+	chk i j ri rj ri rj
+
+isfull : n ?
+	n >= (PASSES - 1) : 1
+	(get ABORT) = 1 : 1
+	0
+
+pbody : f ?
+	f = 1 : seq5 (lists_reset 0) (CLN # 0) (lists 0 (@(G + 32))) (pairs_all 0) 0
+	redo 0
+
+`--- 眠りの更新。1 こまの終わりに、速さが出たら起こし(押された果物も)、静止が続いたら眠らせる(眠るとき速さを 0 にする) ---`
+
+settle : i K ?
+	i >= K : 0
+	seq2 (settle1 i (@(F + (i * 4)))) (settle (i + 1) K)
+
+settle1 : i [lv x y vx vy pin r m] ?
+	((ab vx) + (ab vy)) > FAST : rsput i (0 - 1)
+	((ab vx) + (ab vy)) > EPS : rsput i 0
+	(rsget i) >= SLEEP : 0
+	nap i ((mx2 0 (rsget i)) + 1) [lv x y 0 0 pin r m]
+
+nap : i n rec ?
+	n >= SLEEP : seq2 (rsput i SLEEP) (put i rec)
+	rsput i n
+
+passes : n ?
+	n <= 0 : 0
+	seq4 (ss 28 0) (pbody (isfull n)) (fence_all 0 (@(G + 32))) (again n)
+
+again : n ?
+	(@(G + 28)) < 2 : 0
+	passes (n - 1)
+
+`--- 落とす。次の段を乱数(線形合同)で決める ---`
+
+newrec : lv x ? [lv x ((TOP - 4) * 16) 0 0 0 (16 * (radius lv)) ((radius lv) * (radius lv))]
+
+grow : z ?
+	(@(G + 32)) < (@(G + 60)) : 0
+	seq2 (ldput (@(G + 32)) NONE) (ss 60 ((@(G + 32)) + 1))
+
+spawn : z ?
+	seq8 (ss 64 (0 - 1)) (grow 0) (put (@(G + 32)) (newrec (@(G + 12)) ((@(G + 4)) * 16))) (rsput (@(G + 32)) 0) (ss 32 ((@(G + 32)) + 1)) (ss 8 20) (ss 16 ((((@(G + 16)) * 25) + 7) % 64)) (ss 12 ((@(G + 16)) % 3))
+
+drop : z ?
+	(@(G + 24)) = 1 : 0
+	(@(G + 8)) > 0 : 0
+	spawn 0
+
+key : code ?
+	code = 0x1C : ss 4 (mx2 (LEFT + 6) ((@(G + 4)) - 3))
+	code = 0x1D : ss 4 (mn2 (RIGHT - 6) ((@(G + 4)) + 3))
+	code = 32 : drop 0
+	0
+
+`--- 入力。出来事を読み切る。q か 閉じる で -1 ---`
+
+drain : q ?
+	@count = 0 : q
+	@etype = 6 : seq2 (pop # 0) (0 - 1)
+	@etype = 1 & @ecode = 113 : seq2 (pop # 0) (0 - 1)
+	@etype = 1 : seq3 (key (@ecode)) (pop # 0) (drain q)
+	seq2 (pop # 0) (drain q)
+
+`--- 7 セグ風の数字(幅 3 高さ 5)。段ごとに点灯する線の印(a=1 b=2 c=4 d=8 e=16 f=32 g=64) ---`
+
+mask : d ?
+	d = 0 : 63
+	d = 1 : 6
+	d = 2 : 91
+	d = 3 : 79
+	d = 4 : 102
+	d = 5 : 109
+	d = 6 : 125
+	d = 7 : 7
+	d = 8 : 127
+	111
+
+seg : m k x y w h c ?
+	(((m / k) % 2) = 1) : rect x y w h c
+	0
+
+digit : d x y c ?
+	seq8 (seg (mask d) 1 x y 3 1 c) (seg (mask d) 2 (x + 2) y 1 3 c) (seg (mask d) 4 (x + 2) (y + 2) 1 3 c) (seg (mask d) 8 x (y + 4) 3 1 c) (seg (mask d) 16 x (y + 2) 1 3 c) (seg (mask d) 32 x y 1 3 c) (seg (mask d) 64 x (y + 2) 3 1 c) 0
+
+number : v x y c ?
+	seq4 (digit ((v / 1000) % 10) x y c) (digit ((v / 100) % 10) (x + 4) y c) (digit ((v / 10) % 10) (x + 8) y c) (digit (v % 10) (x + 12) y c)
+
+`--- 終わりの判定。線より上に出た果物があれば数え、HOLD こま続けば終わり ---`
+
+above : i ?
+	i >= (@(G + 32)) : 0
+	above2 i (@(F + (i * 4)))
+
+above2 : i [lv x y vx vy pin r m] ?
+	(y - r) < (TOP * 16) : 1
+	above (i + 1)
+
+judgev : v ?
+	v = 1 : seq2 (ss 20 ((@(G + 20)) + 1)) (watch 0)
+	ss 20 0
+
+judge : z ? judgev (above 0)
+
+`--- 早道のこまは、他の果物が動いていないので、線の上に出ているかは「他の最高点(G+68)」と落ちている果物だけで決まる ---`
+
+fabove : z ?
+	(@(G + 68)) < (TOP * 16) : 1
+	(top (@(F + ((@(G + 76)) * 4)))) < (TOP * 16) : 1
+	0
+
+iabove : z ?
+	(@(G + 68)) < (TOP * 16) : 1
+	0
+
+judge2 : z ?
+	(@(G + 72)) = 2 : judgev (iabove 0)
+	(@(G + 72)) = 1 : judgev (fabove 0)
+	judge 0
+
+watch : z ?
+	(@(G + 20)) >= HOLD : ss 24 1
+	0
+
+banner : z ?
+	seq4 (rect 10 40 60 22 0xFF3030) (rect 11 41 58 20 0x101020) (number (@(G + 0)) 30 46 0xFFFFFF) 0
+
+`--- 1 こま ---`
+
+`--- 落下中の早道。起きているのが落ちている 1 つだけ(G+64 にその添字、無ければ -1)で、その 1 つが他のどれにも触れも近づきもしない(NEAR 以内に入らない)間は、
+`    動かして壁と床を直し、眠りを更新するだけでよい(他は全部眠っていて動かない)。近づいたこまは何もせず、いつもの全体の処理に任せる ---`
+
+near2 : a x y r j K rj dx dy ?
+	(((dx * dx) + (dy * dy)) >= ((r + rj + NEAR) * (r + rj + NEAR))) : near_any a x y r (j + 1) K
+	1
+
+near1 : a x y r j K [lj xj yj vxj vyj pj rj mj] ? near2 a x y r j K rj (xj - x) (yj - y)
+
+near_any : a x y r j K ?
+	j >= K : 0
+	j = a : near_any a x y r (j + 1) K
+	near1 a x y r j K (@(F + (j * 4)))
+
+quiet_fin : cnt idx ht ?
+	cnt = 0 : seq2 (ss 68 ht) (ss 64 (0 - 2))
+	cnt = 1 : seq2 (ss 68 ht) (ss 64 idx)
+	ss 64 (0 - 1)
+
+top : [lv x y vx vy pin r m] ? y - r
+
+quiet_scan : i K cnt idx ht ?
+	i >= K : quiet_fin cnt idx ht
+	asleep i : quiet_scan (i + 1) K cnt idx (mn2 ht (top (@(F + (i * 4)))))
+	quiet_scan (i + 1) K (cnt + 1) i ht
+
+quiet : z ? quiet_scan 0 (@(G + 32)) 0 (0 - 1) 100000000
+
+full : z ? seq4 (mv_all 0 (@(G + 32))) (passes PASSES) (settle 0 (@(G + 32))) (quiet 0)
+
+quiet_after : a ?
+	asleep a : ss 64 (0 - 1)
+	0
+
+fast3 : a [lv x y vx vy pin r m] hit ?
+	hit = 1 : full 0
+	seq6 (ss 72 1) (ss 76 a) (put a [lv x y vx vy pin r m]) (settle1 a [lv x y vx vy pin r m]) (quiet_after a) 0
+
+hit_of : a x y r ?
+	((y + r + NEAR) < (@(G + 68))) : 0
+	near_any a x y r 0 (@(G + 32))
+
+fast2 : a [lv x y vx vy pin r m] ? fast3 a [lv x y vx vy pin r m] (hit_of a x y r)
+
+fast : a ? fast2 a (fence (mv (@(F + (a * 4)))))
+
+`--- 全部眠っている間(G+64 が -2)は物理は何もしない。カーソルを動かすだけのこまがこれ。画面も、見本の四角を消すだけでよい(果物の最高点より上なら) ---`
+
+core : z ?
+	(@(G + 64)) = (0 - 2) : ss 72 2
+	(@(G + 64)) < 0 : full 0
+	fast (@(G + 64))
+
+play : z ? seq5 (ss 8 (mx2 0 ((@(G + 8)) - 1))) (ss 72 0) (core 0) (judge2 0) 0
+
+tick : z ?
+	(@(G + 24)) = 1 : render 0
+	seq2 (play 0) (render 0)
+
+loop : n q ?
+	q < 0 : gs 0
+	n <= 0 : gs 0
+	seq2 (tick 0) (sleep # 16) : loop (n - 1) (drain 0)
+
+seq8 (runs_all 0) (ss 60 0) (ss 0 0) (ss 4 40) (ss 8 0) (ss 12 0) (ss 44 (0 - 1)) (ss 36 (0 - 1))
+clear BG
+ss 40 0
+ss 48 0
+ss 16 7
+ss 28 0
+ss 32 0
+ss 20 0
+ss 24 0
+ss 64 (0 - 1)
+ss 72 0
+loop FRAMES (drain 0)

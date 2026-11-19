@@ -1,0 +1,43 @@
+Counter({'pg-error': 24, 'diff': 11, 'same': 7, 'pg-unit': 7})
+pg-error	books/book1/01.sn	TIMEOUT	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-error	books/book1/03.sn	TIMEOUT	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+diff	books/book1/07.sn	[[1, 3, 0, 2], `Bob`, `Cy`]	1302BobCy
+diff	books/book1/10.sn	150	26214440
+pg-error	books/book1/12.sn	<fn/1>	ERROR: on_timer は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返
+pg-error	books/book1/14.sn	[1000, [1000, [1000, [1000, [1000, 0]]]]]	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-error	books/book2/02.sn	TIMEOUT	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-error	books/book2/05.sn	[[[`6291456127.0.0.1`, [1, 6291456, 6291456, 1883,	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-error	books/book2/07.sn	`:memory:0CREATE TABLE fruit(id INTEGER PRIMARY KE	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+diff	books/book2/10.sn	<fn/1>	<Lambda>
+pg-error	books/book2/12.sn	[`記録 件数・最低・最高(×100): iot.db0SELECT count(*), min(t	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-unit	books/book3/01.sn	21	__
+pg-unit	books/book3/03.sn	152043540	__
+pg-error	books/book3/05.sn	[`Hello, Sign!44116776960ABC xyz 01234567894141654	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+diff	books/book3/07.sn	<fn/1>	<Lambda>
+diff	books/book3/09.sn	__	153092096
+diff	books/book3/11.sn	<fn/1>	<Lambda>
+pg-unit	books/book4/01.sn	0	__
+pg-error	books/book4/03.sn	<fn/1>	ERROR: on_timer は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返
+pg-error	books/book4/05.sn	0	ERROR: 'seq2' が /mnt/user-data/outputs/std.sn の 1 番目の文 と /mnt/user-dat
+pg-error	books/book4/07.sn	__	ERROR: 'seq3' が /mnt/user-data/outputs/std.sn の 2 番目の文 と /mnt/user-dat
+pg-error	books/book4/09.sn	__	ERROR: sys は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し、使う側
+pg-unit	books/book4/11.sn		__
+diff	books/book5/03.sn	<fn/1>	<Lambda>
+diff	books/book5/05.sn	[[2, 2, 16777215], 0, 0]	[__ 2 2 16777215 __ 0 0]
+diff	books/book5/06.sn	[[2, 2, 16777215], [0, 90, 96, 6, 4500070], 0, 0]	[__ 2 2 16777215 __ [0 90 96 6 4500070] 0 0]
+pg-error	books/book6/01.sn	[`fmod (0-7) 3 = `, [-7, 3], 0]	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-error	books/book6/02.sn	`7  0  0  0  0  0  0  0  0  0  0000`	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-error	books/book6/03.sn	0	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-error	books/book6/04.sn	0	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-error	books/book6/05.sn		ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-error	books/book6/06.sn	0	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-error	books/book6/11.sn		ERROR: f は関数を返しています（点なしの括り）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し、使
+pg-unit	books/book6/14.sn	5246976	__
+pg-error	books/book8/01.sn	`5/2   20-5/2  -20-5%2  -107/2   304/3   10-7/2  -	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+diff	books/book8/03.sn	99	0
+pg-error	books/book8/04.sn	[[5242880, 0, 11], [5242880, 1, 22]]	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-unit	books/book8/06.sn	5242880	__
+pg-error	books/book8/07.sn	[5242880, 0]	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し
+pg-unit	books/book8/08.sn	156237824	__
+diff	books/book8/10.sn	__	Ann
+pg-error	books/book8/11.sn	`5242880hello sign5242880sign`	ERROR: arr_max は関数を返しています（合成）——関数を返す関数は、関数オブジェクトの番地で返します。`$(…)` を付けて返し

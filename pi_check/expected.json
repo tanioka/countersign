@@ -1,0 +1,582 @@
+{
+ "t_alarm": {
+  "stdout": ".......1......2......30\n",
+  "exit": 0
+ },
+ "t_clock": {
+  "stdout": "200\n",
+  "exit": 0
+ },
+ "t_dns_name": {
+  "stdout": "-2\n0\n",
+  "exit": 0
+ },
+ "t_gfx_fb": {
+  "stdout": "エラー: /dev/fb0 が使えません(開けない・24 ビットなど未対応の形式・権限は video グループ)。画面への出力は行いません(描画の読み書きはできます)\n1\n0\n0\n",
+  "exit": 0
+ },
+ "t_gpio_bias": {
+  "stdout": "10\n",
+  "exit": 0
+ },
+ "t_gpio_out": {
+  "stdout": "10\n",
+  "exit": 0
+ },
+ "t_i2c_aht25": {
+  "stdout": "0\n",
+  "exit": 0
+ },
+ "t_i2c_nobus": {
+  "stdout": "-2\n",
+  "exit": 0
+ },
+ "t_i2c_probe": {
+  "stdout": "-6\n",
+  "exit": 0
+ },
+ "t_input_idle": {
+  "stdout": "0\n0\n0\n0\n0\n",
+  "exit": 0
+ },
+ "t_input_live": {
+  "stdout": "0\n0\n",
+  "exit": 0
+ },
+ "t_map": {
+  "stdout": "79\n",
+  "exit": 0
+ },
+ "t_net_names": {
+  "stdout": "-2\n-2\n0\n",
+  "exit": 0
+ },
+ "t_net_refused": {
+  "stdout": "-111\n0\n",
+  "exit": 0
+ },
+ "t_net_tcp": {
+  "stdout": "5\n5\n104\n111\n0\n0\n0\n0\n-9\n0\n",
+  "exit": 0
+ },
+ "t_net_timeout": {
+  "stdout": "-11\n200\n0\n",
+  "exit": 0
+ },
+ "t_net_tls": {
+  "stdout": "-38\n-9\n0\n",
+  "exit": 0
+ },
+ "t_net_udp": {
+  "stdout": "5\n5\n104\n49\n49\n58\n50\n0\n-11\n0\n",
+  "exit": 0
+ },
+ "t_sound_tone": {
+  "stdout": "0\n1\n0\n0\n",
+  "exit": 0
+ },
+ "t_spi_ret": {
+  "stdout": "4\n",
+  "exit": 0
+ },
+ "t_spi_rx": {
+  "stdout": "4027538085\n",
+  "exit": 0
+ },
+ "t_sys_file": {
+  "stdout": "1\n5\n0\n5\n5\n104\n0\n-2\n-13\n-13\n1\n-9\n-38\n0\n",
+  "exit": 0
+ },
+ "t_uart": {
+  "stdout": "Hi\n150994944\n",
+  "exit": 0
+ },
+ "t_db_basic": {
+  "stdout": "0\n2\n-17\n-95\n-95\n-22\n1\nabc\t4294967295\t0.1\t1e+16\n1\nxyz\t-5\t0.1\t1e+16\n0\n2\n2\n0\n",
+  "exit": 0
+ },
+ "t_par_args_s": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_par_args_p2": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_par_args_p3": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_par_args_p4": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_par_args_p4site": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_par_args_p4l1000": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_par_args_p4l0": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_par_fib_s": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_fib_p2": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_fib_p3": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_fib_p4": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_fib_p4site": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_fib_p4l1000": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_fib_p4l0": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_fib1_s": {
+  "stdout": "63245986\n",
+  "exit": 0
+ },
+ "t_par_fib1_p2": {
+  "stdout": "63245986\n",
+  "exit": 0
+ },
+ "t_par_fib1_p3": {
+  "stdout": "63245986\n",
+  "exit": 0
+ },
+ "t_par_fib1_p4": {
+  "stdout": "63245986\n",
+  "exit": 0
+ },
+ "t_par_fib1_p4site": {
+  "stdout": "63245986\n",
+  "exit": 0
+ },
+ "t_par_fib1_p4l1000": {
+  "stdout": "63245986\n",
+  "exit": 0
+ },
+ "t_par_fib1_p4l0": {
+  "stdout": "63245986\n",
+  "exit": 0
+ },
+ "t_par_fib4_s": {
+  "stdout": "96631268\n",
+  "exit": 0
+ },
+ "t_par_fib4_p2": {
+  "stdout": "96631268\n",
+  "exit": 0
+ },
+ "t_par_fib4_p3": {
+  "stdout": "96631268\n",
+  "exit": 0
+ },
+ "t_par_fib4_p4": {
+  "stdout": "96631268\n",
+  "exit": 0
+ },
+ "t_par_fib4_p4site": {
+  "stdout": "96631268\n",
+  "exit": 0
+ },
+ "t_par_fib4_p4l1000": {
+  "stdout": "96631268\n",
+  "exit": 0
+ },
+ "t_par_fib4_p4l0": {
+  "stdout": "96631268\n",
+  "exit": 0
+ },
+ "t_par_list_s": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_list_p2": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_list_p3": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_list_p4": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_list_p4site": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_list_p4l1000": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_list_p4l0": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_par_local_s": {
+  "stdout": "44791056\n",
+  "exit": 0
+ },
+ "t_par_local_p2": {
+  "stdout": "44791056\n",
+  "exit": 0
+ },
+ "t_par_local_p3": {
+  "stdout": "44791056\n",
+  "exit": 0
+ },
+ "t_par_local_p4": {
+  "stdout": "44791056\n",
+  "exit": 0
+ },
+ "t_par_local_p4site": {
+  "stdout": "44791056\n",
+  "exit": 0
+ },
+ "t_par_local_p4l1000": {
+  "stdout": "44791056\n",
+  "exit": 0
+ },
+ "t_par_local_p4l0": {
+  "stdout": "44791056\n",
+  "exit": 0
+ },
+ "t_par_loop_s": {
+  "stdout": "80000000400000000\n",
+  "exit": 0
+ },
+ "t_par_loop_p2": {
+  "stdout": "80000000400000000\n",
+  "exit": 0
+ },
+ "t_par_loop_p3": {
+  "stdout": "80000000400000000\n",
+  "exit": 0
+ },
+ "t_par_loop_p4": {
+  "stdout": "80000000400000000\n",
+  "exit": 0
+ },
+ "t_par_loop_p4site": {
+  "stdout": "80000000400000000\n",
+  "exit": 0
+ },
+ "t_par_loop_p4l1000": {
+  "stdout": "80000000400000000\n",
+  "exit": 0
+ },
+ "t_par_loop_p4l0": {
+  "stdout": "80000000400000000\n",
+  "exit": 0
+ },
+ "t_opt_fib_opt": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_opt_fib_noopt": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_opt_loop_opt": {
+  "stdout": "15000000150000000\n",
+  "exit": 0
+ },
+ "t_opt_loop_noopt": {
+  "stdout": "15000000150000000\n",
+  "exit": 0
+ },
+ "t_opt_list_opt": {
+  "stdout": "165000000\n",
+  "exit": 0
+ },
+ "t_opt_list_noopt": {
+  "stdout": "165000000\n",
+  "exit": 0
+ },
+ "t_spec_or_s": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_or_p4": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_or_spec": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_or_p2": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_or_p2spec": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_or_p3": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_or_p3spec": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_or_specab": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_or_p3specab": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_or_look": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_or_p3look": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_gfalse_s": {
+  "stdout": "3524578\n",
+  "exit": 0
+ },
+ "t_spec_gfalse_p4": {
+  "stdout": "3524578\n",
+  "exit": 0
+ },
+ "t_spec_gfalse_spec": {
+  "stdout": "3524578\n",
+  "exit": 0
+ },
+ "t_spec_gfalse_p2": {
+  "stdout": "3524578\n",
+  "exit": 0
+ },
+ "t_spec_gfalse_p2spec": {
+  "stdout": "3524578\n",
+  "exit": 0
+ },
+ "t_spec_gfalse_p3": {
+  "stdout": "3524578\n",
+  "exit": 0
+ },
+ "t_spec_gfalse_p3spec": {
+  "stdout": "3524578\n",
+  "exit": 0
+ },
+ "t_spec_gfalse_specab": {
+  "stdout": "3524578\n",
+  "exit": 0
+ },
+ "t_spec_gfalse_p3specab": {
+  "stdout": "3524578\n",
+  "exit": 0
+ },
+ "t_spec_gfalse_look": {
+  "stdout": "3524578\n",
+  "exit": 0
+ },
+ "t_spec_gfalse_p3look": {
+  "stdout": "3524578\n",
+  "exit": 0
+ },
+ "t_spec_gtrue_s": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_gtrue_p4": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_gtrue_spec": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_gtrue_p2": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_gtrue_p2spec": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_gtrue_p3": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_gtrue_p3spec": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_gtrue_specab": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_gtrue_p3specab": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_gtrue_look": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_gtrue_p3look": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_trap_s": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_spec_trap_p4": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_spec_trap_spec": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_spec_trap_p2": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_spec_trap_p2spec": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_spec_trap_p3": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_spec_trap_p3spec": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_spec_trap_specab": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_spec_trap_p3specab": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_spec_trap_look": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_spec_trap_p3look": {
+  "stdout": "14930352\n",
+  "exit": 0
+ },
+ "t_spec_rows_s": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_rows_p4": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_rows_spec": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_rows_p2": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_rows_p2spec": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_rows_p3": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_rows_p3spec": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_rows_specab": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_rows_p3specab": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_rows_look": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_spec_rows_p3look": {
+  "stdout": "9227465\n",
+  "exit": 0
+ },
+ "t_hof_rep_hof": {
+  "stdout": "300000000\n",
+  "exit": 0
+ },
+ "t_hof_rep_dir": {
+  "stdout": "300000000\n",
+  "exit": 0
+ },
+ "t_hof_fold_hof": {
+  "stdout": "165000000\n",
+  "exit": 0
+ },
+ "t_hof_fold_dir": {
+  "stdout": "165000000\n",
+  "exit": 0
+ },
+ "t_hof_map_hof": {
+  "stdout": "110000000\n",
+  "exit": 0
+ },
+ "t_hof_map_dir": {
+  "stdout": "110000000\n",
+  "exit": 0
+ },
+ "t_hof_cap_hof": {
+  "stdout": "495000000\n",
+  "exit": 0
+ },
+ "t_hof_cap_dir": {
+  "stdout": "495000000\n",
+  "exit": 0
+ },
+ "t_hof_par_s": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_hof_par_p2": {
+  "stdout": "48315634\n",
+  "exit": 0
+ },
+ "t_hof_par_p4": {
+  "stdout": "48315634\n",
+  "exit": 0
+ }
+}

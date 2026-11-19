@@ -1,0 +1,4 @@
+`std.sn`@~
+T : 0x9200000
+elapsed : a s ? (@T) - a
+elapsed (@T) ((T + 4) # 200)

@@ -1,0 +1,12 @@
+`標準入力を 1 文字ずつ読んで、そのまま標準出力へ出す(入力の終わりは __)。`
+`  printf 'hello\n' | python3 sign_interp.py echo.sn`
+
+uart : 0x9000000
+
+seq2 : a b ? b
+
+go : c ?
+	c = __ : 0
+	seq2 (uart # c) (go (@uart))
+
+go (@uart)

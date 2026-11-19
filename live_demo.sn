@@ -1,0 +1,87 @@
+`live_demo.sn — ライブ・コーディングの見本。ボールが跳ね返る。矢印の左右で横の速さ、上下で縦の速さを変える。q か 閉じる で終わる`
+`  python3 sign_console.py live_demo.sn            (窓)`
+`動かしたまま、下の色(BALL・BG)・大きさ(SIZE)・重さ(GRAV)・跳ね返り(BOUNCE)を書き換えて保存してみる。ボールは止まらず、続きから新しい値で動く`
+
+SIZE : 8
+GRAV : 1
+BOUNCE : 90
+BALL : 0xFFCC00
+BG : 0x101830
+W : 80
+H : 104
+
+gfx : 0x9100000
+inp : 0x9300000
+color : gfx + 0x08
+px : gfx + 0x0C
+py : gfx + 0x10
+cmd : gfx + 0x14
+arg0 : gfx + 0x18
+arg1 : gfx + 0x1C
+count : inp + 0x00
+etype : inp + 0x04
+ecode : inp + 0x08
+pop : inp + 0x14
+
+seq2 : a b ? b
+seq3 : a b c ? c
+seq4 : a b c d ? d
+seq5 : a b c d e ? e
+seq8 : a b c d e f g h ? h
+
+`状態は番地に置く: 位置と速さ(1/16 画素)`
+X : 0x3000
+Y : 0x3004
+VX : 0x3008
+VY : 0x300C
+get : a ? @a
+
+clear : c ? seq2 (color # c) (cmd # 2)
+rect : x y w h c ? seq8 (color # c) (px # x) (py # y) (arg0 # w) (arg1 # h) (cmd # 5) 0 0
+present : z ? cmd # 3
+
+`--- 入力。出来事を読み切る。矢印で速さを変え、q か 閉じる で -1 ---`
+key : code ?
+	code = 0x1C : VX # ((get VX) - 8)
+	code = 0x1D : VX # ((get VX) + 8)
+	code = 0x1E : VY # ((get VY) - 24)
+	code = 0x1F : VY # ((get VY) + 24)
+	0
+
+drain : q ?
+	@count = 0 : q
+	@etype = 6 : seq2 (pop # 0) (0 - 1)
+	@etype = 1 & @ecode = 113 : seq2 (pop # 0) (0 - 1)
+	@etype = 1 : seq3 (key (@ecode)) (pop # 0) (drain q)
+	seq2 (pop # 0) (drain q)
+
+`--- 物理。床と壁で跳ね返る ---`
+bounce : v ? 0 - ((v * BOUNCE) / 100)
+
+wall : x vx ?
+	x < 0 : 0
+	x > ((W - SIZE) * 16) : (W - SIZE) * 16
+	x
+
+floor : y ?
+	y > ((H - SIZE) * 16) : (H - SIZE) * 16
+	y
+
+step : x y vx vy ?
+	seq4 (X # (wall (x + vx) vx)) (Y # (floor (y + vy))) (VX # (turnx x vx)) (VY # (turny y vy))
+
+turnx : x vx ?
+	(x + vx) < 0 : bounce vx
+	(x + vx) > ((W - SIZE) * 16) : bounce vx
+	vx
+
+turny : y vy ?
+	(y + vy) > ((H - SIZE) * 16) : bounce (vy + GRAV)
+	vy + GRAV
+
+draw : z ? seq4 (clear BG) (rect ((get X) / 16) ((get Y) / 16) SIZE SIZE BALL) (present 0) 0
+
+`--- ゲーム機から呼ばれる ---`
+init : z ? seq5 (X # (20 * 16)) (Y # (10 * 16)) (VX # 40) (VY # 0) 0
+
+tick : z ? seq3 (step (get X) (get Y) (get VX) (get VY)) (draw 0) (drain 0)

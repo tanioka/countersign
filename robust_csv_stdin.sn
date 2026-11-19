@@ -1,0 +1,104 @@
+`壊れない集計(標準入力版): 標準入力の CSV を 1 行ずつ読む。欠けた欄・文字の混じった欄・足りない行があっても止まらず、その欄だけが「読めなかった」(-)になる。`
+`  printf 'alice,30,82\nbob,x,75\ncarol,,90\ndave,41\neve,28,9z\nfrank,35,100\n' | python3 sign_interp.py robust_csv_stdin.sn`
+`入力の終わり(__)は引数に渡すと関数が死ぬので、(@uart) | (0 - 1) で -1 に直して受ける。CRLF の CR は読み飛ばす。最後の行に改行が無くても読む。`
+`単位 __ を実引数に渡すと関数は死ぬ(完全性の公理)ので、欠けは -1 の印で運ぶ。条件の行の値が __ だと --strict ではその行が無かったことになり次の行へ進むので、欠けも __ にせず -1 を返す。合計(tally)は -1 を数えない。`
+
+uart : 0x9000000
+BUF : 4x00300000
+CELL : 0x310000
+
+emit : ch ? uart # ch
+emitc : ch ? uart # ch
+`本体の行は上から順の文ではなく条件の行なので、順に実行するには seq2 の実引数(左から評価)に並べる`
+seq2 : a b ? 0
+nl : u ? emit 10
+
+`i 番目から文字列を出す`
+pstr : s i ?
+	i >= ||s|| : 0
+	pstr2 s i (s ' i)
+
+pstr2 : s i ch ?
+	seq2 (emitc ch) (pstr s (i + 1))
+
+`10 進で出す。読めなかった(負)は - と出す`
+digits : n ?
+	n < 10 : emit (48 + n)
+	seq2 (digits (n / 10)) (emit (48 + (n % 10)))
+
+pnum : n ?
+	n < 0 : emit 45
+	digits n
+
+`行バッファ BUF の i 番目の文字`
+cat : i ? @(BUF + (i * 4))
+
+`k 列目(0 始まり)の数。読めない欄・空の欄は -1。n は行の長さ`
+col : n k i c acc bad ?
+	i >= n : fin acc bad
+	step n k i c acc bad (cat i)
+
+step : n k i c acc bad x ?
+	x = 44 : comma n k i c acc bad
+	c = k : digit n k i c acc bad x
+	col n k (i + 1) c acc bad
+
+comma : n k i c acc bad ?
+	c = k : fin acc bad
+	col n k (i + 1) (c + 1) (0 - 1) bad
+
+fin : acc bad ?
+	(bad = 0) & (acc >= 0) : acc
+	0 - 1
+
+`acc が -1 は「まだ 1 桁も読んでいない」印`
+dig : acc d ?
+	acc < 0 : d
+	(acc * 10) + d
+
+digit : n k i c acc bad x ?
+	(x >= 48) & (x <= 57) : col n k (i + 1) c (dig acc (x - 48)) bad
+	col n k (i + 1) c acc 1
+
+`名前(最初のコンマまで)`
+pname : n i ?
+	i >= n : 0
+	(cat i) = 44 : 0
+	pname2 n i (cat i)
+
+pname2 : n i x ?
+	seq2 (emit x) (pname n (i + 1))
+
+`列ごとの合計と読めた件数を CELL に持つ(sa から 2 語 = 16 バイト: 合計, 件数。Int は 8 バイトの語)`
+tally : sa v ?
+	v < 0 : 0
+	seq2 (sa # ((@sa) + v)) ((sa + 8) # ((@(sa + 8)) + 1))
+
+show : sa v ? seq2 (tally sa v) (pnum v)
+shownum : n k sa ? show sa ((col n k 0 0 (0 - 1) 0) | (0 - 1))
+
+line : n ?
+	seq2 (pname n 0) (seq2 (pstr `  age=` 0) (seq2 (shownum n 1 CELL) (seq2 (pstr `  score=` 0) (seq2 (shownum n 2 (CELL + 16)) (nl 0)))))
+
+proc : n ?
+	n = 0 : 0
+	line n
+
+`1 文字ずつ読む。改行で 1 行を処理して次へ。入力の終わり(-1)で残りを処理して終わる`
+rl : i ? rl2 i ((@uart) | (0 - 1))
+rl2 : i c ?
+	c < 0 : proc i
+	c = 10 : seq2 (proc i) (rl 0)
+	c = 13 : rl i
+	seq2 ((BUF + (i * 4)) # c) (rl (i + 1))
+
+report : sa name ?
+	seq2 (pstr name 0) (seq2 (pstr `合計=` 0) (seq2 (pnum (@sa)) (seq2 (pstr `  読めた件数=` 0) (seq2 (pnum (@(sa + 8))) (seq2 (pstr `  平均=` 0) (seq2 (pnum (((@sa) / (@(sa + 8))) | (0 - 1))) (nl 0)))))))
+
+CELL # 0
+(CELL + 8) # 0
+(CELL + 16) # 0
+(CELL + 24) # 0
+rl 0
+report (CELL + 16) `score `
+report CELL `age   `

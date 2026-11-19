@@ -1,0 +1,114 @@
+`iot_demo.sn — IoT のデモ。温湿度センサー AHT25 を読み、SQLite に記録し、MQTT で送り、MQTT で来た命令で LED を動かす。全部 Sign で書いてある。
+`  流れ(PERIOD ミリ秒ごとに CYCLES 回。CYCLES を 0 にすると止まるまで):
+`    1. AHT25 で温度・湿度を測る(aht25.sn)      2. SQLite の readings 表へ 1 行足す(sqlite.sn)
+`    3. MQTT で送る(mqtt.sn。保持つき):  sign/iot/temp = 温度×100  sign/iot/hum = 湿度×100  sign/iot/led = 1 か 0
+`    4. 温度がしきい値(最初は 30.00 ℃)より高ければ LED(GPIO17)を点け、そうでなければ消す。変わったときだけ sign/iot/led を送る
+`    5. 次の測定までの間 MQTT を聞く。 sign/iot/cmd/threshold に整数(温度×100。例 2400 = 24.00 ℃)が来たらしきい値を変える
+`  パソコンでの練習(本物のセンサー・LED・ブローカーは要らない):
+`    端末 1:  python3 iot_broker.py --inject 3:sign/iot/cmd/threshold:2000        (小さなブローカー。3 秒後にしきい値を 20.00 ℃へ変える命令を出す)
+`    端末 2:  python3 sign_interp.py iot_demo.sn --i2c=aht25:23.5,61 --gpio=fake --db --net=local
+`  Raspberry Pi の実機:  python3 sign_interp.py iot_demo.sn --i2c --gpio --db --net=ブローカーのホスト名    (HOST と PORT を書き換える。AHT25 のつなぎ方は aht25.sn、LED は led_gpio.sn)
+`  記録は --db のフォルダ(既定は今のフォルダ)の iot.db に残る。 sqlite3 iot.db "select * from readings" で見られる。
+
+`aht25.sn`@~
+`sqlite.sn`@~
+`mqtt.sn`@~
+
+HOST : `127.0.0.1`
+PORT : 1883
+CYCLES : 6
+PERIOD : 1000
+LED_PIN : 17
+GPIO : 4x09500000
+NOW : 4x09200000
+ST : 0x500000
+TB : 4x00600000
+
+`状態の置き場(Int は 8 バイトの語): ST+0 しきい値(×100)  ST+8 LED の今(0・1。2 = まだ分からない)  ST+16 DB の h  ST+24 MQTT の h`
+
+tcp : z ? seq2 (str_put TB HOST) (mq_net 1 TB (str_len TB) PORT 0 0 0)
+say : msg n ? seq3 (print msg) (println_int n) n
+
+`==================== 記録 ====================`
+log_add : db ms t hum ? log_add2 (db_prep db `INSERT INTO readings VALUES (?, ?, ?)`) ms t hum
+log_add2 : s ms t hum ? seq5 (db_bind_int s 1 ms) (db_bind_int s 2 t) (db_bind_int s 3 hum) (db_step s) (db_done s)
+summary : db ? summary2 (db_prep db `SELECT count(*), min(t), max(t) FROM readings`)
+summary2 : s ? seq5 (print `記録 件数・最低・最高(×100): `) (db_step s) (db_print_row s) (db_done s) 0
+
+`==================== LED ====================`
+led_pin : v ? seq2 ((GPIO + (4 * LED_PIN)) # v) 0
+led_pub : v ?
+	v = 1 : mqtt_publish (@(ST + 24)) `sign/iot/led` `1` 0 1
+	mqtt_publish (@(ST + 24)) `sign/iot/led` `0` 0 1
+
+led_to : v ?
+	(@(ST + 8)) = v : 0
+	(seq3 ((ST + 8) # v) (led_pin v) (led_pub v)) : 0
+
+led_apply : t ?
+	t > (@ST) : led_to 1
+	led_to 0
+
+`==================== 命令 ====================`
+set_thresh : v ? seq3 (ST # v) (print `しきい値を変えた(×100): `) (println_int v)
+on_msg : r ?
+	r = 3 : on_cmd (str_put TB `sign/iot/cmd/threshold`)
+	0
+
+on_cmd : n ?
+	((str_eq MQ_TOPIC TB) = 1) & ((str_is_int MQ_PAYLOAD) = 1) : set_thresh (str_to_int MQ_PAYLOAD)
+	0
+
+`次の測定の時刻 until まで MQTT を聞く(来たら処理して、また聞く)`
+wait : until ? wait2 until (until - (@NOW))
+wait2 : until left ?
+	left <= 0 : 0
+	wait3 until (mqtt_poll (@(ST + 24)) left)
+
+wait3 : until r ?
+	r < 0 : r
+	(on_msg r) : wait until
+
+`==================== 測って送る ====================`
+publish_all : z ? seq3 (mqtt_publish_int (@(ST + 24)) `sign/iot/temp` (aht25_temp 0) 0 1) (mqtt_publish_int (@(ST + 24)) `sign/iot/hum` (aht25_hum 0) 0 1) 0
+
+step : i ?
+	(CYCLES > 0) & (i >= CYCLES) : 0
+	step2 i (aht25_measure 0)
+
+step2 : i m ?
+	m < 0 : step_err i (say `センサーのエラー: ` m)
+	step3 i (@NOW)
+
+step_err : i e ? next i
+step3 : i ms ?
+	(seq6 (log_add (@(ST + 16)) ms (aht25_temp 0) (aht25_hum 0)) (aht25_show 0) (publish_all 0) (led_apply (aht25_temp 0)) (mqtt_ping (@(ST + 24))) 0) : next i
+
+next : i ? next2 i (wait ((@NOW) + PERIOD))
+next2 : i w ?
+	w < 0 : say `MQTT のエラー: ` w
+	step (i + 1)
+
+`==================== 起動 ====================`
+run : z ?
+	(ST # 3000) : run1 (tcp 0)
+
+run1 : h ?
+	h < 0 : say `ブローカーにつなげません: ` h
+	run2 h (mqtt_connect h `sign-iot` 60)
+
+run2 : h rc ?
+	(rc < 0) | (rc > 0) : say `MQTT に断られました: ` rc
+	run3 h (db_open `iot.db` 0)
+
+run3 : h db ?
+	db < 0 : say `データベースが開けません: ` db
+	(seq6 ((ST + 24) # h) ((ST + 16) # db) ((ST + 8) # 2) (db_exec db `CREATE TABLE IF NOT EXISTS readings(ms INTEGER, t INTEGER, h INTEGER)`) (mqtt_subscribe h `sign/iot/cmd/#` 0) 0) : run4 h db (aht25_init 0)
+
+run4 : h db r ?
+	r < 0 : say `センサーが使えません: ` r
+	(seq2 (step 0) 0) : finish h db
+
+finish : h db ? seq4 (summary db) (led_pin 0) (mqtt_disconnect h) (db_close db)
+
+run 0

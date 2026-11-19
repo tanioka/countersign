@@ -1,0 +1,6 @@
+`std.sn`@~
+G : 0x9500000
+PIN : 26
+p : G + 4 * PIN
+r : a b ? a * 10 + b
+r (seq2 (p # 1) (@p)) (seq2 (p # 0) (@p))

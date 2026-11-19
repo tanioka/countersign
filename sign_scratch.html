@@ -1,0 +1,1292 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<title>Sign ブロックでゲーム</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+/* Scratch のように、ブロックを積むだけでゲームを作る。左: ブロック棚、中: スクリプト、右: できた Sign とプレビュー。 */
+:root{
+  --bg:#eef1f5; --panel:#f8f9fb; --card:#ffffff; --ink:#1b2430; --muted:#5d6b7a; --line:#c9d1db; --accent:#2155d4; --accent-ink:#fff;
+  --bad:#b3261e; --ok:#17794a; --shadow:0 1px 0 rgba(0,0,0,.25);
+  --c-var:#e8802a; --c-draw:#8b52d6; --c-ctl:#d9a21b; --c-op:#2fa05a; --c-in:#2d8ad6; --c-hat:#d6523f; --c-sp:#d64fa0;
+  --ui:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Noto Sans JP",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161b; --panel:#1a2027; --card:#222a33; --ink:#e5eaf0; --muted:#98a5b3; --line:#35414d; --accent:#7a9dff; --accent-ink:#0e1520;
+  --bad:#ff8a80; --ok:#6fd49c; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12161b; --panel:#1a2027; --card:#222a33; --ink:#e5eaf0; --muted:#98a5b3; --line:#35414d; --accent:#7a9dff; --accent-ink:#0e1520; --bad:#ff8a80; --ok:#6fd49c; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:14px;line-height:1.4;display:flex;flex-direction:column;
+  padding:10px max(12px,env(safe-area-inset-right)) 10px max(12px,env(safe-area-inset-left));gap:8px;min-height:100%}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+h1{font-size:17px;margin:0;font-weight:650}
+.tools{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 10px;min-height:32px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:default}
+label.chk{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted)}
+main{flex:1;display:grid;grid-template-columns:270px minmax(320px,1fr) 340px;gap:8px;min-height:560px}
+@media(max-width:1000px){main{grid-template-columns:1fr;}}
+.col{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:auto;min-height:0}
+#palette{padding:8px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;max-height:calc(100vh - 80px)}
+#palette>*{flex-shrink:0}
+#palette .cblk{align-self:stretch}
+#palette .varbox{align-self:stretch}
+#palette h3{font-size:12px;margin:10px 0 3px;color:var(--muted);font-weight:600;letter-spacing:.04em}
+#palette h3:first-child{margin-top:0}
+#ws{position:relative;min-height:560px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:18px 18px}
+#wsin{position:relative;min-width:900px;min-height:900px}
+.script{position:absolute;display:flex;flex-direction:column;align-items:flex-start}
+.script.orphan{opacity:.55}
+.script .note{font-size:11px;color:var(--bad);margin:2px 0 0 2px}
+
+/* ブロック */
+.blk{--c:var(--c-var);position:relative;display:flex;align-items:center;flex-wrap:wrap;gap:4px 5px;background:var(--c);color:#fff;
+  padding:5px 9px;min-height:30px;font-size:13px;font-weight:600;border-radius:5px;cursor:grab;user-select:none;touch-action:none;white-space:nowrap;
+  box-shadow:var(--shadow)}
+.blk.var{--c:var(--c-var)} .blk.draw{--c:var(--c-draw)} .blk.ctl{--c:var(--c-ctl)} .blk.op{--c:var(--c-op)} .blk.inp{--c:var(--c-in)} .blk.hat{--c:var(--c-hat)} .blk.sprite{--c:var(--c-sp)}
+.blk.hat{border-radius:16px 16px 5px 5px;padding-top:9px;font-size:14px}
+.blk.cmd{border-top-left-radius:2px;border-top-right-radius:2px}
+.blk.num{border-radius:15px;padding:2px 8px;min-height:24px;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.blk.bool{border-radius:4px;clip-path:polygon(9px 0,calc(100% - 9px) 0,100% 50%,calc(100% - 9px) 100%,9px 100%,0 50%);padding:2px 15px;min-height:24px;box-shadow:none}
+.stack{display:flex;flex-direction:column;align-items:flex-start;min-width:30px}
+.stack>.blk+.blk,.stack>.blk+.cblk,.stack>.cblk+.blk,.stack>.cblk+.cblk{margin-top:2px}
+.cblk{--c:var(--c-ctl);display:flex;flex-direction:column;align-items:stretch}
+.cblk>.head{border-radius:5px 5px 0 0}
+.cblk>.mid{border-radius:0;min-height:24px}
+.cblk>.arm{margin-left:14px;border-left:10px solid var(--c);padding:3px 0 3px 4px;min-height:30px;background:rgba(127,127,127,.10)}
+.cblk>.foot{height:12px;background:var(--c);border-radius:0 0 5px 5px}
+.cblk.var{--c:var(--c-var)} .cblk.ctl{--c:var(--c-ctl)}
+.blk .slot{display:inline-flex;align-items:center;min-width:26px;min-height:22px}
+.blk .slot.empty-bool{background:rgba(0,0,0,.22);border-radius:4px;min-width:34px;height:22px;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,8px 100%,0 50%)}
+.blk input[type=text]{width:46px;border:0;border-radius:11px;padding:1px 6px;background:#fff;color:#1b2430;font-weight:600;text-align:center;min-height:22px}
+.blk input[type=color]{width:34px;height:22px;border:2px solid #fff;border-radius:4px;padding:0;background:none}
+.blk select{border:0;border-radius:11px;padding:1px 4px;background:#fff;color:#1b2430;font-weight:600;min-height:22px}
+.blk .lbl{opacity:.97}
+.hl{outline:3px solid #fff;outline-offset:1px;box-shadow:0 0 0 5px var(--accent)}
+.gap-line{position:fixed;height:5px;background:var(--accent);border-radius:3px;pointer-events:none;z-index:50;box-shadow:0 0 0 2px #fff}
+#ghost{position:fixed;pointer-events:none;z-index:100;opacity:.92;transform:rotate(-1.5deg);filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
+.varbox{display:flex;gap:4px;margin:2px 0 4px}
+.varbox input{flex:1;min-width:0;border:1px solid var(--line);border-radius:5px;padding:3px 6px;background:var(--card)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:3px}
+.chip{background:var(--c-var);color:#fff;border-radius:11px;padding:1px 4px 1px 9px;font-size:12px;font-weight:600;display:flex;gap:4px;align-items:center}
+.chip button{border:0;background:rgba(0,0,0,.25);color:#fff;border-radius:50%;width:16px;height:16px;line-height:14px;padding:0;font-size:11px}
+/* 右 */
+#side{display:flex;flex-direction:column;gap:8px;padding:8px}
+#stage{width:100%;image-rendering:pixelated;background:#000;border:1px solid var(--line);border-radius:6px;aspect-ratio:1/1;object-fit:contain}
+pre#code{margin:0;font-family:var(--mono);font-size:12px;line-height:1.45;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px;
+  overflow:auto;max-height:340px;white-space:pre;tab-size:2}
+.status{font-size:12px;color:var(--muted);min-height:18px;word-break:break-all}
+.status.bad{color:var(--bad)} .status.ok{color:var(--ok)}
+.cmdline{font-family:var(--mono);font-size:11.5px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:5px 8px;word-break:break-all;user-select:all}
+.sprow{align-self:stretch;display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:3px 5px}
+.sprow canvas{width:32px;height:32px;image-rendering:pixelated;background:repeating-conic-gradient(#8884 0 25%,transparent 0 50%) 0 0/8px 8px;border-radius:3px;flex:none}
+.sprow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.sprow button{min-height:26px;padding:2px 7px}
+.spbtns{display:flex;gap:4px;flex-wrap:wrap;align-self:stretch;margin:2px 0 4px}
+.spbtns .btn{min-height:26px;padding:2px 8px;font-size:12px}
+dialog#spdlg{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px;width:min(600px,94vw);max-height:94vh;overflow:auto}
+dialog#spdlg::backdrop{background:rgba(0,0,0,.45)}
+.dlgrow{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-bottom:8px}
+.dlgrow input[type=text],.dlgrow input[type=number]{border:1px solid var(--line);border-radius:5px;padding:3px 6px;background:var(--card);min-height:28px}
+.dlgrow input[type=number]{width:60px}
+.dlgmain{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
+canvas#spcv{image-rendering:pixelated;border:1px solid var(--line);touch-action:none;cursor:crosshair;max-width:100%;background:var(--card)}
+.swatches{display:grid;grid-template-columns:repeat(8,28px);gap:4px}
+.sw{width:28px;height:28px;border:2px solid var(--line);border-radius:5px;padding:0}
+.sw[aria-pressed=true],.btn[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tabs .btn{min-width:32px;padding:3px 8px}
+details summary{cursor:pointer;font-size:12px;color:var(--muted)}
+</style>
+</head><body>
+
+<header>
+  <h1>Sign ブロックでゲーム <small style="font-weight:400;color:var(--muted)">ブロックを積むだけ</small></h1>
+  <div class="tools">
+    <label class="chk" id="autolbl"><input type="checkbox" id="auto"> ゲーム機へ自動で反映</label>
+    <button class="btn" id="btnPrev" title="30 こま動かした画面を見る(サーバー版)">▶ プレビュー</button>
+    <button class="btn" id="btnSn">.sn を保存</button>
+    <button class="btn" id="btnJson">作品を保存</button>
+    <button class="btn" id="btnLoad">作品を開く</button>
+    <button class="btn" id="btnEx">見本に戻す</button>
+    <input type="file" id="file" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<main>
+  <aside class="col" id="palette" aria-label="ブロック棚"></aside>
+  <section class="col" id="ws" aria-label="スクリプト"><div id="wsin"></div></section>
+  <aside class="col" id="side">
+    <img id="stage" alt="プレビュー" hidden>
+    <div class="status" id="status"></div>
+    <div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:3px">ゲーム機で動かす(保存先に反映されます)</div>
+      <div class="cmdline" id="cmdline">python3 sign_console.py sign_projects/blocks_game.sn --display=window:5:96x96</div>
+    </div>
+    <details open><summary>できた Sign</summary><pre id="code"></pre></details>
+  </aside>
+</main>
+
+<dialog id="spdlg" aria-label="スプライトの絵">
+  <div class="dlgrow">
+    <label>名前 <input type="text" id="spName" maxlength="12"></label>
+    <label>幅 <input type="number" id="spW" min="1" max="16"></label>
+    <label>高さ <input type="number" id="spH" min="1" max="16"></label>
+    <button class="btn" id="spClose" style="margin-left:auto">閉じる</button>
+  </div>
+  <div class="dlgrow"><span style="font-size:12px;color:var(--muted)">見た目</span><div class="tabs" id="spTabs"></div>
+    <button class="btn" id="spAddC" title="白紙の見た目を足す">＋</button>
+    <button class="btn" id="spDupC" title="いまの見た目を複製">複製</button>
+    <button class="btn" id="spDelC" title="いまの見た目を消す">消す</button></div>
+  <div class="dlgmain">
+    <canvas id="spcv" aria-label="ドット絵のキャンバス"></canvas>
+    <div>
+      <div class="swatches" id="spSw" role="group" aria-label="色"></div>
+      <div class="dlgrow" style="margin-top:8px">
+        <button class="btn" id="tPen" aria-pressed="true">ペン</button>
+        <button class="btn" id="tEr" aria-pressed="false">消しゴム</button>
+        <button class="btn" id="tFill" aria-pressed="false">バケツ</button>
+      </div>
+      <div class="dlgrow">
+        <button class="btn" id="spFlipH">左右反転</button>
+        <button class="btn" id="spFlipV">上下反転</button>
+        <button class="btn" id="spClear">ぜんぶ消す</button>
+      </div>
+      <div class="status" id="spMsg" style="max-width:240px">1 画素ずつ色をぬります。透明の画素は何も描きません。</div>
+    </div>
+  </div>
+</dialog>
+
+<script id="gen">
+/* ---------- コード生成(画面に触らない純粋な部分。試験は test_scratch.py がこの部分だけ取り出して走らせる) ---------- */
+const GEN = (() => {
+  const VARS0 = 0x200000;
+  const KEYS = {left: 0x1C, right: 0x1D, up: 0x1E, down: 0x1F, space: 32};
+  for (let c = 97; c <= 122; c++) KEYS[String.fromCharCode(c)] = c;
+  const keyCode = k => KEYS[k] ?? 32;
+
+  const FONT5 = {33:0x108421004,34:0x294A00000,35:0x295F57D4A,36:0x11F4717C4,37:0x672222273,38:0x32544564D,39:0x108800000,40:0x88842082,41:0x208210888,42:0x9575480,43:0x84F9080,44:0x3088,45:0xF8000,46:0x18C,47:0x2222200,48:0x3A33AE62E,49:0x11842108E,50:0x3A211111F,51:0x7C441062E,52:0x8CA97C42,53:0x7E1E0862E,54:0x1910F462E,55:0x7C2222108,56:0x3A317462E,57:0x3A317844C,58:0x18C03180,59:0x18C03088,60:0x88882082,61:0x1F07C00,62:0x208208888,63:0x3A2111004,64:0x3A37ADE0E,65:0x3A31FC631,66:0x7A31F463E,67:0x3A308422E,68:0x72518C65C,69:0x7E10F421F,70:0x7E10F4210,71:0x3A30BC62F,72:0x4631FC631,73:0x38842108E,74:0x1C4210A4C,75:0x4654C5251,76:0x42108421F,77:0x4775AC631,78:0x4639ACE31,79:0x3A318C62E,80:0x7A31F4210,81:0x3A318D64D,82:0x7A31F5251,83:0x3E107043E,84:0x7C8421084,85:0x46318C62E,86:0x46318C544,87:0x4631AD771,88:0x462A22A31,89:0x462A21084,90:0x7C222221F,91:0x39084210E,92:0x20820820,93:0x38421084E,94:0x115100000,95:0x1F,96:0x208200000,97:0xE0BE2F,98:0x4216CC63E,99:0xE8422E,100:0x42D9C62F,101:0xE8FE0E,102:0x1928E2108,103:0x1F18BC2E,104:0x4216CC631,105:0x100C2108E,106:0x80610A4C,107:0x4212A6292,108:0x30842108E,109:0x1AAD6B5,110:0x16CC631,111:0xE8C62E,112:0x1E8FA10,113:0xD9BC21,114:0x16CC210,115:0xF8383E,116:0x211C42126,117:0x118C66D,118:0x118C544,119:0x118D6AA,120:0x1151151,121:0x2318BC2E,122:0x1F1111F,123:0xC8441083,124:0x108421084,125:0x608411098,126:0x9B0000};   // 5×7 の字の形(font.sn と同じ 35 ビットの数。32 の空白は無し)
+  const PRELUDE = `\`ブロックで作ったゲーム(sign_scratch.html が作りました)。\`
+\`  python3 sign_console.py <このファイル> --display=window:5:96x96\`
+\`  tick は毎こま、init は始めに 1 回。画面は毎こまの終わりに自動で出します\`
+
+gfx : 0x9100000
+inp : 0x9300000
+color : gfx + 0x08
+px : gfx + 0x0C
+py : gfx + 0x10
+cmd : gfx + 0x14
+arg0 : gfx + 0x18
+arg1 : gfx + 0x1C
+tmid : 0x9200008
+tmafter : 0x920000C
+tmevery : 0x9200010
+tmcancel : 0x9200014
+src : gfx + 0x28
+scale : gfx + 0x30
+flip : gfx + 0x34
+count : inp + 0x00
+etype : inp + 0x04
+ecode : inp + 0x08
+pop : inp + 0x14
+SEED : 0x1FFFF0
+TMV : 0x1FFFD4
+MQN : 0x1FFFD8
+MQB : 0x1FFC00
+QUIT : 0x1FFFF4
+MX : 0x1FFFE0
+MY : 0x1FFFE4
+MB : 0x1FFFE8
+
+seq2 : a b ? b
+seq3 : a b c ? c
+seq4 : a b c d ? d
+seq5 : a b c d e ? e
+seq6 : a b c d e f ? f
+seq7 : a b c d e f g ? g
+seq8 : a b c d e f g h ? h
+seq9 : a b c d e f g h i ? i
+seq10 : a b c d e f g h i j ? j
+
+ab : v ?
+	v < 0 : 0 - v
+	v
+mx2 : a b ?
+	a > b : a
+	b
+mn2 : a b ?
+	a < b : a
+	b
+ne : a b ?
+	a < b : 1
+	a > b : 1
+	(1 < 0)
+
+clear : c ? seq2 (color # c) (cmd # 2)
+rect : x y w h c ? seq8 (color # c) (px # x) (py # y) (arg0 # w) (arg1 # h) (cmd # 5) 0 0
+line : x y x2 y2 c ? seq8 (color # c) (px # x) (py # y) (arg0 # x2) (arg1 # y2) (cmd # 4) 0 0
+present : z ? cmd # 3
+
+mask : d ?
+	d = 0 : 63
+	d = 1 : 6
+	d = 2 : 91
+	d = 3 : 79
+	d = 4 : 102
+	d = 5 : 109
+	d = 6 : 125
+	d = 7 : 7
+	d = 8 : 127
+	111
+seg : m k x y w h c ?
+	(((m / k) % 2) = 1) : rect x y w h c
+	0
+digit : d x y c ? seq8 (seg (mask d) 1 x y 3 1 c) (seg (mask d) 2 (x + 2) y 1 3 c) (seg (mask d) 4 (x + 2) (y + 2) 1 3 c) (seg (mask d) 8 x (y + 4) 3 1 c) (seg (mask d) 16 x (y + 2) 1 3 c) (seg (mask d) 32 x y 1 3 c) (seg (mask d) 64 x (y + 2) 3 1 c) 0
+number : v x y c ? seq4 (digit ((v / 1000) % 10) x y c) (digit ((v / 100) % 10) (x + 4) y c) (digit ((v / 10) % 10) (x + 8) y c) (digit (v % 10) (x + 12) y c)
+
+rnd2 : n s ? seq2 (SEED # s) ((s / 65536) % n)
+rnd : n ? rnd2 n ((((@SEED) * 1103515245) + 12345) % 2147483648)
+
+drain : q ?
+	@count = 0 : q
+	@etype = 6 : seq2 (pop # 0) (0 - 1)
+	@etype = 1 & @ecode = 113 : seq2 (pop # 0) (0 - 1)
+	seq2 (pop # 0) (drain q)
+fin : z ?
+	(@QUIT) = 1 : 0 - 1
+	drain 0
+chk : z ?
+	(@QUIT) = 1 : 0 - 1
+	0
+`;
+
+  /* スプライト: 絵は 1 画素 1 語(0xRRGGBB、透明は -1)で番地に置き、装置の BLIT(命令 6)で描く。
+     状態(x y 大きさ 向き 見た目 表示)は 1 つにつき 6 語、番地 SPB + 32*番号。 */
+  const SPB = 0x1F0000, ARTV = 0x1FFFD0, IMG0 = 0x400000, MAXSP = 16, MAXSIDE = 16;
+  const PAL16 = ["#000000", "#ffffff", "#e0453a", "#f0912a", "#f5d90a", "#3fb950", "#1f8a70", "#2aa8e0",
+                 "#2155d4", "#7a4bd8", "#c24ec4", "#ff9fb2", "#8a5a2b", "#d9b38c", "#8892a0", "#3a3f48"];
+  const PALCH = "abcdefghijklmnop";                                   // 絵の文字: . は透明、a〜p が上の 16 色
+  const SPLIB = `pcol : ch ?
+${PALCH.split("").map((c, i) => `\tch = 0u${c.charCodeAt(0).toString(16).toUpperCase()} : 0x${PAL16[i].slice(1).toUpperCase()}`).join("\n")}
+	0 - 1
+ldrow : base w r s i ?
+	i >= ||s|| : 0
+	seq2 (((base + (((r * w) + i) * 4)) # (pcol (s ' i))) | 0) (ldrow base w r s (i + 1))
+ldart : base w h rows r ?
+	r >= h : 0
+	seq2 (ldrow base w r (rows ' r) 0) (ldart base w h rows (r + 1))
+ovl : a aw b bw ?
+	((a < (b + bw)) & (b < (a + aw))) : 1
+	(1 < 0)
+`;
+  const clampSide = v => Math.max(1, Math.min(MAXSIDE, Math.trunc(Number(v)) || 1));
+  const cleanSprite = s => {                                          // 絵の形を整える(幅・高さに合わせ、知らない文字は透明)
+    const w = clampSide(s.w), h = clampSide(s.h);
+    let cs = Array.isArray(s.costumes) && s.costumes.length ? s.costumes.slice(0, 16) : [[]];
+    cs = cs.map(rows => { rows = Array.isArray(rows) ? rows : []; const out = [];
+      for (let r = 0; r < h; r++) { const row = String(rows[r] || ""); let t = ""; for (let c = 0; c < w; c++) { const ch = row[c]; t += ch && PALCH.includes(ch) ? ch : "."; } out.push(t); }
+      return out; });
+    return {name: String(s.name || ""), w, h, costumes: cs};
+  };
+  const hashOf = str => { let h = 5381; for (let i = 0; i < str.length; i++) h = (Math.imul(h, 33) ^ str.charCodeAt(i)) >>> 0; return (h % 2147483000) + 1; };
+
+  const lit = v => { let n = Math.trunc(Number(v)); if (!Number.isFinite(n)) n = 0; return n < 0 ? `(0 - ${-n})` : String(n); };
+  const col = v => { const m = /^#([0-9a-fA-F]{6})$/.exec(String(v || "")); return m ? "0x" + m[1].toUpperCase() : "0x000000"; };
+
+  function generate(proj) {
+    const vars = [...(proj.vars || [])];
+    const helpers = [];
+    let nh = 0;
+    const vidx = name => { let i = vars.indexOf(name); if (i < 0) { vars.push(name); i = vars.length - 1; } return i; };
+    const vn = name => "v" + (vidx(name) + 1);                       // 変数 i 番目の番地の名前(v1, v2, …)
+    const msgs = [...(proj.msgs || [])];
+    const mi = name => { let i = msgs.indexOf(name); if (i < 0) { msgs.push(name); i = msgs.length - 1; } return i; };
+    let usedSend = false, usedClone = false;
+    const textBlocks = [];                                           // 「文字」ブロックごとの文(関数 ftN を作る)
+    const ctx = [];                                                    // 「このクローン」が指す先 {i: スプライト番号, cell: 何番目かを入れた番地の名前}。各クローンについて・できたとき の中だけ有効
+    let fdepth = 0;
+    const CLB = 0x1F4000, CLS = 0x200, CLN = 16;                       // クローンの枠: スプライト i の k 番目 = CLB + 0x200*i + 32*k(x y 大きさ 向き 見た目 表示 いる)
+    const hx = n => "0x" + n.toString(16).toUpperCase();
+    const cadr = (i, f, slot) => `(${hx(CLB + CLS * i + f)} + (${slot} * 32))`;
+    const cfld = (i, f, slot) => `(@${cadr(i, f, slot)})`;
+    const FX = 0, FY = 4, FS = 8, FF = 12, FC = 16, FH = 20, FA = 24;
+    const sprites = (proj.sprites || []).slice(0, MAXSP).map(cleanSprite);
+    let imgOff = IMG0;
+    const lay = sprites.map(s => { const o = {base: imgOff, n: s.costumes.length}; imgOff += 4 * s.w * s.h * s.costumes.length; return o; });
+    const spi = name => { const i = sprites.findIndex(s => s.name === name); return i < 0 ? 0 : i; };   // 名前が見つからなければ最初のスプライト
+    const SP = (name, k) => `S${spi(name) + 1}${k}`;                  // X Y S(大きさ) F(向き) C(見た目) H(表示)
+
+    function ex(e) {                                                  // 数の式
+      if (!e) return "0";
+      switch (e.t) {
+        case "n": return lit(e.v);
+        case "c": return col(e.v);
+        case "v": return `(@${vn(e.v)})`;
+        case "op": {
+          const a = ex(e.a), b = ex(e.b);
+          if (e.o === "/") return `((${a} / ${b}) | 0)`;
+          if (e.o === "%") return `((${a} % ${b}) | 0)`;
+          if (e.o === "min") return `(mn2 ${a} ${b})`;
+          if (e.o === "max") return `(mx2 ${a} ${b})`;
+          return `(${a} ${e.o} ${b})`;
+        }
+        case "abs": return `(ab ${ex(e.a)})`;
+        case "rand": return `((rnd ${ex(e.a)}) | 0)`;
+        case "sp": {
+          if (!sprites.length) return "0";
+          const i = spi(e.s), sp = sprites[i];
+          switch (e.p) {
+            case "x": return `(@${SP(e.s, "X")})`;
+            case "y": return `(@${SP(e.s, "Y")})`;
+            case "scale": return `(@${SP(e.s, "S")})`;
+            case "costume": return `(((@${SP(e.s, "C")}) % ${lay[i].n}) + 1)`;
+            case "w": return `(${sp.w} * (@${SP(e.s, "S")}))`;
+            case "h": return `(${sp.h} * (@${SP(e.s, "S")}))`;
+            default: return "0";
+          }
+        }
+        case "cl": {
+          const c = ctx[ctx.length - 1]; if (!c || !sprites.length) return "0"; usedClone = true;
+          const sl = `(@${c.cell})`, sp = sprites[c.i];
+          switch (e.p) {
+            case "x": return cfld(c.i, FX, sl);
+            case "y": return cfld(c.i, FY, sl);
+            case "scale": return cfld(c.i, FS, sl);
+            case "costume": return `((${cfld(c.i, FC, sl)} % ${lay[c.i].n}) + 1)`;
+            case "w": return `(${sp.w} * ${cfld(c.i, FS, sl)})`;
+            case "h": return `(${sp.h} * ${cfld(c.i, FS, sl)})`;
+            default: return "0";
+          }
+        }
+        case "clcount": if (!sprites.length) return "0"; usedClone = true; return `(clcnt${spi(e.s) + 1} 0)`;
+        case "mx": return "(@MX)";
+        case "my": return "(@MY)";
+        case "mb": return "(@MB)";
+        default: return "0";
+      }
+    }
+    const NEG = {"<": ">=", ">": "<=", "<=": ">", ">=": "<"};
+    function cond(b, neg) {                                           // 条件(行の左に置く形)。neg なら「でない」
+      if (!b) return neg ? "(0 = 0)" : "(0 = 1)";
+      switch (b.t) {
+        case "cmp": {
+          const a = ex(b.a), c = ex(b.b);
+          if (b.o === "!=") return neg ? `(${a} = ${c})` : `(ne ${a} ${c})`;
+          if (b.o === "=") return neg ? `(ne ${a} ${c})` : `(${a} = ${c})`;
+          return `(${a} ${neg ? NEG[b.o] : b.o} ${c})`;
+        }
+        case "cltouch": case "cltouchc": {
+          const c = ctx[ctx.length - 1];
+          if (!c || !sprites.length) return neg ? "(0 = 0)" : "(0 = 1)";
+          usedClone = true;
+          const i = c.i, j = spi(b.s), A = sprites[i], B = sprites[j], d = c.cell, many = b.t === "cltouchc";
+          const name = `${many ? "ctc" : "ctb"}${i + 1}_${j + 1}_${d}`;
+          if (!helpers.some(h => h.startsWith(name + " :"))) {
+            const sl = `(@${d})`;
+            const me = `(((${cfld(i, FA, sl)} = 1) & (${cfld(i, FH, sl)} = 1))`;
+            const mine = (ow, bw) => `(ovl ${cfld(i, FX, sl)} (${A.w} * ${cfld(i, FS, sl)}) ${ow.x} (${B.w} * ${ow.s})) & (ovl ${cfld(i, FY, sl)} (${A.h} * ${cfld(i, FS, sl)}) ${ow.y} (${B.h} * ${ow.s}))`;
+            if (!many) {
+              const o = {x: `(@S${j + 1}X)`, y: `(@S${j + 1}Y)`, s: `(@S${j + 1}S)`};
+              helpers.push(`${name} : z ?\n\t${me} & (((@S${j + 1}H) = 1) & (${mine(o)}))) : 1\n\t0`);
+            } else {
+              const o = {x: cfld(j, FX, "k"), y: cfld(j, FY, "k"), s: cfld(j, FS, "k")};
+              helpers.push(`${name}l : k ?\n\tk >= ${CLN} : 0\n\t${me} & (((${cfld(j, FA, "k")} = 1) & (${cfld(j, FH, "k")} = 1)) & (${mine(o)}))) : 1\n\t${name}l (k + 1)`);
+              helpers.push(`${name} : z ? ${name}l 0`);
+            }
+          }
+          return `((${name} 0) = ${neg ? 0 : 1})`;
+        }
+        case "touch": {
+          if (sprites.length < 1) return neg ? "(0 = 0)" : "(0 = 1)";
+          const i = spi(b.a), j = spi(b.b), name = `touch${i + 1}_${j + 1}`;
+          if (!helpers.some(h => h.startsWith(name + " :"))) {
+            const A = sprites[i], B = sprites[j];
+            const sc = n => `(@${SP(n === 0 ? b.a : b.b, "S")})`;
+            helpers.push(`${name} : z ?\n\t((((@${SP(b.a, "H")}) = 1) & ((@${SP(b.b, "H")}) = 1)) & ((ovl (@${SP(b.a, "X")}) (${A.w} * ${sc(0)}) (@${SP(b.b, "X")}) (${B.w} * ${sc(1)})) & (ovl (@${SP(b.a, "Y")}) (${A.h} * ${sc(0)}) (@${SP(b.b, "Y")}) (${B.h} * ${sc(1)})))) : 1\n\t0`);
+          }
+          return `((${name} 0) = ${neg ? 0 : 1})`;
+        }
+        case "key": return `((@(inp + ${0x100 + 4 * keyCode(b.k)})) = ${neg ? 0 : 1})`;
+        case "and": return neg ? `(${cond(b.a, true)} | ${cond(b.b, true)})` : `(${cond(b.a, false)} & ${cond(b.b, false)})`;
+        case "or": return neg ? `(${cond(b.a, true)} & ${cond(b.b, true)})` : `(${cond(b.a, false)} | ${cond(b.b, false)})`;
+        case "not": return cond(b.a, !neg);
+        default: return neg ? "(0 = 0)" : "(0 = 1)";
+      }
+    }
+    function seqOf(parts) {                                           // 式の並びを左から順に評価して最後の値を返す(10 個を越えたら入れ子)
+      if (parts.length === 0) return "0";
+      if (parts.length === 1) return parts[0];
+      if (parts.length <= 10) return `(seq${parts.length} ${parts.join(" ")})`;
+      return `(seq10 ${parts.slice(0, 9).join(" ")} ${seqOf(parts.slice(9))})`;
+    }
+    const safe = s => `(${s} | 0)`;                                   // 単位 __ を引数に渡すと関数が死ぬので、どの文も 0 以上の値で返す
+    function st(s) {                                                  // 1 つのブロック
+      switch (s.t) {
+        case "set": return safe(`(${vn(s.v)} # ${ex(s.e)})`);
+        case "change": return safe(`(${vn(s.v)} # ((@${vn(s.v)}) + ${ex(s.e)}))`);
+        case "clear": return safe(`(clear ${ex(s.c)})`);
+        case "rect": return safe(`(rect ${ex(s.x)} ${ex(s.y)} ${ex(s.w)} ${ex(s.h)} ${ex(s.c)})`);
+        case "line": return safe(`(line ${ex(s.x)} ${ex(s.y)} ${ex(s.x2)} ${ex(s.y2)} ${ex(s.c)})`);
+        case "num": return safe(`(number (ab ${ex(s.e)}) ${ex(s.x)} ${ex(s.y)} ${ex(s.c)})`);
+        case "text": {                                                    // 文字(5×7)。文字ごとに fch を呼ぶ関数 ftN を作り、x y 倍率 色 は 1 回だけ評価して渡す
+          const chars = [...String(s.txt == null ? "" : s.txt)].map(ch => ch.charCodeAt(0)).filter(c => c >= 32 && c <= 126);
+          if (!chars.length) return "0";
+          const id = textBlocks.length + 1; textBlocks.push(chars);
+          return safe(`(ft${id} ${ex(s.x)} ${ex(s.y)} ${ex(s.k)} ${ex(s.c)})`);
+        }
+        case "stop": return safe(`(QUIT # 1)`);
+        case "send": {                                                   // メッセージを待ち行列に入れる(値 = 名前の番号 × 32 + 宛先。0 は みんな、k は k 番目のスプライト)
+          usedSend = true;
+          const k = sprites.findIndex(x => x.name === s.to);
+          return safe(`(msend ${mi(s.m) * 32 + (k < 0 ? 0 : k + 1)})`);
+        }
+        case "clmake": if (!sprites.length) return "0"; usedClone = true; return safe(`(clmake${spi(s.s) + 1} ${ex(s.x)} ${ex(s.y)})`);
+        case "cldelall": if (!sprites.length) return "0"; usedClone = true; return safe(`(clclr${spi(s.s) + 1} 0)`);
+        case "clfor": {
+          if (!sprites.length || fdepth >= 3) return "0";
+          usedClone = true;
+          const i = spi(s.s), cell = "CK" + fdepth, name = "blk" + (++nh), inner = "blk" + (++nh);
+          fdepth++; ctx.push({i, cell});
+          const body = seqOf((s.body || []).map(st));
+          ctx.pop(); fdepth--;
+          helpers.push(`${inner} : z ?\n\t(${cfld(i, FA, `(@${cell})`)} = 1) : ${body}\n\t0`);
+          helpers.push(`${name} : i ?\n\t(i >= ${CLN}) : 0\n\t(seq3 ((${cell} # i) | 0) (${inner} 0) 0) : ${name} (i + 1)`);
+          return safe(`(${name} 0)`);
+        }
+        case "cldel": case "clset": case "clmove": case "clnext": case "cldraw": {
+          const c = ctx[ctx.length - 1]; if (!c || !sprites.length) return "0";
+          usedClone = true;
+          const sl = `(@${c.cell})`, w = (f, v) => safe(`(${cadr(c.i, f, sl)} # ${v})`);
+          if (s.t === "cldel") return w(FA, 0);
+          if (s.t === "cldraw") return safe(`(cldraw${c.i + 1} ${sl})`);
+          if (s.t === "clnext") return w(FC, `((${cfld(c.i, FC, sl)} + 1) % ${lay[c.i].n})`);
+          if (s.t === "clset") return seqOf([w(FX, ex(s.x)), w(FY, ex(s.y))]);
+          return seqOf([w(FX, `(${cfld(c.i, FX, sl)} + ${ex(s.x)})`), w(FY, `(${cfld(c.i, FY, sl)} + ${ex(s.y)})`)]);
+        }
+        case "spdraw": return sprites.length ? safe(`(sdraw${spi(s.s) + 1} 0)`) : "0";
+        case "spset": return sprites.length ? seqOf([safe(`(${SP(s.s, "X")} # ${ex(s.x)})`), safe(`(${SP(s.s, "Y")} # ${ex(s.y)})`)]) : "0";
+        case "spmove": return sprites.length ? seqOf([safe(`(${SP(s.s, "X")} # ((@${SP(s.s, "X")}) + ${ex(s.x)}))`), safe(`(${SP(s.s, "Y")} # ((@${SP(s.s, "Y")}) + ${ex(s.y)}))`)]) : "0";
+        case "spscale": return sprites.length ? safe(`(${SP(s.s, "S")} # (mx2 1 (mn2 ${MAXSIDE} ${ex(s.e)})))`) : "0";
+        case "spflip": return sprites.length ? safe(`(${SP(s.s, "F")} # ${Math.max(0, Math.min(3, Math.trunc(Number(s.f)) || 0))})`) : "0";
+        case "spcost": return sprites.length ? safe(`(${SP(s.s, "C")} # (mx2 0 (${ex(s.e)} - 1)))`) : "0";
+        case "spnext": return sprites.length ? safe(`(${SP(s.s, "C")} # (((@${SP(s.s, "C")}) + 1) % ${lay[spi(s.s)].n}))`) : "0";
+        case "spshow": return sprites.length ? safe(`(${SP(s.s, "H")} # ${s.show === 0 || s.show === "0" ? 0 : 1})`) : "0";
+        case "if": {
+          const name = "blk" + (++nh);
+          const t = seqOf((s.then || []).map(st)), e = seqOf((s.else || []).map(st));
+          helpers.push(`${name} : z ?\n\t${cond(s.c)} : ${t}\n\t${e}`);
+          return safe(`(${name} 0)`);
+        }
+        case "for": {
+          const name = "blk" + (++nh);
+          const body = seqOf((s.body || []).map(st));
+          helpers.push(`${name} : i ?\n\t(i >= ${ex(s.n)}) : 0\n\t(seq3 (${vn(s.v)} # i) ${body} 0) : ${name} (i + 1)`);
+          return safe(`(${name} 0)`);
+        }
+        default: return "0";
+      }
+    }
+    const byY = (a, b) => (a.y - b.y) || (a.x - b.x);
+    const of = hat => (proj.scripts || []).filter(s => s.hat === hat).sort(byY).flatMap(s => s.body || []).map(st);
+    const initParts = of("init"), tickParts = of("tick");
+    const hats = (h, k) => (proj.scripts || []).filter(s => s.hat === h && (k === undefined || s.k === k)).sort(byY).flatMap(s => s.body || []).map(st);
+    const keyFn = (hat, name) => {                                     // キーの帽子: 押されたキーごとの行
+      const ks = [...new Set((proj.scripts || []).filter(s => s.hat === hat).map(s => s.k || "left"))];
+      if (!ks.length) return null;
+      return `${name} : code ?\n` + ks.map(k => `\tcode = ${keyCode(k)} : ${seqOf([...hats(hat, k), "(chk 0)"])}`).join("\n") + "\n\t0";
+    };
+    const evFns = [keyFn("key", "on_key"), keyFn("keyup", "on_keyup")];
+    const clickParts = hats("click"), mouseParts = hats("mouse"), relParts = [];
+    if ((proj.scripts || []).some(s => s.hat === "click"))
+      evFns.push(`on_click : x y b ? ${seqOf([safe("(MX # x)"), safe("(MY # y)"), safe("(MB # b)"), ...clickParts, "(chk 0)"])}`);
+    if ((proj.scripts || []).some(s => s.hat === "mouse"))
+      evFns.push(`on_mouse : x y ? ${seqOf([safe("(MX # x)"), safe("(MY # y)"), ...mouseParts, "(chk 0)"])}`);
+    // 時計のアラーム: 「n ミリ秒ごと」「はじまって n ミリ秒後」の帽子。番号は上から 1, 2, …。設定のハッシュが変わると、次のこまで取り消して付け直す
+    const timerHats = (proj.scripts || []).filter(s => s.hat === "every" || s.hat === "after").sort(byY).slice(0, 16);
+    const tmMs = s => Math.max(s.hat === "every" ? 1 : 0, Math.trunc(Number(s.ms && s.ms.v)) || 0);
+    const tmHash = hashOf(JSON.stringify(timerHats.map(s => [s.hat, tmMs(s)])));
+    if (timerHats.length) evFns.push(`on_timer : id ?\n` + timerHats.map((s, i) => `\tid = ${i + 1} : ${seqOf([...(s.body || []).map(st), "(chk 0)"])}`).join("\n") + "\n\t0");
+    const tmInit = timerHats.length ? [safe("(tmchk 0)")] : [];
+    const tmDefs = () => !timerHats.length ? "" : "`時計のアラーム`\n" + `tmreg : z ? ${seqOf([...Array.from({length: 16}, (_, k) => safe(`(tmcancel # ${k + 1})`)),
+        ...timerHats.flatMap((s, i) => [safe(`(tmid # ${i + 1})`), safe(`(${s.hat === "every" ? "tmevery" : "tmafter"} # ${tmMs(s)})`)]), safe(`(TMV # ${tmHash})`)])}\ntmchk : z ?\n\t(@TMV) = ${tmHash} : 0\n\ttmreg 0\n\n`;
+    // クローン: 「クローンができたとき」の帽子(中では「このクローン」= 作られた枠。番地 CK3 に枠の番号を入れて走らせる)
+    const cloneHatBodies = sprites.map((_, i) => {
+      const hs = (proj.scripts || []).filter(s => s.hat === "onclone" && spi(s.s) === i).sort(byY);
+      if (!hs.length) return "0";
+      ctx.push({i, cell: "CK3"});
+      const body = seqOf([...hs.flatMap(h => (h.body || []).map(st)), "0"]);
+      ctx.pop(); return body;
+    });
+    const clDefs = () => {
+      if (!usedClone || !sprites.length) return "";
+      const out = ["`クローン(スプライトごとに 16 個の枠。枠の状態は 1 つにつき x y 大きさ 向き 見た目 表示 いる の 7 語、32 バイト刻み)`",
+                   ...[0, 1, 2, 3].map(d => `CK${d} : ${hx(0x1FFFC0 + 4 * d)}`), ""];
+      sprites.forEach((sp, i) => {
+        const n = i + 1, f = (g, k) => cfld(i, g, k);
+        out.push(`cldraw${n} : k ?\n\t${f(FH, "k")} = 1 : seq9 (px # ${f(FX, "k")}) (py # ${f(FY, "k")}) (arg0 # ${sp.w}) (arg1 # ${sp.h}) (src # (${hx(lay[i].base)} + ((${f(FC, "k")} % ${lay[i].n}) * ${4 * sp.w * sp.h}))) (scale # ${f(FS, "k")}) (flip # ${f(FF, "k")}) (cmd # 6) 0\n\t0`);
+        out.push(`clfree${n} : k ?\n\tk >= ${CLN} : 0 - 1\n\t${f(FA, "k")} = 1 : clfree${n} (k + 1)\n\tk`);
+        out.push(`clhat${n} : z ? ${cloneHatBodies[i]}`);
+        out.push(`clmk${n} : x y k o ?\n\tk < 0 : 0\n\t${seqOf([safe(`(${cadr(i, FX, "k")} # x)`), safe(`(${cadr(i, FY, "k")} # y)`), safe(`(${cadr(i, FS, "k")} # (@S${n}S))`), safe(`(${cadr(i, FF, "k")} # (@S${n}F))`),
+          safe(`(${cadr(i, FC, "k")} # (@S${n}C))`), safe(`(${cadr(i, FH, "k")} # 1)`), safe(`(${cadr(i, FA, "k")} # 1)`), safe("(CK3 # k)"), `(clhat${n} 0)`, safe("(CK3 # o)")])}`);
+        out.push(`clmake${n} : x y ? clmk${n} x y (clfree${n} 0) (@CK3)`);
+        out.push(`clclr${n} : k ?\n\tk >= ${CLN} : 0\n\tseq2 (((${cadr(i, FA, "k")}) # 0) | 0) (clclr${n} (k + 1))`);
+        out.push(`clcnt${n} : k ?\n\tk >= ${CLN} : 0\n\t${f(FA, "k")} = 1 : (1 + (clcnt${n} (k + 1)))\n\tclcnt${n} (k + 1)`);
+      });
+      return out.join("\n") + "\n\n";
+    };
+    // メッセージ: 受け取る帽子 → mhN(送られた値 v を見て、名前と宛先が合えば体を走らせる)。次のこまの頭(tick の始め)に待ち行列を読む
+    const msgHats = (proj.scripts || []).filter(s => s.hat === "onmsg").sort(byY);
+    const mhDefs = msgHats.map((s, i) => {
+      const M = mi(s.m), k = sprites.findIndex(x => x.name === s.me) + 1;
+      const c = k ? `(((v / 32) = ${M}) & (((v % 32) = 0) | ((v % 32) = ${k})))` : `((v / 32) = ${M})`;
+      return `mh${i + 1} : v ?\n\t${c} : ${seqOf([...(s.body || []).map(st), "0"])}\n\t0`;
+    });
+    const msgOn = () => usedSend || msgHats.length > 0;
+    const msgDefs = () => !msgOn() ? "" : "`メッセージ(送った物は待ち行列に入り、次のこまの頭に受け取る帽子が走る。64 個まで)`\n" + [
+      "msend : v ?\n\t(@MQN) >= 64 : 0\n\tseq3 (((MQB + ((@MQN) * 4)) # v) | 0) ((MQN # ((@MQN) + 1)) | 0) 0",
+      `onm : v ? ${seqOf([...msgHats.map((_, i) => `(mh${i + 1} v)`), "0"])}`,
+      "mcompact : j n m ?\n\t(n + j) >= m : ((MQN # (m - n)) | 0)\n\tseq2 (((MQB + (j * 4)) # (@(MQB + ((n + j) * 4)))) | 0) (mcompact (j + 1) n m)",
+      "mrun : i n ?\n\ti >= n : mcompact 0 n (@MQN)\n\tseq2 (onm (@(MQB + (i * 4)))) (mrun (i + 1) n)",
+      "mdisp : z ? mrun 0 (@MQN)", ...mhDefs].join("\n") + "\n\n";
+    const textDefs = () => {
+      if (!textBlocks.length) return "";
+      const used = [...new Set(textBlocks.flat())].filter(c => c !== 32).sort((a, b) => a - b);
+      const out = ["`文字(5×7 の字の形。35 ビットの数で、上の行から左から右へ。fch は 1 文字を型抜きで描いて次の x を返す)`", "FTB : 0x1FFE00",
+        "ffill : g i ?\n\ti > 34 : 0\n\t((FTB + (i * 4)) # ((g >> (34 - i)) && 1)) : ffill g (i + 1)\n\t0",
+        "fglyph : c ?\n" + used.map(c => `\tc = ${c} : ${hx(FONT5[c])}`).join("\n") + "\n\t0",
+        "fch : c x y k col ? seq9 (ffill (fglyph c) 0) (color # col) (px # x) (py # y) (arg0 # 5) (arg1 # 7) (src # FTB) (scale # k) (seq3 (flip # 4) (cmd # 6) ((flip # 0) | 0))"];
+      textBlocks.forEach((chars, i) => out.push(`ft${i + 1} : x y k col ? ${seqOf([...chars.map((c, j) => safe(`(fch ${c} (x + (${6 * j} * k)) y k col)`)), safe("(scale # 1)")])}`));
+      return out.join("\n") + "\n\n";
+    };
+    const events = evFns.filter(Boolean);
+    const varInit = vars.map((_, i) => null);                         // (変数は使われた分が増えるので、最後に作る)
+    let src = PRELUDE;
+    const body = [];
+    const artHash = hashOf(JSON.stringify(sprites.map(s => [s.w, s.h, s.costumes])));
+    const spInit = sprites.length ? [...sprites.flatMap((_, i) => [`${"S" + (i + 1)}X`, `${"S" + (i + 1)}Y`, `${"S" + (i + 1)}S`, `${"S" + (i + 1)}F`, `${"S" + (i + 1)}C`, `${"S" + (i + 1)}H`]
+        .map((c, k) => safe(`(${c} # ${[0, 0, 1, 0, 0, 1][k]})`))), safe("(artchk 0)")] : [];
+    const spTick = sprites.length ? [safe("(artchk 0)")] : [];       // 絵を直して保存すると、ハッシュが変わって次のこまで置き直す(続きから動いたまま絵が変わる)
+    const spDefs = () => {
+      if (!sprites.length) return "";
+      const consts = [`ARTV : 0x${ARTV.toString(16).toUpperCase()}`];
+      sprites.forEach((_, i) => ["X", "Y", "S", "F", "C", "H"].forEach((k, j) => consts.push(`S${i + 1}${k} : 0x${(SPB + 32 * i + 4 * j).toString(16).toUpperCase()}`)));
+      const arts = [], loads = [], draws = [];
+      sprites.forEach((s, i) => s.costumes.forEach((rows, c) => {
+        const cb = lay[i].base + 4 * s.w * s.h * c;
+        arts.push(`ART${i + 1}_${c + 1} : [${rows.map(r => "`" + r + "`").join(" , ")}]`);
+        loads.push(`(ldart 0x${cb.toString(16).toUpperCase()} ${s.w} ${s.h} ART${i + 1}_${c + 1} 0)`);
+      }));
+      sprites.forEach((s, i) => draws.push(`sdraw${i + 1} : z ?\n\t(@S${i + 1}H) = 1 : seq9 (px # (@S${i + 1}X)) (py # (@S${i + 1}Y)) (arg0 # ${s.w}) (arg1 # ${s.h}) (src # (0x${lay[i].base.toString(16).toUpperCase()} + ((((@S${i + 1}C) % ${lay[i].n}) * ${4 * s.w * s.h})))) (scale # (@S${i + 1}S)) (flip # (@S${i + 1}F)) (cmd # 6) 0\n\t0`));
+      return "`スプライトの絵(. は透明、a〜p は 16 色)と状態`\n" + consts.join("\n") + "\n\n" + SPLIB + "\n" + arts.join("\n") + "\n\n"
+        + `loadart : z ? ${seqOf([...loads, safe(`(ARTV # ${artHash})`)])}\nartchk : z ?\n\t(@ARTV) = ${artHash} : 0\n\tloadart 0\n\n` + draws.join("\n\n") + "\n\n";
+    };
+    const initFn = () => `init : z ? ${seqOf([safe(`(SEED # 12345)`), safe(`(QUIT # 0)`), safe(`(MX # 0)`), safe(`(MY # 0)`), safe(`(MB # 0)`), ...(msgOn() ? [safe("(MQN # 0)")] : []), ...(usedClone && sprites.length ? [...[0, 1, 2, 3].map(d => safe(`(CK${d} # 0)`)), ...sprites.map((_, i) => safe(`(clclr${i + 1} 0)`))] : []), ...spInit, ...(timerHats.length ? [safe("(TMV # 0)")] : []), ...tmInit, ...vars.map((_, i) => safe(`(v${i + 1} # 0)`)), ...initParts])}`;
+    const tickFn = () => `tick : z ? ${seqOf([...(msgOn() ? [safe("(mdisp 0)")] : []), ...spTick, ...tmInit, ...tickParts, safe("(present 0)"), events.length ? "(chk 0)" : "(fin 0)"])}`;   // 出来事の帽子があれば、ゲーム機が出来事を読む(自分で drain しない)
+    // 変数の番地(使われた順で増えるので、式の生成が済んだあとに並べる)
+    const init = initFn(), tick = tickFn();
+    const consts = vars.map((n, i) => `\`変数 ${n.replace(/`/g, "'")}\`\nv${i + 1} : ${"0x" + (VARS0 + 4 * i).toString(16).toUpperCase()}`).join("\n");
+    return src + "\n" + spDefs() + tmDefs() + msgDefs() + clDefs() + textDefs() + (consts ? consts + "\n\n" : "") + (helpers.length ? helpers.join("\n\n") + "\n\n" : "") + init + "\n\n" + tick + "\n" + (events.length ? "\n" + events.join("\n\n") + "\n" : "");
+  }
+  return {generate, keyCode, KEYS, PAL16, PALCH, MAXSP, MAXSIDE};
+})();
+if (typeof module !== "undefined") module.exports = GEN;
+</script>
+
+<script>
+(() => {
+"use strict";
+if (typeof document === "undefined") return;
+const $ = s => document.querySelector(s);
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const clone = o => JSON.parse(JSON.stringify(o));
+const SCREEN = "96x96";
+
+/* ---------- ブロックの定義 ---------- */
+const N = v => ({t: "n", v: String(v)});
+const C = v => ({t: "c", v});
+/* 部品: 文字列はそのまま。{n:名前} 数の穴、{b:名前} 真偽の穴、{c:名前} 色の穴、{v:名前} 変数の選び、{k:名前} キーの選び */
+const FLIPS = [["0", "ふつう"], ["1", "左右反転"], ["2", "上下反転"], ["3", "両方反転"]];
+const SPPROPS = [["x", "x"], ["y", "y"], ["scale", "大きさ"], ["costume", "見た目の番号"], ["w", "幅(画素)"], ["h", "高さ(画素)"]];
+const CMDS = {
+  set:    {cat: "var",  parts: [{v: "v"}, "を", {n: "e"}, "にする"], mk: () => ({t: "set", v: "", e: N(0)})},
+  change: {cat: "var",  parts: [{v: "v"}, "を", {n: "e"}, "ずつ変える"], mk: () => ({t: "change", v: "", e: N(1)})},
+  clear:  {cat: "draw", parts: ["画面を", {c: "c"}, "でぬりつぶす"], mk: () => ({t: "clear", c: C("#101830")})},
+  rect:   {cat: "draw", parts: ["四角 x", {n: "x"}, "y", {n: "y"}, "幅", {n: "w"}, "高さ", {n: "h"}, {c: "c"}], mk: () => ({t: "rect", x: N(10), y: N(10), w: N(8), h: N(8), c: C("#ffcc00")})},
+  line:   {cat: "draw", parts: ["線 (", {n: "x"}, {n: "y"}, ")→(", {n: "x2"}, {n: "y2"}, ")", {c: "c"}], mk: () => ({t: "line", x: N(0), y: N(0), x2: N(95), y2: N(95), c: C("#ffffff")})},
+  num:    {cat: "draw", parts: ["数字", {n: "e"}, "を x", {n: "x"}, "y", {n: "y"}, {c: "c"}], mk: () => ({t: "num", e: N(0), x: N(2), y: N(2), c: C("#ffffff")})},
+  text:   {cat: "draw", parts: ["文字", {txt: "txt"}, "を x", {n: "x"}, "y", {n: "y"}, "倍率", {n: "k"}, {c: "c"}], mk: () => ({t: "text", txt: "HELLO", x: N(2), y: N(2), k: N(1), c: C("#ffffff")})},
+  if:     {cat: "ctl",  c: true, parts: ["もし", {b: "c"}, "なら"], mk: () => ({t: "if", c: null, then: [], else: []})},
+  for:    {cat: "ctl",  c: true, parts: [{v: "v"}, "を 0 から", {n: "n"}, "未満まで 1 ずつ変えて"], mk: () => ({t: "for", v: "", n: N(5), body: []})},
+  send:   {cat: "ctl",  parts: ["メッセージ", {msg: "m"}, "を", {sp2: "to", any: "みんな"}, "に送る"], mk: () => ({t: "send", m: "", to: ""})},
+  stop:   {cat: "ctl",  parts: ["ゲームをおわる"], mk: () => ({t: "stop"})},
+  spdraw:  {cat: "sprite", parts: [{s: "s"}, "を描く"], mk: () => ({t: "spdraw", s: ""})},
+  spset:   {cat: "sprite", parts: [{s: "s"}, "を x", {n: "x"}, "y", {n: "y"}, "に置く"], mk: () => ({t: "spset", s: "", x: N(40), y: N(40)})},
+  spmove:  {cat: "sprite", parts: [{s: "s"}, "を x", {n: "x"}, "y", {n: "y"}, "ずつ動かす"], mk: () => ({t: "spmove", s: "", x: N(1), y: N(0)})},
+  spscale: {cat: "sprite", parts: [{s: "s"}, "の大きさを", {n: "e"}, "倍にする"], mk: () => ({t: "spscale", s: "", e: N(2)})},
+  spflip:  {cat: "sprite", parts: [{s: "s"}, "の向きを", {sel: "f", opts: FLIPS}, "にする"], mk: () => ({t: "spflip", s: "", f: "0"})},
+  spcost:  {cat: "sprite", parts: [{s: "s"}, "の見た目を", {n: "e"}, "番にする"], mk: () => ({t: "spcost", s: "", e: N(1)})},
+  spnext:  {cat: "sprite", parts: [{s: "s"}, "の見た目を次にする"], mk: () => ({t: "spnext", s: ""})},
+  clmake:  {cat: "sprite", parts: [{s: "s"}, "のクローンを x", {n: "x"}, "y", {n: "y"}, "に作る"], mk: () => ({t: "clmake", s: "", x: N(40), y: N(0)})},
+  clfor:   {cat: "sprite", c: true, parts: [{s: "s"}, "の各クローンについて"], mk: () => ({t: "clfor", s: "", body: []})},
+  cldel:   {cat: "sprite", parts: ["このクローンを消す"], mk: () => ({t: "cldel"})},
+  clmove:  {cat: "sprite", parts: ["このクローンを x", {n: "x"}, "y", {n: "y"}, "ずつ動かす"], mk: () => ({t: "clmove", x: N(0), y: N(2)})},
+  clset:   {cat: "sprite", parts: ["このクローンを x", {n: "x"}, "y", {n: "y"}, "に置く"], mk: () => ({t: "clset", x: N(40), y: N(40)})},
+  clnext:  {cat: "sprite", parts: ["このクローンの見た目を次にする"], mk: () => ({t: "clnext"})},
+  cldraw:  {cat: "sprite", parts: ["このクローンを描く"], mk: () => ({t: "cldraw"})},
+  cldelall: {cat: "sprite", parts: [{s: "s"}, "のクローンをぜんぶ消す"], mk: () => ({t: "cldelall", s: ""})},
+  spshow:  {cat: "sprite", parts: [{s: "s"}, "を", {sel: "show", opts: [["1", "表示する"], ["0", "かくす"]]}], mk: () => ({t: "spshow", s: "", show: "1"})},
+};
+const REPS = {
+  v:    {cat: "var", ty: "n", parts: [{v: "v"}], mk: () => ({t: "v", v: ""})},
+  mx:   {cat: "inp", ty: "n", parts: ["マウスの x"], mk: () => ({t: "mx"})},
+  my:   {cat: "inp", ty: "n", parts: ["マウスの y"], mk: () => ({t: "my"})},
+  mb:   {cat: "inp", ty: "n", parts: ["クリックのボタン"], mk: () => ({t: "mb"})},
+  add:  {cat: "op", ty: "n", parts: [{n: "a"}, "+", {n: "b"}], mk: () => ({t: "op", o: "+", a: N(0), b: N(0)})},
+  sub:  {cat: "op", ty: "n", parts: [{n: "a"}, "−", {n: "b"}], mk: () => ({t: "op", o: "-", a: N(0), b: N(0)})},
+  mul:  {cat: "op", ty: "n", parts: [{n: "a"}, "×", {n: "b"}], mk: () => ({t: "op", o: "*", a: N(0), b: N(0)})},
+  div:  {cat: "op", ty: "n", parts: [{n: "a"}, "÷", {n: "b"}], mk: () => ({t: "op", o: "/", a: N(0), b: N(1)})},
+  mod:  {cat: "op", ty: "n", parts: [{n: "a"}, "を", {n: "b"}, "でわったあまり"], mk: () => ({t: "op", o: "%", a: N(0), b: N(2)})},
+  min:  {cat: "op", ty: "n", parts: ["小さい方", {n: "a"}, {n: "b"}], mk: () => ({t: "op", o: "min", a: N(0), b: N(0)})},
+  max:  {cat: "op", ty: "n", parts: ["大きい方", {n: "a"}, {n: "b"}], mk: () => ({t: "op", o: "max", a: N(0), b: N(0)})},
+  abs:  {cat: "op", ty: "n", parts: ["絶対値", {n: "a"}], mk: () => ({t: "abs", a: N(0)})},
+  rand: {cat: "op", ty: "n", parts: ["乱数 0〜", {n: "a"}, "未満"], mk: () => ({t: "rand", a: N(10)})},
+  lt:   {cat: "op", ty: "b", parts: [{n: "a"}, "<", {n: "b"}], mk: () => ({t: "cmp", o: "<", a: N(0), b: N(0)})},
+  gt:   {cat: "op", ty: "b", parts: [{n: "a"}, ">", {n: "b"}], mk: () => ({t: "cmp", o: ">", a: N(0), b: N(0)})},
+  eq:   {cat: "op", ty: "b", parts: [{n: "a"}, "=", {n: "b"}], mk: () => ({t: "cmp", o: "=", a: N(0), b: N(0)})},
+  le:   {cat: "op", ty: "b", parts: [{n: "a"}, "≦", {n: "b"}], mk: () => ({t: "cmp", o: "<=", a: N(0), b: N(0)})},
+  ge:   {cat: "op", ty: "b", parts: [{n: "a"}, "≧", {n: "b"}], mk: () => ({t: "cmp", o: ">=", a: N(0), b: N(0)})},
+  ne:   {cat: "op", ty: "b", parts: [{n: "a"}, "≠", {n: "b"}], mk: () => ({t: "cmp", o: "!=", a: N(0), b: N(0)})},
+  and:  {cat: "op", ty: "b", parts: [{b: "a"}, "かつ", {b: "b"}], mk: () => ({t: "and", a: null, b: null})},
+  or:   {cat: "op", ty: "b", parts: [{b: "a"}, "または", {b: "b"}], mk: () => ({t: "or", a: null, b: null})},
+  not:  {cat: "op", ty: "b", parts: ["でない", {b: "a"}], mk: () => ({t: "not", a: null})},
+  sp:   {cat: "sprite", ty: "n", parts: [{s: "s"}, "の", {p: "p"}], mk: () => ({t: "sp", s: "", p: "x"})},
+  cl:   {cat: "sprite", ty: "n", parts: ["このクローンの", {p: "p"}], mk: () => ({t: "cl", p: "x"})},
+  clcount: {cat: "sprite", ty: "n", parts: [{s: "s"}, "のクローンの数"], mk: () => ({t: "clcount", s: ""})},
+  cltouch: {cat: "sprite", ty: "b", parts: ["このクローンが", {s: "s"}, "に触れた"], mk: () => ({t: "cltouch", s: ""})},
+  cltouchc: {cat: "sprite", ty: "b", parts: ["このクローンが", {s: "s"}, "のクローンに触れた"], mk: () => ({t: "cltouchc", s: ""})},
+  touch: {cat: "sprite", ty: "b", parts: [{s: "a"}, "が", {s: "b"}, "に触れた"], mk: () => ({t: "touch", a: "", b: ""})},
+  key:  {cat: "inp", ty: "b", parts: ["キー", {k: "k"}, "が押されている"], mk: () => ({t: "key", k: "left"})},
+};
+const KEYNAMES = {left: "←", right: "→", up: "↑", down: "↓", space: "スペース"};
+const OPKEY = {n: "n", c: "c", v: "v"};                              // 穴の初めの値の型
+const HATS = {                                                        // 帽子。{k:…} はキーの選び
+  init:  {parts: ["はじめに(1 回)"]}, tick: {parts: ["毎こま"]},
+  key:   {parts: ["キー", {k: "k"}, "が押されたとき"], k: "left"}, keyup: {parts: ["キー", {k: "k"}, "が離されたとき"], k: "left"},
+  click: {parts: ["クリックされたとき"]}, mouse: {parts: ["マウスが動いたとき"]},
+  onmsg: {parts: ["メッセージ", {msg: "m"}, "を", {sp2: "me", any: "だれ宛でも"}, "が受け取ったとき"], msgs: true},
+  onclone: {parts: [{s: "s"}, "のクローンができたとき"], clone: true},
+  every: {parts: [{n: "ms"}, "ミリ秒ごと"], ms: 1000}, after: {parts: ["はじまって", {n: "ms"}, "ミリ秒後(1 回)"], ms: 3000},
+};
+const typeOf = e => e == null ? null : (["cmp", "and", "or", "not", "key", "touch", "cltouch", "cltouchc"].includes(e.t) ? "b" : "n");
+const defOf = e => {                                                  // モデルの形 → 定義
+  if (e.t === "v") return REPS.v;
+  if (e.t === "op") return {"+": REPS.add, "-": REPS.sub, "*": REPS.mul, "/": REPS.div, "%": REPS.mod, "min": REPS.min, "max": REPS.max}[e.o];
+  if (e.t === "cmp") return {"<": REPS.lt, ">": REPS.gt, "=": REPS.eq, "<=": REPS.le, ">=": REPS.ge, "!=": REPS.ne}[e.o];
+  return REPS[e.t];
+};
+
+/* ---------- 作品(モデル) ---------- */
+let P = null;
+function example() {
+  const V = n => ({t: "v", v: n}), op = (o, a, b) => ({t: "op", o, a, b});
+  return {
+    vars: ["x", "y", "vx", "vy", "点"],
+    scripts: [
+      {id: 1, x: 20, y: 20, hat: "init", body: [
+        {t: "set", v: "x", e: N(40)}, {t: "set", v: "y", e: N(10)}, {t: "set", v: "vx", e: N(2)}, {t: "set", v: "vy", e: N(0)}]},
+      {id: 2, x: 20, y: 210, hat: "tick", body: [
+        {t: "change", v: "vy", e: N(1)},
+        {t: "change", v: "x", e: V("vx")}, {t: "change", v: "y", e: V("vy")},
+        {t: "if", c: {t: "cmp", o: "<", a: V("x"), b: N(0)}, then: [{t: "set", v: "x", e: N(0)}, {t: "set", v: "vx", e: op("-", N(0), V("vx"))}], else: []},
+        {t: "if", c: {t: "cmp", o: ">", a: V("x"), b: N(86)}, then: [{t: "set", v: "x", e: N(86)}, {t: "set", v: "vx", e: op("-", N(0), V("vx"))}], else: []},
+        {t: "if", c: {t: "cmp", o: ">", a: V("y"), b: N(86)}, then: [
+          {t: "set", v: "y", e: N(86)}, {t: "set", v: "vy", e: op("-", N(0), op("/", op("*", V("vy"), N(9)), N(10)))}, {t: "change", v: "点", e: N(1)}], else: []},
+        {t: "clear", c: C("#101830")},
+        {t: "rect", x: V("x"), y: V("y"), w: N(8), h: N(8), c: C("#ffcc00")},
+        {t: "num", e: V("点"), x: N(2), y: N(2), c: C("#ffffff")}]},
+      {id: 3, x: 330, y: 20, hat: "key", k: "left", body: [{t: "change", v: "vx", e: N(-1)}]},
+      {id: 4, x: 330, y: 110, hat: "key", k: "right", body: [{t: "change", v: "vx", e: N(1)}]},
+      {id: 5, x: 330, y: 200, hat: "click", body: [{t: "set", v: "x", e: {t: "mx"}}, {t: "set", v: "y", e: {t: "my"}}, {t: "set", v: "vy", e: N(0)}]},
+    ],
+    sprites: [ghostSprite()],
+    next: 6,
+  };
+}
+const exampleClean = example;
+function uniqueName(base) { const have = new Set(spNames()); if (!have.has(base)) return base; for (let i = 2; ; i++) if (!have.has(base + i)) return base + i; }
+function blankSprite() { const w = 8, h = 8; return {name: uniqueName("スプライト"), w, h, costumes: [Array.from({length: h}, () => ".".repeat(w))]}; }
+function ghostSprite() {
+  return {name: "おばけ", w: 8, h: 8, costumes: [
+    ["..eeee..", ".eeeeee.", "eebbebbe", "eebaebae", "eeeeeeee", "eeeeeeee", "ee.ee.ee", "e..ee..e"],
+    ["..eeee..", ".eeeeee.", "eebbebbe", "eebaebae", "eeeeeeee", "eeeeeeee", ".ee..ee.", "ee....ee"]]};
+}
+function normalizeProject(p) { p.msgs = Array.isArray(p.msgs) ? p.msgs : []; p.sprites = Array.isArray(p.sprites) ? p.sprites : []; p.next = p.next || 100; return p; }
+
+/* ---------- 描画(モデル → DOM) ---------- */
+const palette = $("#palette"), wsin = $("#wsin"), wsEl = $("#ws");
+let drag = null;
+
+function mkEmptyHole(kind) { const s = el("span", "slot" + (kind === "b" ? " empty-bool" : "")); return s; }
+
+const spNames = () => (P.sprites || []).map(x => x.name);
+function renderParts(def, obj, host, onChange, inPalette) {
+  for (const part of def.parts) {
+    if (typeof part === "string") { host.appendChild(el("span", "lbl", part)); continue; }
+    if (part.n) host.appendChild(slotEl(obj, part.n, "n", onChange, inPalette));
+    else if (part.b) host.appendChild(slotEl(obj, part.b, "b", onChange, inPalette));
+    else if (part.c) host.appendChild(slotEl(obj, part.c, "c", onChange, inPalette));
+    else if (part.txt) {
+      const inp = el("input", "txtin"); inp.type = "text"; inp.value = obj[part.txt] == null ? "" : obj[part.txt]; inp.size = Math.max(4, inp.value.length + 1); inp.maxLength = 40;
+      inp.addEventListener("pointerdown", e => e.stopPropagation());
+      inp.addEventListener("keydown", e => e.stopPropagation());
+      inp.addEventListener("change", () => { obj[part.txt] = inp.value; onChange(); });
+      host.appendChild(inp);
+    }
+    else if (part.v) {
+      const sel = el("select");
+      const names = P.vars.length ? P.vars : [""];
+      for (const nm of names) { const o = el("option", "", nm || "(変数をつくってください)"); o.value = nm; sel.appendChild(o); }
+      if (obj[part.v] === "" || !P.vars.includes(obj[part.v])) { if (P.vars.length) obj[part.v] = P.vars[0]; }
+      sel.value = obj[part.v];
+      sel.addEventListener("pointerdown", e => e.stopPropagation());
+      sel.addEventListener("change", () => { obj[part.v] = sel.value; onChange(); });
+      host.appendChild(sel);
+    } else if (part.s) {
+      const names = spNames();
+      const sel = el("select");
+      for (const nm of (names.length ? names : [""])) { const o = el("option", "", nm || "(スプライトをつくってください)"); o.value = nm; sel.appendChild(o); }
+      if (names.length && !names.includes(obj[part.s])) obj[part.s] = names[0];
+      sel.value = obj[part.s];
+      sel.addEventListener("pointerdown", e => e.stopPropagation());
+      sel.addEventListener("change", () => { obj[part.s] = sel.value; onChange(); });
+      host.appendChild(sel);
+    } else if (part.msg) {
+      const sel = el("select");
+      const names = P.msgs.length ? P.msgs : [""];
+      for (const nm of names) { const o = el("option", "", nm || "(メッセージをつくってください)"); o.value = nm; sel.appendChild(o); }
+      if (P.msgs.length && !P.msgs.includes(obj[part.msg])) obj[part.msg] = P.msgs[0];
+      sel.value = obj[part.msg];
+      sel.addEventListener("pointerdown", e => e.stopPropagation());
+      sel.addEventListener("change", () => { obj[part.msg] = sel.value; onChange(); });
+      host.appendChild(sel);
+    } else if (part.sp2) {
+      const sel = el("select");
+      for (const nm of ["", ...spNames()]) { const o = el("option", "", nm || part.any); o.value = nm; sel.appendChild(o); }
+      if (obj[part.sp2] && !spNames().includes(obj[part.sp2])) obj[part.sp2] = "";
+      sel.value = obj[part.sp2] || "";
+      sel.addEventListener("pointerdown", e => e.stopPropagation());
+      sel.addEventListener("change", () => { obj[part.sp2] = sel.value; onChange(); });
+      host.appendChild(sel);
+    } else if (part.p) {
+      const sel = el("select");
+      for (const [v, lb] of SPPROPS) { const o = el("option", "", lb); o.value = v; sel.appendChild(o); }
+      sel.value = obj[part.p];
+      sel.addEventListener("pointerdown", e => e.stopPropagation());
+      sel.addEventListener("change", () => { obj[part.p] = sel.value; onChange(); });
+      host.appendChild(sel);
+    } else if (part.sel) {
+      const sel = el("select");
+      for (const [v, lb] of part.opts) { const o = el("option", "", lb); o.value = v; sel.appendChild(o); }
+      sel.value = String(obj[part.sel]);
+      sel.addEventListener("pointerdown", e => e.stopPropagation());
+      sel.addEventListener("change", () => { obj[part.sel] = sel.value; onChange(); });
+      host.appendChild(sel);
+    } else if (part.k) {
+      const sel = el("select");
+      for (const k of Object.keys(GEN.KEYS)) { const o = el("option", "", KEYNAMES[k] || k.toUpperCase()); o.value = k; sel.appendChild(o); }
+      sel.value = obj[part.k];
+      sel.addEventListener("pointerdown", e => e.stopPropagation());
+      sel.addEventListener("change", () => { obj[part.k] = sel.value; onChange(); });
+      host.appendChild(sel);
+    }
+  }
+}
+
+function slotEl(owner, key, kind, onChange, inPalette) {
+  const slot = el("span", "slot");
+  const val = owner[key];
+  slot.dataset.kind = kind;
+  slot._owner = owner; slot._key = key;
+  if (val && val.t !== "n" && val.t !== "c") {                        // 穴に入った部品
+    slot.appendChild(blockEl(val, {inline: true, onChange}));
+  } else if (kind === "b") {
+    slot.classList.add("empty-bool");
+  } else if (kind === "c") {
+    const inp = el("input"); inp.type = "color"; inp.value = val && val.t === "c" ? val.v : "#ffffff";
+    inp.addEventListener("pointerdown", e => e.stopPropagation());
+    inp.addEventListener("input", () => { owner[key] = C(inp.value); onChange(); });
+    slot.appendChild(inp);
+  } else {
+    const inp = el("input"); inp.type = "text"; inp.inputMode = "numeric"; inp.value = val ? val.v : "0";
+    inp.addEventListener("pointerdown", e => e.stopPropagation());
+    inp.addEventListener("input", () => { owner[key] = N(inp.value.trim() === "" || inp.value.trim() === "-" ? 0 : inp.value); onChange(); });
+    slot.appendChild(inp);
+  }
+  return slot;
+}
+
+function blockEl(obj, opt) {                                          // 1 つの部品(命令・穴に入る式)の DOM
+  const o = opt || {}, onChange = o.onChange || changed;
+  if (o.inline || REPS[obj._rep] || ["v", "op", "abs", "rand", "cmp", "and", "or", "not", "key", "sp", "touch", "cl", "clcount", "cltouch", "cltouchc"].includes(obj.t)) {
+    const def = defOf(obj);
+    const b = el("span", `blk ${def.cat} ${def.ty === "b" ? "bool" : "num"}`);
+    b._obj = obj; b._reporter = true;
+    renderParts(def, obj, b, onChange);
+    return b;
+  }
+  const def = cmdDef(obj);
+  if (def.c) {
+    const w = el("div", `cblk ${def.cat}`);
+    w._obj = obj;
+    const head = el("div", `blk ${def.cat} cmd head`); head._obj = obj; head._cmd = true;
+    renderParts(def, obj, head, onChange);
+    w.appendChild(head);
+    const arm = stackEl(obj.t === "for" || obj.t === "clfor" ? obj.body : obj.then, onChange); arm.classList.add("arm");
+    w.appendChild(arm);
+    if (obj.t === "if") {
+      const mid = el("div", `blk ${def.cat} cmd mid`, "でなければ"); mid._cmd = true; mid._obj = obj; mid.style.cursor = "default";
+      w.appendChild(mid);
+      const arm2 = stackEl(obj.else, onChange); arm2.classList.add("arm"); w.appendChild(arm2);
+    }
+    w.appendChild(el("div", "foot"));
+    return w;
+  }
+  const b = el("div", `blk ${def.cat} cmd`); b._obj = obj; b._cmd = true;
+  renderParts(def, obj, b, onChange);
+  return b;
+}
+const cmdDef = obj => CMDS[obj.t];
+
+function stackEl(arr, onChange) {
+  const s = el("div", "stack"); s._arr = arr;
+  arr.forEach(b => { const e = blockEl(b, {onChange}); e._inArr = arr; s.appendChild(e); });
+  return s;
+}
+
+function render() {
+  P.scripts = P.scripts.filter(s => s.hat || s.body.length);                 // 空になった孤立の積み重ねは消す
+  wsin.textContent = "";
+  for (const sc of P.scripts) {
+    const box = el("div", "script" + (sc.hat ? "" : " orphan"));
+    box.style.left = sc.x + "px"; box.style.top = sc.y + "px"; box._script = sc;
+    if (sc.hat) {
+      const h = hatEl(sc, changed); h._script = sc; h._hat = true;
+      box.appendChild(h);
+    }
+    const st = stackEl(sc.body, changed); st._script = sc; box.appendChild(st);
+    if (!sc.hat) box.appendChild(el("div", "note", "上に「はじめに」「毎こま」かイベントの帽子をつけると動きます"));
+    wsin.appendChild(box);
+  }
+  renderPalette();
+}
+
+function hatEl(obj, onChange) {                                       // 帽子の DOM。obj は {hat, k?}
+  const def = HATS[obj.hat] || HATS.tick;
+  const h = el("div", "blk hat");
+  renderParts(def, obj, h, onChange);
+  return h;
+}
+
+function thumb(sp) {                                                  // 先頭の見た目の小さな絵
+  const cv = el("canvas"); cv.width = sp.w; cv.height = sp.h;
+  const g = cv.getContext("2d"); const rows = (sp.costumes[0] || []);
+  for (let y = 0; y < sp.h; y++) for (let x = 0; x < sp.w; x++) {
+    const i = GEN.PALCH.indexOf((rows[y] || "")[x]); if (i < 0) continue;
+    g.fillStyle = GEN.PAL16[i]; g.fillRect(x, y, 1, 1);
+  }
+  return cv;
+}
+function renderSpriteList() {
+  for (const [i, sp] of P.sprites.entries()) {
+    const row = el("div", "sprow"); row.dataset.sprite = sp.name;
+    row.append(thumb(sp), el("span", "nm", sp.name));
+    const ed = el("button", "btn", "絵"); ed.title = "ドット絵を描く・直す"; ed.setAttribute("aria-label", sp.name + " の絵を直す");
+    ed.addEventListener("click", () => openEditor(i));
+    const x = el("button", "btn", "×"); x.title = "このスプライトを消す"; x.setAttribute("aria-label", sp.name + " を消す");
+    x.addEventListener("click", () => { P.sprites.splice(i, 1); changed(true); });
+    row.append(ed, x); palette.appendChild(row);
+  }
+  const bar = el("div", "spbtns");
+  const nw = el("button", "btn", "＋ 新しいスプライト"); nw.id = "spNew";
+  nw.addEventListener("click", () => { if (P.sprites.length >= GEN.MAXSP) { setStatus("スプライトは " + GEN.MAXSP + " 個までです", "bad"); return; } P.sprites.push(blankSprite()); changed(true); openEditor(P.sprites.length - 1); });
+  const gh = el("button", "btn", "おばけの見本"); gh.id = "spGhost";
+  gh.addEventListener("click", () => { if (P.sprites.length >= GEN.MAXSP) return; const g = ghostSprite(); g.name = uniqueName(g.name); P.sprites.push(g); changed(true); });
+  bar.append(nw, gh); palette.appendChild(bar);
+}
+function renderPalette() {
+  palette.textContent = "";
+  const sec = t => palette.appendChild(el("h3", "", t));
+  const add = (kind, key, obj) => {
+    const def = kind === "hat" ? null : (kind === "cmd" ? CMDS[key] : REPS[key]);
+    let e;
+    if (kind === "hat") { const spec = {hat: key}; if (HATS[key].k) spec.k = HATS[key].k; if (HATS[key].ms) spec.ms = N(HATS[key].ms); if (HATS[key].msgs) { spec.m = ""; spec.me = ""; } if (HATS[key].clone) spec.s = ""; e = hatEl(spec, () => {}); e._hatSpec = spec; }
+    else {
+      const o = obj || def.mk();
+      if (kind === "rep") { e = blockEl(o, {inline: true, onChange: () => {}}); e._reporter = true; }
+      else { e = blockEl(o, {onChange: () => {}}); }
+      e._proto = {kind, key};
+    }
+    e._palette = true; palette.appendChild(e); return e;
+  };
+  sec("はじまり"); add("hat", "init"); add("hat", "tick");
+  sec("イベント"); ["key", "keyup", "click", "mouse", "every", "after", "onmsg", "onclone"].forEach(k => add("hat", k));
+  sec("変数");
+  const box = el("div", "varbox"); const inp = el("input"); inp.placeholder = "変数の名前"; inp.maxLength = 12;
+  const bt = el("button", "btn", "つくる"); bt.style.minHeight = "26px"; bt.style.padding = "2px 8px";
+  const make = () => { const n = inp.value.trim().replace(/[`\s]/g, ""); if (!n) return; if (!P.vars.includes(n)) P.vars.push(n); inp.value = ""; changed(true); };
+  bt.addEventListener("click", make); inp.addEventListener("keydown", e => { if (e.key === "Enter") make(); });
+  box.append(inp, bt); palette.appendChild(box);
+  const chips = el("div", "chips");
+  P.vars.forEach((n, i) => { const c = el("span", "chip", n); const x = el("button", "", "×"); x.title = "この変数を消す"; x.setAttribute("aria-label", n + " を消す");
+    x.addEventListener("click", () => { P.vars.splice(i, 1); changed(true); }); c.appendChild(x); chips.appendChild(c); });
+  palette.appendChild(chips);
+  add("cmd", "set"); add("cmd", "change"); add("rep", "v");
+  sec("描く"); ["clear", "rect", "line", "num", "text"].forEach(k => add("cmd", k));
+  sec("スプライト"); renderSpriteList();
+  ["spdraw", "spset", "spmove", "spscale", "spflip", "spcost", "spnext", "spshow"].forEach(k => add("cmd", k));
+  ["sp", "touch"].forEach(k => add("rep", k));
+  sec("クローン");
+  ["clmake", "clfor", "cldel", "clmove", "clset", "clnext", "cldraw", "cldelall"].forEach(k => add("cmd", k));
+  ["cl", "clcount", "cltouch", "cltouchc"].forEach(k => add("rep", k));
+  sec("メッセージ");
+  const mbox = el("div", "varbox"); const minp = el("input"); minp.placeholder = "メッセージの名前"; minp.maxLength = 12; minp.id = "msgName";
+  const mbt = el("button", "btn", "つくる"); mbt.id = "msgMake"; mbt.style.minHeight = "26px"; mbt.style.padding = "2px 8px";
+  const mmake = () => { const n = minp.value.trim().replace(/[`\s]/g, ""); if (!n) return; if (!P.msgs.includes(n)) P.msgs.push(n); minp.value = ""; changed(true); };
+  mbt.addEventListener("click", mmake); minp.addEventListener("keydown", e => { if (e.key === "Enter") mmake(); });
+  mbox.append(minp, mbt); palette.appendChild(mbox);
+  const mchips = el("div", "chips");
+  P.msgs.forEach((n, i) => { const c = el("span", "chip", n); c.style.background = "var(--c-ctl)"; const x = el("button", "", "×"); x.title = "このメッセージを消す"; x.setAttribute("aria-label", n + " を消す");
+    x.addEventListener("click", () => { P.msgs.splice(i, 1); changed(true); }); c.appendChild(x); mchips.appendChild(c); });
+  palette.appendChild(mchips);
+  add("cmd", "send");
+  sec("制御"); ["if", "for", "stop"].forEach(k => add("cmd", k));
+  sec("入力"); ["key", "mx", "my", "mb"].forEach(k => add("rep", k));
+  sec("演算"); ["add", "sub", "mul", "div", "mod", "min", "max", "abs", "rand"].forEach(k => add("rep", k));
+  sec("条件"); ["lt", "gt", "eq", "le", "ge", "ne", "and", "or", "not"].forEach(k => add("rep", k));
+}
+
+/* ---------- ドラッグ&ドロップ ---------- */
+let ghostEl = null, gapLine = null, hlEl = null;
+
+document.addEventListener("pointerdown", e => {
+  if (e.button !== 0) return;
+  const t = e.target.closest(".blk");
+  if (!t || t.closest("#side")) return;
+  if (t._cmd && t.classList.contains("mid")) return;
+  startDrag(t, e);
+});
+
+function startDrag(t, e) {
+  let item = null;
+  if (!t._palette && t.closest("#palette")) { const r = [...palette.children].find(c => c.contains(t)); if (r && r._palette) t = r; }   // 棚の「もし」「くりかえし」「各クローンについて」は、頭をつかんでも棚の部品として持つ
+  const rect = t.getBoundingClientRect();
+  if (t._palette) {
+    if (t._hatSpec) item = {type: "hat", spec: clone(t._hatSpec)};
+    else {
+      const o = clone((t._proto.kind === "cmd" ? CMDS : REPS)[t._proto.key].mk());
+      item = t._proto.kind === "cmd" ? {type: "chain", blocks: [o]} : {type: "rep", obj: o};
+    }
+  } else if (t._hat) {
+    item = {type: "script", script: t._script, dx: e.clientX - rect.left, dy: e.clientY - rect.top, sx: t._script.x, sy: t._script.y, ox: e.clientX, oy: e.clientY};
+  } else if (t._reporter) {
+    const slot = t.parentElement;
+    if (!slot._owner) return;                                          // 棚の部品は上で処理済み
+    item = {type: "rep", obj: slot._owner[slot._key]};
+    slot._owner[slot._key] = slot.dataset.kind === "b" ? null : N(0);
+  } else if (t._cmd) {
+    const holder = t._inArr ? t : t.parentElement, arr = holder._inArr, i = arr.indexOf(t._obj);
+    item = {type: "chain", blocks: arr.splice(i)};                      // 下に続くブロックごと持つ
+  }
+  if (!item) return;
+  e.preventDefault();
+  item.offx = e.clientX - rect.left; item.offy = e.clientY - rect.top;
+  // ゴースト
+  ghostEl = el("div"); ghostEl.id = "ghost";
+  if (item.type === "hat") ghostEl.appendChild(hatEl(item.spec, () => {}));
+  else if (item.type === "script") { ghostEl.appendChild(t.cloneNode(true)); }
+  else if (item.type === "rep") ghostEl.appendChild(blockEl(item.obj, {inline: true, onChange: () => {}}));
+  else { const s = el("div", "stack"); item.blocks.forEach(b => s.appendChild(blockEl(b, {onChange: () => {}}))); ghostEl.appendChild(s); }
+  document.body.appendChild(ghostEl);
+  drag = item;
+  if (!t._palette && item.type !== "script") { render(); changedNoRender(); }
+  moveGhost(e);
+  window.addEventListener("pointermove", onMove); window.addEventListener("pointerup", onUp, {once: true});
+}
+
+function moveGhost(e) {
+  ghostEl.style.left = (e.clientX - drag.offx) + "px"; ghostEl.style.top = (e.clientY - drag.offy) + "px";
+}
+
+function onMove(e) {
+  moveGhost(e);
+  if (drag.type === "script") {
+    drag.script.x = Math.max(0, drag.sx + e.clientX - drag.ox); drag.script.y = Math.max(0, drag.sy + e.clientY - drag.oy);
+    ghostEl.style.display = "none";
+    const box = [...wsin.children].find(b => b._script === drag.script); if (box) { box.style.left = drag.script.x + "px"; box.style.top = drag.script.y + "px"; }
+    return;
+  }
+  const tg = findTarget(e); showTarget(tg); drag.target = tg;
+}
+
+function allStacks() { return [...wsin.querySelectorAll(".stack")]; }
+
+function findTarget(e) {
+  const gx = e.clientX - drag.offx, gy = e.clientY - drag.offy;         // ゴーストの左上
+  const px = e.clientX, py = e.clientY;
+  if (drag.type === "rep") {                                            // 穴
+    const want = typeOf(drag.obj);
+    let best = null, bd = 1e9;
+    for (const s of wsin.querySelectorAll(".slot")) {
+      if (!s._owner) continue;
+      const k = s.dataset.kind;
+      if (k === "b" ? want !== "b" : (want !== "n")) continue;
+      if (s.closest(".blk") && isInside(s, drag.obj)) continue;
+      const r = s.getBoundingClientRect();
+      const inside = px >= r.left - 4 && px <= r.right + 4 && py >= r.top - 4 && py <= r.bottom + 4;
+      const d = Math.hypot((r.left + r.right) / 2 - px, (r.top + r.bottom) / 2 - py);
+      if (inside && d < bd) { best = {kind: "slot", el: s}; bd = d; }
+    }
+    return best;
+  }
+  if (drag.type === "chain") {                                          // 積み重ね
+    let best = null, bd = 34;
+    for (const st of allStacks()) {
+      if (!st._arr) continue;
+      const kids = [...st.children].filter(c => c._inArr);
+      const sr = st.getBoundingClientRect();
+      for (let i = 0; i <= kids.length; i++) {
+        const y = i < kids.length ? kids[i].getBoundingClientRect().top : (kids.length ? kids[kids.length - 1].getBoundingClientRect().bottom : sr.top);
+        const x = kids.length ? kids[0].getBoundingClientRect().left : sr.left;
+        const d = Math.hypot(gx - x, gy - y);
+        if (d < bd) { bd = d; best = {kind: "gap", arr: st._arr, i, x, y, w: Math.max(60, sr.width)}; }
+      }
+    }
+    if (!best) {                                                         // 空の置き場(スクリプトの上にも落とせる)
+      const wr = wsEl.getBoundingClientRect();
+      if (px > wr.left && px < wr.right && py > wr.top && py < wr.bottom) best = {kind: "free", x: px - wr.left + wsEl.scrollLeft, y: py - wr.top + wsEl.scrollTop};
+    }
+    return best;
+  }
+  if (drag.type === "hat") {
+    const wr = wsEl.getBoundingClientRect();
+    if (px > wr.left && px < wr.right && py > wr.top && py < wr.bottom) return {kind: "free", x: px - wr.left + wsEl.scrollLeft, y: py - wr.top + wsEl.scrollTop};
+  }
+  return null;
+}
+function isInside(slotEl, obj) { return false; }
+
+function showTarget(tg) {
+  if (hlEl) { hlEl.classList.remove("hl"); hlEl = null; }
+  if (gapLine) { gapLine.remove(); gapLine = null; }
+  if (!tg) return;
+  if (tg.kind === "slot") { hlEl = tg.el; hlEl.classList.add("hl"); }
+  else if (tg.kind === "gap") { gapLine = el("div", "gap-line"); gapLine.style.left = tg.x + "px"; gapLine.style.top = (tg.y - 2) + "px"; gapLine.style.width = tg.w + "px"; document.body.appendChild(gapLine); }
+}
+
+function onUp(e) {
+  window.removeEventListener("pointermove", onMove);
+  showTarget(null);
+  const it = drag, tg = it.target; drag = null;
+  ghostEl.remove(); ghostEl = null;
+  const pr = palette.getBoundingClientRect();
+  const overPalette = e.clientX < pr.right && e.clientY > pr.top && e.clientY < pr.bottom && e.clientX > pr.left;
+  if (it.type === "script") { if (overPalette) P.scripts = P.scripts.filter(s => s !== it.script); changed(true); return; }
+  if (overPalette) { changed(true); return; }                            // 棚へ戻す = 消す
+  if (it.type === "rep") {
+    if (tg && tg.kind === "slot") tg.el._owner[tg.el._key] = it.obj;
+  } else if (it.type === "chain") {
+    if (tg && tg.kind === "gap") tg.arr.splice(tg.i, 0, ...it.blocks);
+    else if (tg && tg.kind === "free") P.scripts.push({id: P.next++, x: Math.max(0, tg.x - 20), y: Math.max(0, tg.y - 10), hat: null, body: it.blocks});
+  } else if (it.type === "hat") {
+    if (tg && tg.kind === "free") P.scripts.push(Object.assign({id: P.next++, x: Math.max(0, tg.x - 20), y: Math.max(0, tg.y - 10), body: []}, {hat: it.spec.hat}, (it.spec.k ? {k: it.spec.k} : {}), (it.spec.ms ? {ms: it.spec.ms} : {}), (it.spec.m !== undefined ? {m: it.spec.m, me: it.spec.me} : {}), (it.spec.s !== undefined ? {s: it.spec.s} : {})));
+  }
+  // 孤立した積み重ねの頭に「はじめに」「毎こま」を重ねたとき: 帽子の下へ吸い付ける(帽子の近くに落とす)
+  attachOrphans();
+  changed(true);
+}
+
+function attachOrphans() {                                              // 帽子だけの置き場に、近くの孤立した積み重ねをつなぐ
+  for (const h of P.scripts.filter(s => s.hat && s.body.length === 0)) {
+    for (const o of P.scripts.filter(s => !s.hat)) {
+      if (Math.abs(o.x - h.x) < 40 && Math.abs(o.y - (h.y + 40)) < 40) { h.body = o.body; P.scripts = P.scripts.filter(s => s !== o); break; }
+    }
+  }
+}
+
+/* ---------- ドット絵エディタ ---------- */
+const dlg = $("#spdlg"), cv = $("#spcv");
+const ed = {i: 0, c: 0, tool: "pen", ch: "e", down: false};
+const curSp = () => P.sprites[ed.i];
+const curRows = () => curSp().costumes[ed.c];
+function cellSize(sp) { return Math.max(8, Math.floor(320 / Math.max(sp.w, sp.h))); }
+function drawGrid() {
+  const sp = curSp(); if (!sp) return;
+  const k = cellSize(sp); cv.width = sp.w * k; cv.height = sp.h * k;
+  const g = cv.getContext("2d"), rows = curRows();
+  for (let y = 0; y < sp.h; y++) for (let x = 0; x < sp.w; x++) {
+    const i = GEN.PALCH.indexOf(rows[y][x]);
+    if (i < 0) { g.fillStyle = (x + y) % 2 ? "#c9ced6" : "#e8ebf0"; } else g.fillStyle = GEN.PAL16[i];
+    g.fillRect(x * k, y * k, k, k);
+  }
+  g.strokeStyle = "rgba(128,128,128,.35)"; g.lineWidth = 1;
+  for (let x = 0; x <= sp.w; x++) { g.beginPath(); g.moveTo(x * k + .5, 0); g.lineTo(x * k + .5, sp.h * k); g.stroke(); }
+  for (let y = 0; y <= sp.h; y++) { g.beginPath(); g.moveTo(0, y * k + .5); g.lineTo(sp.w * k, y * k + .5); g.stroke(); }
+}
+function edTabs() {
+  const sp = curSp(), box = $("#spTabs"); box.textContent = "";
+  sp.costumes.forEach((_, i) => { const b = el("button", "btn", String(i + 1)); b.setAttribute("aria-pressed", String(i === ed.c)); b.setAttribute("aria-label", "見た目 " + (i + 1));
+    b.addEventListener("click", () => { ed.c = i; edTabs(); drawGrid(); }); box.appendChild(b); });
+  $("#spDelC").disabled = sp.costumes.length <= 1;
+  $("#spAddC").disabled = sp.costumes.length >= 16;
+}
+function edSwatches() {
+  const box = $("#spSw"); box.textContent = "";
+  GEN.PAL16.forEach((c, i) => { const b = el("button", "sw"); b.style.background = c; const ch = GEN.PALCH[i]; b.dataset.ch = ch; b.setAttribute("aria-label", "色 " + (i + 1));
+    b.setAttribute("aria-pressed", String(ed.tool !== "er" && ed.ch === ch));
+    b.addEventListener("click", () => { ed.ch = ch; if (ed.tool === "er") ed.tool = "pen"; edTools(); }); box.appendChild(b); });
+}
+function edTools() {
+  $("#tPen").setAttribute("aria-pressed", String(ed.tool === "pen")); $("#tEr").setAttribute("aria-pressed", String(ed.tool === "er")); $("#tFill").setAttribute("aria-pressed", String(ed.tool === "fill"));
+  edSwatches();
+}
+function openEditor(i) {
+  ed.i = i; ed.c = 0; const sp = curSp();
+  $("#spName").value = sp.name; $("#spW").value = sp.w; $("#spH").value = sp.h;
+  edTabs(); edTools(); drawGrid();
+  if (!dlg.open) { try { dlg.showModal(); } catch (e) { dlg.setAttribute("open", ""); } }
+}
+function setPx(x, y, ch) {
+  const sp = curSp(); if (x < 0 || y < 0 || x >= sp.w || y >= sp.h) return false;
+  const rows = curRows(), r = rows[y]; if (r[x] === ch) return false;
+  rows[y] = r.slice(0, x) + ch + r.slice(x + 1); return true;
+}
+function flood(x, y, ch) {
+  const sp = curSp(), rows = curRows(); if (x < 0 || y < 0 || x >= sp.w || y >= sp.h) return;
+  const from = rows[y][x]; if (from === ch) return;
+  const st = [[x, y]];
+  while (st.length) { const [a, b] = st.pop(); if (a < 0 || b < 0 || a >= sp.w || b >= sp.h || rows[b][a] !== from) continue; setPx(a, b, ch); st.push([a + 1, b], [a - 1, b], [a, b + 1], [a, b - 1]); }
+}
+function cellAt(e) { const r = cv.getBoundingClientRect(), sp = curSp(); return [Math.floor((e.clientX - r.left) / r.width * sp.w), Math.floor((e.clientY - r.top) / r.height * sp.h)]; }
+function paintAt(e) {
+  const [x, y] = cellAt(e);
+  const ch = ed.tool === "er" ? "." : ed.ch;
+  if (ed.tool === "fill") flood(x, y, ch); else setPx(x, y, ch);
+  drawGrid(); schedule();
+}
+cv.addEventListener("pointerdown", e => { e.preventDefault(); ed.down = true; try { cv.setPointerCapture(e.pointerId); } catch (er) {} paintAt(e); });
+cv.addEventListener("pointermove", e => { if (ed.down && ed.tool !== "fill") paintAt(e); });
+const endStroke = () => { ed.down = false; };
+cv.addEventListener("pointerup", endStroke); cv.addEventListener("pointercancel", endStroke);
+$("#tPen").addEventListener("click", () => { ed.tool = "pen"; edTools(); });
+$("#tEr").addEventListener("click", () => { ed.tool = "er"; edTools(); });
+$("#tFill").addEventListener("click", () => { ed.tool = "fill"; edTools(); });
+$("#spFlipH").addEventListener("click", () => { const rows = curRows(); rows.forEach((r, i) => rows[i] = [...r].reverse().join("")); drawGrid(); schedule(); });
+$("#spFlipV").addEventListener("click", () => { curRows().reverse(); drawGrid(); schedule(); });
+$("#spClear").addEventListener("click", () => { const sp = curSp(); sp.costumes[ed.c] = Array.from({length: sp.h}, () => ".".repeat(sp.w)); drawGrid(); schedule(); });
+$("#spAddC").addEventListener("click", () => { const sp = curSp(); sp.costumes.push(Array.from({length: sp.h}, () => ".".repeat(sp.w))); ed.c = sp.costumes.length - 1; edTabs(); drawGrid(); schedule(); });
+$("#spDupC").addEventListener("click", () => { const sp = curSp(); if (sp.costumes.length >= 16) return; sp.costumes.splice(ed.c + 1, 0, [...curRows()]); ed.c++; edTabs(); drawGrid(); schedule(); });
+$("#spDelC").addEventListener("click", () => { const sp = curSp(); if (sp.costumes.length <= 1) return; sp.costumes.splice(ed.c, 1); ed.c = Math.min(ed.c, sp.costumes.length - 1); edTabs(); drawGrid(); schedule(); });
+function resizeSprite() {
+  const sp = curSp(), w = Math.max(1, Math.min(GEN.MAXSIDE, parseInt($("#spW").value) || sp.w)), h = Math.max(1, Math.min(GEN.MAXSIDE, parseInt($("#spH").value) || sp.h));
+  if (w === sp.w && h === sp.h) return;
+  sp.costumes = sp.costumes.map(rows => Array.from({length: h}, (_, y) => { const r = rows[y] || ""; return (r + ".".repeat(w)).slice(0, w); }));
+  sp.w = w; sp.h = h; drawGrid(); schedule();
+}
+$("#spW").addEventListener("change", resizeSprite); $("#spH").addEventListener("change", resizeSprite);
+const SPKEYS = {spdraw: ["s"], spset: ["s"], spmove: ["s"], spscale: ["s"], spflip: ["s"], spcost: ["s"], spnext: ["s"], spshow: ["s"], sp: ["s"], touch: ["a", "b"], send: ["to"], clmake: ["s"], clfor: ["s"], cldelall: ["s"], clcount: ["s"], cltouch: ["s"], cltouchc: ["s"]};
+function renameInScripts(from, to) {                                    // 名前を変えたら、ブロックの中の指定も追いかける
+  const walk = o => {
+    if (Array.isArray(o)) { o.forEach(walk); return; }
+    if (!o || typeof o !== "object") return;
+    for (const k of (SPKEYS[o.t] || (o.hat === "onmsg" ? ["me"] : o.hat === "onclone" ? ["s"] : []))) if (o[k] === from) o[k] = to;
+    for (const v of Object.values(o)) walk(v);
+  };
+  walk(P.scripts);
+}
+$("#spName").addEventListener("change", () => {
+  const sp = curSp(), nm = $("#spName").value.trim().replace(/[`\s]/g, "");
+  if (!nm || nm === sp.name) { $("#spName").value = sp.name; return; }
+  if (P.sprites.some((x, i) => i !== ed.i && x.name === nm)) { $("#spMsg").textContent = "同じ名前のスプライトがあります"; $("#spName").value = sp.name; return; }
+  renameInScripts(sp.name, nm); sp.name = nm; $("#spMsg").textContent = ""; schedule();
+});
+$("#spClose").addEventListener("click", () => dlg.close());
+dlg.addEventListener("close", () => { ed.down = false; changed(true); });
+
+/* ---------- 生成・保存 ---------- */
+let genTimer = null, saveTimer = null, server = false;
+function changedNoRender() { schedule(); }
+function changed(rerender) {
+  if (rerender) render();
+  schedule();
+}
+function schedule() {
+  try { localStorage.setItem("sign_scratch_project", JSON.stringify(P)); } catch (e) {}
+  clearTimeout(genTimer); genTimer = setTimeout(regen, 60);
+}
+let lastCode = "";
+function regen() {
+  try { lastCode = GEN.generate(P); } catch (e) { $("#code").textContent = "生成に失敗: " + e.message; return; }
+  const body = lastCode.slice(lastCode.indexOf("\ngfx : ") + 1);
+  $("#code").textContent = lastCode.split("\n").filter((l, i, a) => !/^`/.test(l)).join("\n").replace(/^\s+/, "");
+  if (server && $("#auto").checked) { clearTimeout(saveTimer); saveTimer = setTimeout(saveToConsole, 250); }
+}
+async function api(path, body) {
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  return r.json();
+}
+function setStatus(msg, cls) { const s = $("#status"); s.textContent = msg; s.className = "status " + (cls || ""); }
+async function saveToConsole() {
+  try {
+    const r = await api("/api/game", {code: lastCode});
+    if (r.error) setStatus(r.error, "bad"); else setStatus("ゲーム機へ反映しました: " + r.path, "ok");
+    if (r.path) $("#cmdline").textContent = `python3 sign_console.py ${r.path} --display=window:5:${SCREEN}`;
+  } catch (e) { setStatus("保存できませんでした: " + e.message, "bad"); }
+}
+$("#auto").addEventListener("change", () => { try { localStorage.setItem("sign_scratch_auto", $("#auto").checked ? "1" : ""); } catch (e) {} if ($("#auto").checked) saveToConsole(); });
+$("#btnPrev").addEventListener("click", async () => {
+  if (!server) return;
+  setStatus("動かしています…");
+  try {
+    const r = await api("/api/preview", {code: lastCode, frames: 30});
+    if (r.error) { setStatus(r.error, "bad"); $("#stage").hidden = true; return; }
+    $("#stage").src = "data:image/png;base64," + r.png; $("#stage").hidden = false;
+    setStatus(r.log ? r.log : "30 こま動かした画面です(キーは押していません)", r.log ? "bad" : "ok");
+  } catch (e) { setStatus("プレビューできませんでした: " + e.message, "bad"); }
+});
+function download(name, text, type) {
+  const a = el("a"); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$("#btnSn").addEventListener("click", () => download("blocks_game.sn", lastCode, "text/plain"));
+$("#btnJson").addEventListener("click", () => download("blocks_game.json", JSON.stringify(P, null, 1), "application/json"));
+$("#btnLoad").addEventListener("click", () => $("#file").click());
+$("#file").addEventListener("change", async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const p = JSON.parse(await f.text()); if (!Array.isArray(p.scripts) || !Array.isArray(p.vars)) throw new Error("作品の形ではありません"); P = normalizeProject(p); render(); schedule(); setStatus("開きました: " + f.name, "ok"); }
+  catch (er) { setStatus("開けませんでした: " + er.message, "bad"); }
+  e.target.value = "";
+});
+$("#btnEx").addEventListener("click", () => { P = exampleClean(); render(); schedule(); setStatus("見本に戻しました"); });
+
+(async function init() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem("sign_scratch_project") || "null"); } catch (e) {}
+  P = saved && Array.isArray(saved.scripts) && Array.isArray(saved.vars) ? saved : exampleClean();
+  normalizeProject(P);
+  try { if (localStorage.getItem("sign_scratch_auto")) $("#auto").checked = true; } catch (e) {}
+  render(); regen();
+  try { const r = await fetch("/api/ping"); server = r.ok; } catch (e) { server = false; }
+  $("#btnPrev").disabled = !server; $("#autolbl").hidden = !server;
+  if (!server) { $("#cmdline").textContent = "(sign_editor.py を起動して開くと、ゲーム機へ自動で反映できます。いまは「.sn を保存」で書き出せます)"; }
+  else if ($("#auto").checked) saveToConsole();
+})();
+})();
+</script>
+</body></html>

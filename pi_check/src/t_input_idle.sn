@@ -1,0 +1,8 @@
+`std.sn`@~
+CNT : 4x09300000
+MX : 4x09300020
+MY : 4x09300024
+MB : 4x09300028
+pi : n ? println_int n
+t : z ? seq4 (pi @CNT) (pi @MX) (pi @MY) (pi @MB)
+t 0

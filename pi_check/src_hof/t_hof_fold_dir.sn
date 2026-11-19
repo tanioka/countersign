@@ -1,0 +1,10 @@
+`特殊化の比べ相手(第110段): t_hof_fold_hof を手で特殊化した形。答え 165000000。
+add : a b ? a + b
+fold : acc [h ~t] ?
+	||t|| = 0 : add acc h
+	fold (add acc h) t
+xs : 1 2 3 4 5 6 7 8 9 10
+drv : k acc ?
+	k < 1 : acc
+	drv (k - 1) (acc + (fold 0 xs))
+drv 3000000 0

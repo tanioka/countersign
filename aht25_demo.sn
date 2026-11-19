@@ -1,0 +1,18 @@
+`aht25_demo.sn — AHT25 から温度と湿度を 1 秒ごとに 5 回読んで出す。
+`  Raspberry Pi: python3 sign_interp.py aht25_demo.sn --i2c        (バス 1。SDA = GPIO2、SCL = GPIO3、3.3 V。raspi-config で I2C を有効にしておく)
+`  パソコンでの練習: python3 sign_interp.py aht25_demo.sn --i2c=aht25:23.5,61
+
+`aht25.sn`@~
+
+fail : e ? seq3 (print `error `) (println_int e) e
+loop : i ?
+	i >= 5 : 0
+	(aht25_measure 0) < 0 : fail (aht25_measure 0)
+	loop2 i (aht25_show 0)
+
+loop2 : i w ? seq2 (aht_wait 1000) (loop (i + 1))
+start : r ?
+	r < 0 : fail r
+	loop 0
+
+start (aht25_init 0)

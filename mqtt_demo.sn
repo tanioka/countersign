@@ -1,0 +1,31 @@
+`mqtt_demo.sn — MQTT の見本。ブローカーにつないで sign/in を購読し、sign/count に 0〜4 を 1 秒おきに出す。sign/in に誰かが出したものを画面に出す。
+`  ブローカー(例 Mosquitto)を動かしておき: python3 sign_interp.py mqtt_demo.sn --net=local          (HOST・PORT は下で書き換える)
+`  別の端末から: mosquitto_pub -t sign/in -m hello     /     mosquitto_sub -t sign/count
+`  暗号化(8883 番など)は、つないだあとに TLS_START(ネットワーク装置の番号 13)を呼ぶ。ユーザー名・パスワードは mqtt_connect_auth。
+
+`mqtt.sn`@~
+
+HOST : `127.0.0.1`
+PORT : 1883
+
+`つなぐ。ハンドル(負ならエラー)`
+tcp : z ? seq2 (str_put 4x00600000 HOST) (mq_net 1 4x00600000 (str_len 4x00600000) PORT 0 0 0)
+
+show_in : r ?
+	r = 3 : seq4 (print `受信 `) (print_mem MQ_TOPIC) (print `: `) (println_mem MQ_PAYLOAD)
+	0
+
+step : h i ? seq3 (mqtt_publish_int h `sign/count` i 0 0) (show_in (mqtt_poll h 1000)) 0
+loop : h i ?
+	i >= 5 : 0
+	(step h i) : loop h (i + 1)
+
+run : h ?
+	h < 0 : seq2 (print `つなげませんでした: エラー `) (println_int h)
+	run2 h (mqtt_connect h `sign-demo` 60)
+
+run2 : h rc ?
+	(rc < 0) | (rc > 0) : seq2 (print `MQTT に断られました: `) (println_int rc)
+	seq4 (mqtt_subscribe h `sign/in` 0) (loop h 0) (mqtt_disconnect h) 0
+
+run (tcp 0)

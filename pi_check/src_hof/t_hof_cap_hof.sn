@@ -1,0 +1,11 @@
+`特殊化(第110段): 囲む関数の仮引数を捕まえた名前の無い関数を渡す。sc k xs は xs の各要素に k を掛けて足す。
+`sc 3 xs = 165 を 3000000 回足す。答え 495000000。捕まえた k は、実体の前の仮引数として運ばれる。
+fold : f acc [h ~t] ?
+	||t|| = 0 : @f acc h
+	fold f (@f acc h) t
+sc : k l ? fold $[a x ? a + x * k] 0 l
+xs : 1 2 3 4 5 6 7 8 9 10
+drv : n acc ?
+	n < 1 : acc
+	drv (n - 1) (acc + (sc 3 xs))
+drv 3000000 0

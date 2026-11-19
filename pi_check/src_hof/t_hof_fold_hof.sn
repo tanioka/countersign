@@ -1,0 +1,11 @@
+`特殊化(第110段): 器を畳む高階関数。fold $add 0 xs(= 55)を 3000000 回足す。答え 165000000。
+`括りの仮引数の残り [h ~t] で器を食い、終端は「残りが空」で見る。
+add : a b ? a + b
+fold : f acc [h ~t] ?
+	||t|| = 0 : @f acc h
+	fold f (@f acc h) t
+xs : 1 2 3 4 5 6 7 8 9 10
+drv : k acc ?
+	k < 1 : acc
+	drv (k - 1) (acc + (fold $add 0 xs))
+drv 3000000 0

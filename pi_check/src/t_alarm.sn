@@ -1,0 +1,14 @@
+seq2 : a b ? b
+seq3 : a b c ? c
+seq4 : a b c d ? d
+CNT : 0x7C0000
+TM : 0x9200000
+U : 0x9000000
+init : z ? seq4 (CNT # 0) ((TM + 0x08) # 7) ((TM + 0x10) # 100) 0
+on_timer : id ?
+	id = 7 : seq3 (CNT # ((@CNT) + 1)) (U # (0x30 + (@CNT))) (cont id)
+	0
+cont : id ?
+	(@CNT) >= 3 : -1
+	0
+tick : z ? seq2 (U # 0x2E) 0

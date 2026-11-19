@@ -1,0 +1,30 @@
+`led_pwm.sn — Raspberry Pi の LED をゆっくり明るく・暗くする(呼吸するように)。PWM で明るさを 0〜1000 の番地に書く。
+`  つなぎ方は led_gpio.sn と同じ(GPIO17 ── 330Ω ── LED ── GND)。
+`  動かし方: python3 sign_console.py led_pwm.sn --display=null --gpio      止めるのは Ctrl+C
+`  パソコンでの練習: --gpio=fake(変化が標準エラーに「[gpio] 17 pwm 50% 1000Hz」と出る)
+`  TICK_MS(何ミリ秒ごとに明るさを変えるか)で速さが決まる。100 回で 1 往復なので、20 ミリ秒なら 2 秒で 1 往復。
+
+GPIO : 0x9500000
+LED_PIN : 17
+TICK_MS : 20
+PHASE : 0x500000
+tm_every : 0x9200010
+
+seq2 : a b ? b
+seq3 : a b c ? c
+
+`PWM の明るさの番地 = GPIO + 0x200 + 4 × ピン。周波数の番地 = GPIO + 0x300 + 4 × ピン(既定 1000Hz)`
+duty : n v ? (GPIO + (0x200 + (4 * n))) # v
+
+`位相 0〜99 を 三角波(0 → 1000 → 0)にする。50 を頂点にして、どちらへも 20 ずつ`
+tri : p ?
+	p < 50 : p * 20
+	(100 - p) * 20
+
+init : z ? seq3 (PHASE # 0) (tm_every # TICK_MS) (duty LED_PIN 0)
+
+on_timer : id ?
+	(PHASE # (((@PHASE) + 1) % 100)) : duty LED_PIN (tri (@PHASE))
+	0
+
+tick : z ? 0

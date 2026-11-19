@@ -1,0 +1,2 @@
+`aht25.sn`@~
+seq3 (aht25_init 0) (aht25_measure 0) (aht25_temp 0)

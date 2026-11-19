@@ -1,0 +1,98 @@
+`aht25.sn — AHT25(温湿度センサー、I2C アドレス 0x38)のドライバ(仕様に無い追加)。I2C 装置(sign_bus.py)の上で動く。
+`  使い方: 先頭に「 aht25.sn を バッククォートで囲み @~ を続ける 」と書く(std.sn も一緒に読み込まれる)。--i2c が要る。Raspberry Pi: --i2c(バス 1 = GPIO2 の SDA・GPIO3 の SCL)。練習: --i2c=aht25:25,50
+`    aht25_init                  リセットして、校正されていなければ初期化する。0 = できた。負 = エラー(-6 または -121 = 応答なし(処理系の仮想装置は -6、実機の Linux は WRITE_READ の NACK で -121)、-5 = 初期化できない、その他は I2C 装置のエラー)
+`    aht25_measure               測って結果を作業場に入れる。0 = できた。負 = エラー(-110 = 測定が終わらない、-74 = CRC が合わない)
+`    aht25_temp 0   aht25_hum 0  最後の測定の温度(0.01 ℃の単位。2543 = 25.43 ℃)と湿度(0.01 %RH の単位。5012 = 50.12 %)。整数だけで計算する(Sign に小数は無い)
+`    aht25_fmt dst v             0.01 単位の整数 v を「25.43」の形の文字列にして dst に入れる。長さを返す(負は「-5.20」)
+`    aht25_show                  「T=25.43 C RH=50.12 %」の 1 行を出す
+`  待ち: 時計の SLEEP(0x9200004)を使う(--i2c を付けると時計も付く)。リセット後 100 ms、測定開始後 80 ms、そのあと 10 ms ごとに最大 10 回忙しさを見る。
+`  初期化の判断: 状態(0x71)の (bit4 かつ bit3) = 0x18 なら校正済みで何もしない。そうでなければ 0xBE 0x08 0x00 を送り、10 ms 待って bit3 が立ったか見る。
+`    AHT25 の資料には別の初期化(レジスタ 0x1B 0x1C 0x1E を書き直す)もあるが、資料によって食い違うので入れていない。出荷時に校正済みなら使わない道。
+`  作業場: 0x7C0000〜0x7C0FFF(使わないでください)。
+
+`std.sn`@~
+
+AHT_I2C : 4x09600000
+AHT_TMR : 4x09200004
+AHT_BUF : 4x007C0000
+AHT_RES : 0x007C0100
+
+`I2C 装置を呼ぶ(アドレス 0x38、命令 cmd、送る長さ n、読み返す長さ rn)。戻りは長さか -errno`
+aht_i2c : cmd n rn ? seq6 ((AHT_I2C + 0) # 0x38) ((AHT_I2C + 4) # AHT_BUF) ((AHT_I2C + 8) # n) ((AHT_I2C + 12) # rn) ((AHT_I2C + 0x14) # cmd) (@(AHT_I2C + 0x18))
+aht_wait : ms ? seq2 (AHT_TMR # ms) 0
+
+aht_cmd1 : c ? seq2 (AHT_BUF # c) (aht_i2c 1 1 0)
+aht_cmd3 : a b c ? seq4 (AHT_BUF # a) ((AHT_BUF + 4) # b) ((AHT_BUF + 8) # c) (aht_i2c 1 3 0)
+
+`状態バイトを読む。値か負`
+aht_status : z ? aht_status2 (seq2 (AHT_BUF # 0x71) (aht_i2c 3 1 1))
+aht_status2 : r ?
+	r < 0 : r
+	@AHT_BUF
+
+aht25_init : z ? aht_init2 (aht_cmd1 0xBA)
+aht_init2 : r ?
+	r < 0 : r
+	aht_init3 (aht_wait 100) (aht_status 0)
+
+aht_init3 : w st ?
+	st < 0 : st
+	(st && 0x18) = 0x18 : 0
+	aht_init4 (aht_cmd3 0xBE 0x08 0x00)
+
+aht_init4 : r ?
+	r < 0 : r
+	aht_init5 (aht_wait 10) (aht_status 0)
+
+aht_init5 : w st ?
+	st < 0 : st
+	(st && 0x08) = 0x08 : 0
+	0 - 5
+
+`CRC-8(多項式 0x31、初期値 0xFF)。buf の 0〜5 番目の上`
+aht_crc : i c ?
+	i >= 6 : c
+	aht_crc (i + 1) (aht_crcb (c ;; (@(AHT_BUF + (i * 4)))) 8)
+
+aht_crcb : c k ?
+	k = 0 : c
+	(c && 0x80) > 0 : aht_crcb (((c << 1) ;; 0x31) && 255) (k - 1)
+	aht_crcb ((c << 1) && 255) (k - 1)
+
+aht25_measure : z ? aht_meas2 (aht_cmd3 0xAC 0x33 0x00)
+aht_meas2 : r ?
+	r < 0 : r
+	aht_poll (aht_wait 80) 0
+
+`7 バイト読む。忙しければ 10 ms 待ってやり直す(最大 10 回)`
+aht_poll : w k ? aht_poll2 k (aht_i2c 2 7 0)
+aht_poll2 : k r ?
+	r < 0 : r
+	((@AHT_BUF) && 0x80) = 0 : aht_check (aht_crc 0 255)
+	k >= 10 : 0 - 110
+	aht_poll (aht_wait 10) (k + 1)
+
+aht_check : c ?
+	c = (@(AHT_BUF + 24)) : aht_calc 0
+	0 - 74
+
+aht_calc : z ? aht_store (aht_rh 0) (aht_tp 0)
+`20 ビットの生の値`
+aht_rh : z ? (((@(AHT_BUF + 4)) << 12) || ((@(AHT_BUF + 8)) << 4)) || ((@(AHT_BUF + 12)) >> 4)
+aht_tp : z ? (((((@(AHT_BUF + 12)) && 15) << 16) || ((@(AHT_BUF + 16)) << 8)) || (@(AHT_BUF + 20)))
+`湿度 = 生 / 2^20 × 100 %、温度 = 生 / 2^20 × 200 - 50 ℃(0.01 単位で四捨五入)`
+aht_store : rh tp ? seq3 (AHT_RES # ((((tp * 20000) + 524288) >> 20) - 5000)) ((AHT_RES + 8) # (((rh * 10000) + 524288) >> 20)) 0
+
+aht25_temp : z ? @AHT_RES
+aht25_hum : z ? @(AHT_RES + 8)
+
+`0.01 単位の整数 v を 25.43 の形に`
+aht25_fmt : dst v ?
+	v < 0 : seq2 (dst # 45) (1 + (aht_fmtp (dst + 4) (0 - v)))
+	aht_fmtp dst v
+
+aht_fmtp : dst v ? aht_fmtp2 dst v (str_int dst (v / 100))
+aht_fmtp2 : dst v n ? seq5 ((dst + (n * 4)) # 46) ((dst + ((n + 1) * 4)) # (48 + ((v % 100) / 10))) ((dst + ((n + 2) * 4)) # (48 + (v % 10))) ((dst + ((n + 3) * 4)) # 0) (n + 3)
+
+aht25_show : z ? seq6 (print `T=`) (aht_pr (aht25_temp 0)) (print ` C RH=`) (aht_pr (aht25_hum 0)) (println ` %`) 0
+aht_pr : v ? seq2 (aht25_fmt (AHT_RES + 0x100) v) (print_mem (AHT_RES + 0x100))

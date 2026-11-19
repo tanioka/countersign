@@ -1,0 +1,25 @@
+`sound_demo.sn — 音の見本。chime.wav を鳴らし、そのあと ド・ミ・ソ・ド の 4 つの音を出す。
+`  Windows でも Linux でも: python sign_interp.py sound_demo.sn --sound       (このファイルと chime.wav のあるフォルダで)
+`  音の無い環境での練習: --sound=fake(鳴らした内容が標準エラーに出る)
+`  Linux では paplay・pw-play・aplay・ffplay・play のどれかが要る(多くの環境に最初から入っている)
+
+SND : 0x9800000
+TMR : 0x9200000
+NAME : 0x600000
+
+seq2 : a b ? b
+seq3 : a b c ? c
+seq4 : a b c d ? d
+seq5 : a b c d e ? e
+
+`待つ(ミリ秒)`
+wait : ms ? (TMR + 4) # ms
+
+`名前 chime.wav を置いて鳴らす。鳴り終わりまで待つ`
+chime : z ? seq5 ((NAME + 0) # 99) ((NAME + 4) # 104) ((NAME + 8) # 105) ((NAME + 12) # 109) (seq5 ((NAME + 16) # 101) ((NAME + 20) # 46) ((NAME + 24) # 119) ((NAME + 28) # 97) ((NAME + 32) # 118))
+play : z ? seq4 ((SND + 0) # NAME) ((SND + 4) # 9) ((SND + 0x14) # 1) (wait 700)
+
+`1 つの音を鳴らして、鳴り終わりまで待つ`
+note : f ms ? seq5 ((SND + 8) # f) ((SND + 0x0C) # ms) ((SND + 0x14) # 2) (wait (ms + 30)) 0
+
+seq5 (chime 0) (play 0) (note 262 300) (note 330 300) (seq2 (note 392 300) (note 523 600))

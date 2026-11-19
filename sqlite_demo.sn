@@ -1,0 +1,19 @@
+`sqlite_demo.sn — メモリ上のデータベースに表を作り、行を入れて、選んで出す。
+`  python3 sign_interp.py sqlite_demo.sn --db           (ファイルに残したいときは db_open の名前を :memory: から notes.db などに変える。フォルダは --db=フォルダ)
+
+`sqlite.sn`@~
+
+fail : what ? seq3 (print `error `) (println_int what) what
+add : h name qty ? add2 (db_prep h `INSERT INTO fruit(name, qty) VALUES (?, ?)`) name qty
+add2 : s name qty ? seq4 (db_bind_text s 1 name) (db_bind_int s 2 qty) (db_step s) (db_done s)
+bind5 : s ? seq2 (db_bind_int s 1 5) s
+rows : s ?
+	(db_step s) = 1 : seq2 (db_print_row s) (rows s)
+	0
+
+run : h ? seq6 (db_exec h `CREATE TABLE fruit(id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, qty INTEGER)`) (add h `apple` 3) (add h `banana` 12) (add h `cherry` 7) (rows (bind5 (db_prep h `SELECT id, name, qty FROM fruit WHERE qty > ? ORDER BY qty DESC`))) (db_close h)
+start : h ?
+	h < 0 : fail h
+	run h
+
+start (db_open `:memory:` 0)

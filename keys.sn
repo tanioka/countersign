@@ -1,0 +1,51 @@
+`keys.sn — 矢印キーで四角を動かす。q か 閉じるで終わる`
+
+gfx : 0x9100000
+timer : 0x9200000
+inp : 0x9300000
+
+color : 4x09100008
+px : 4x0910000C
+py : 4x09100010
+cmd : 4x09100014
+arg0 : 4x09100018
+arg1 : 4x0910001C
+sleep : 4x09200004
+count : 4x09300000
+etype : 4x09300004
+ecode : 4x09300008
+pop : 4x09300014
+
+seq2 : a b ? b
+seq3 : a b c ? c
+seq8 : a b c d e f g h ? h
+
+clear : c ? seq2 (color # c) (cmd # 2)
+rect : x y w h c ? seq8 (color # c) (px # x) (py # y) (arg0 # w) (arg1 # h) (cmd # 5) 0 0
+present : z ? cmd # 3
+
+`--- キーが押された出来事 (種類 1) の符号に応じて位置を変える ---`
+
+step : code x ?
+	code = 0x1C : x - 2
+	code = 0x1D : x + 2
+	x
+
+`--- 出来事を捨てて続きを読む。先に引数 (次の x) を評価するので、捨てる前の先頭を使える ---`
+
+popped : nx ? seq2 (pop # 0) (drain nx)
+
+`--- 行列を空になるまで読む。q (113) か 閉じる (6) なら -1 を返して終わる ---`
+
+drain : x ?
+	@count = 0 : x
+	@etype = 6 : seq2 (pop # 0) (0 - 1)
+	@etype = 1 & @ecode = 113 : seq2 (pop # 0) (0 - 1)
+	@etype = 1 : popped (step @ecode x)
+	seq2 (pop # 0) (drain x)
+
+loop : x ?
+	x < 0 : @px
+	seq3 (clear 0) (rect x 4 6 6 0xFFFFFF) (present 0) : seq2 (sleep # 16) (loop (drain x))
+
+loop 10

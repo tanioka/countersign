@@ -1,0 +1,60 @@
+`events_demo.sn — イベント(コールバック)の見本。矢印キーで四角を 1 マスずつ動かす(押すたびに 1 回)、クリックで点を打つ、c で消す、q で終わる`
+`  python3 sign_console.py events_demo.sn --display=window:5:96x96`
+`on_key・on_click などを定義すると、ゲーム機が出来事を古い順に呼んでから tick を呼ぶ。tick は描くだけ。`
+
+SIZE : 6
+STEP : 6
+BG : 0x101830
+
+gfx : 0x9100000
+color : gfx + 0x08
+px : gfx + 0x0C
+py : gfx + 0x10
+cmd : gfx + 0x14
+arg0 : gfx + 0x18
+arg1 : gfx + 0x1C
+
+seq2 : a b ? b
+seq3 : a b c ? c
+seq4 : a b c d ? d
+seq5 : a b c d e ? e
+seq8 : a b c d e f g h ? h
+
+`状態は番地に置く: 四角の位置、点の数、点の座標の並び`
+X : 0x3000
+Y : 0x3004
+NP : 0x3008
+DOTS : 0x4000
+get : a ? @a
+
+clear : c ? seq2 (color # c) (cmd # 2)
+rect : x y w h c ? seq8 (color # c) (px # x) (py # y) (arg0 # w) (arg1 # h) (cmd # 5) 0 0
+present : z ? cmd # 3
+
+clamp : v hi ?
+	v < 0 : 0
+	v > hi : hi
+	v
+
+`--- イベント: キーが押されたとき(1 回だけ)。左 28 右 29 上 30 下 31、c は 99、q は 113 ---`
+on_key : code ?
+	code = 28 : X # (clamp ((get X) - STEP) 90)
+	code = 29 : X # (clamp ((get X) + STEP) 90)
+	code = 30 : Y # (clamp ((get Y) - STEP) 90)
+	code = 31 : Y # (clamp ((get Y) + STEP) 90)
+	code = 99 : NP # 0
+	code = 113 : 0 - 1
+	0
+
+`--- イベント: クリックされたとき。点の座標を覚える(上限 100 こ) ---`
+on_click : x y button ?
+	(get NP) >= 100 : 0
+	seq4 ((DOTS + ((get NP) * 8)) # x) ((DOTS + ((get NP) * 8) + 4) # y) (NP # ((get NP) + 1)) 0
+
+dots : i ?
+	i >= (get NP) : 0
+	seq2 (rect (get (DOTS + (i * 8))) (get (DOTS + (i * 8) + 4)) 2 2 0xFF6060) (dots (i + 1))
+
+init : z ? seq3 (X # 40) (Y # 40) (NP # 0)
+
+tick : z ? seq4 (clear BG) (dots 0) (rect (get X) (get Y) SIZE SIZE 0xFFCC00) (present 0)

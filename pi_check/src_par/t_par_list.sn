@@ -1,0 +1,20 @@
+`並列(--par)の確認: 器・Char・入れ子の仮引数の関数(第106段)。
+`fl l n は l の n 番目(n < 2)か、2 つ前までの和。xs : 1 1 なので fl xs n = fib (n + 1)。
+`fl xs 36 = 24157817、fl xs 35 = 14930352、fl xs 34 = 9227465。合計 48315634(t_par_fib と同じ答え)。
+`器 xs は {番地, 長さ} の 2 語で仕事に渡る。
+`cnt は文字列 s の中の Char c の数。nest は入れ子の器の要素の数の和(どちらも軽いので、答えの確認用)。
+fl : l n ?
+	n < 2 : l ' n
+	(fl l (n - 1)) + (fl l (n - 2))
+xs : 1 1
+cnt : s c i ?
+	i >= ||s|| : 0
+	(s ' i) = c : 1 + (cnt s c (i + 1))
+	cnt s c (i + 1)
+tot : ls i ?
+	i >= ||ls|| : 0
+	||ls ' i|| + (tot ls (i + 1))
+w : `banana`
+ns : [1 2] [3 4 5]
+h : s c l ? (cnt s c 0) + (tot l 0)
+(fl xs 36) + (fl xs 35) + (fl xs 34) + (h w (w ' 1) ns) - 8

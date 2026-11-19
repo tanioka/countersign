@@ -1,0 +1,40 @@
+`led_blink.sn — Sign の L チカ。画面の四角を LED に見立て、タイマー装置の「500 ミリ秒ごと」のアラームで点いたり消えたりする。q か 閉じる で終わる`
+`  python3 sign_console.py led_blink.sn            (窓)`
+`動かしたまま、下の ON_MS(点いている時間)・COLOR_ON・COLOR_OFF を書き換えて保存すると、続きから変わる。LED の状態は番地 LED に入っている(1 = 点灯)`
+`  Sign に GPIO の装置は無いので、LED は画面の画素、ピンの上げ下げは「LED の番地に 0 か 1 を書く」ことで表した。実機なら LED の番地を GPIO のレジスタに置き換えるだけ`
+
+seq2 : a b ? b
+seq4 : a b c d ? d
+seq8 : a b c d e f g h ? h
+
+LED : 0x500000
+PERIOD : 500
+COLOR_ON : 0xFF3030
+COLOR_OFF : 0x401010
+BG : 0x101830
+
+gfx : 0x9100000
+color : gfx + 0x08
+px : gfx + 0x0C
+py : gfx + 0x10
+cmd : gfx + 0x14
+arg0 : gfx + 0x18
+arg1 : gfx + 0x1C
+tm_every : 0x9200010
+
+`始めに LED を消し、500 ミリ秒ごとのアラームを頼む`
+seq3 : a b c ? c
+init : z ? seq3 (LED # 0) (tm_every # PERIOD) 0
+
+`アラームが鳴るたびに LED の状態を反転する`
+on_timer : id ?
+	(LED # (1 - (@LED))) : 0
+	0
+
+led_color : s ?
+	s = 1 : COLOR_ON
+	COLOR_OFF
+
+paint : z ? seq8 (color # (led_color (@LED))) (px # 28) (py # 28) (arg0 # 24) (arg1 # 24) (cmd # 5) 0 0
+
+tick : z ? seq4 (color # BG) (cmd # 2) (paint 0) (cmd # 3)

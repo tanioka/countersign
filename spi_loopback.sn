@@ -1,0 +1,20 @@
+`spi_loopback.sn — SPI の自己診断。MOSI(GPIO10)と MISO(GPIO9)を 1 本の線でつなぐと、送った 4 バイトがそのまま返る。
+`  Raspberry Pi: python3 sign_interp.py spi_loopback.sn --spi        (raspi-config で SPI を有効にしておく)
+`  パソコンでの練習: python3 sign_interp.py spi_loopback.sn --spi=fake
+`  返ってきた 4 バイトを 10 進で出す(1 2 3 4 と出れば成功。0 0 0 0 なら線がつながっていない)。
+
+`std.sn`@~
+
+SPI : 4x09700000
+BUF : 4x00600000
+
+seq3 : a b c ? c
+seq5 : a b c d e ? e
+
+fill : z ? seq5 ((BUF + 0) # 1) ((BUF + 4) # 2) ((BUF + 8) # 3) ((BUF + 12) # 4) 0
+xfer : z ? seq5 ((SPI + 0) # BUF) ((SPI + 4) # 4) ((SPI + 0x08) # 1000000) ((SPI + 0x14) # 1) (@(SPI + 0x18))
+show : i ?
+	i > 3 : newline 0
+	seq3 (print_int (@(BUF + (4 * i)))) (print ` `) (show (i + 1))
+
+seq3 (fill 0) (xfer 0) (show 0)

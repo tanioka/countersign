@@ -1,0 +1,1061 @@
+<title>Sign ブロックエディタ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* 配置: 上に道具帯、左にブロック棚、中央に配線の盤、右に生成された Sign とその値。狭い幅では縦に積む。 */
+:root{
+  --bg:#e8ecf0; --panel:#f5f7f9; --card:#ffffff; --ink:#1b2430; --muted:#5a6978; --line:#c5cdd7; --grid:#cdd5de;
+  --accent:#2155d4; --accent-ink:#ffffff; --bad:#b3261e; --ok:#17794a;
+  --c-value:#0d7867; --c-op:#3849bd; --c-cases:#a96300; --c-call:#85399f; --c-result:#1b2430; --c-unit:#6b7785;
+  --ui:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic UI","Noto Sans JP",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161b; --panel:#1a2027; --card:#222a33; --ink:#e5eaf0; --muted:#94a2b1; --line:#323d49; --grid:#27313b;
+  --accent:#7a9dff; --accent-ink:#0e1520; --bad:#ff8a80; --ok:#6fd49c;
+  --c-value:#3fc3ae; --c-op:#8d9cff; --c-cases:#e3a33f; --c-call:#c690e3; --c-result:#e5eaf0; --c-unit:#94a2b1; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161b; --panel:#1a2027; --card:#222a33; --ink:#e5eaf0; --muted:#94a2b1; --line:#323d49; --grid:#27313b;
+  --accent:#7a9dff; --accent-ink:#0e1520; --bad:#ff8a80; --ok:#6fd49c;
+  --c-value:#3fc3ae; --c-op:#8d9cff; --c-cases:#e3a33f; --c-call:#c690e3; --c-result:#e5eaf0; --c-unit:#94a2b1; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:14px;line-height:1.5;
+  padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-block:10px;
+  display:flex;flex-direction:column;gap:10px;min-height:100%}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+h1{font-size:17px;font-weight:600;margin:0;letter-spacing:.01em}
+h1 small{font-weight:400;color:var(--muted);margin-left:6px;font-size:12px}
+.tools{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 10px;min-height:32px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:default}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.tab{border:1px solid var(--line);background:var(--panel);border-radius:6px 6px 0 0;padding:4px 12px;font-family:var(--mono);font-size:13px}
+.tab[aria-selected="true"]{background:var(--card);border-bottom-color:var(--card);font-weight:500}
+.tabs .add{border-style:dashed}
+.fnhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.fnhead input{font-family:var(--mono);border:1px solid var(--line);background:var(--card);border-radius:5px;padding:3px 7px;min-width:0}
+.work{flex:1;display:grid;grid-template-columns:132px minmax(0,1fr) minmax(280px,340px);gap:10px;min-height:520px}
+.shelf{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px;align-content:start}
+.shelf h2,.side h2,.dside h2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:2px 0 2px;font-weight:600}
+.chip{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:5px 8px;text-align:left;min-height:32px}
+.chip i{width:9px;height:9px;border-radius:2px;flex:none}
+.chip:hover{border-color:var(--accent)}
+.stage{position:relative;border:1px solid var(--line);border-radius:8px;overflow:auto;background:var(--panel);min-height:360px;touch-action:pan-x pan-y}
+.board{position:relative;width:1600px;height:1100px;
+  background-image:radial-gradient(var(--grid) 1.2px,transparent 1.4px);background-size:22px 22px}
+svg.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+svg.wires path{fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round}
+svg.wires path.live{stroke:var(--accent);stroke-dasharray:5 4}
+.node{position:absolute;width:176px;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 0 var(--line);font-size:13px}
+.node.sel{outline:2px solid var(--accent);outline-offset:1px}
+.nhead{display:flex;align-items:center;gap:6px;padding:4px 6px 4px 9px;border-bottom:1px solid var(--line);cursor:grab;touch-action:none;
+  border-radius:7px 7px 0 0;border-top:3px solid var(--tc,var(--c-op));user-select:none}
+.nhead b{font-weight:600;font-size:12px;color:var(--tc);flex:1}
+.nhead .x{border:0;background:none;color:var(--muted);padding:0 4px;font-size:16px;line-height:1;min-height:24px}
+.nbody{padding:6px 9px 8px;display:flex;flex-direction:column;gap:5px}
+.t-num{--tc:var(--c-value)}.t-unit{--tc:var(--c-unit)}.t-param{--tc:var(--c-value)}
+.t-op{--tc:var(--c-op)}.t-cases{--tc:var(--c-cases)}.t-call{--tc:var(--c-call)}.t-result{--tc:var(--c-result)}
+.prow{position:relative;display:flex;align-items:center;gap:6px;min-height:22px}
+.plabel{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.port{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--card);border:2px solid var(--muted);cursor:crosshair;touch-action:none}
+.port.in{left:-17px}.port.out{right:-9px;top:8px}
+.port.on{background:var(--muted)}
+.port:hover,.port.hot{border-color:var(--accent)}
+.port.in::after{content:"";position:absolute;inset:-6px}
+.node input[type=text],.node select{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:2px 6px;font-family:var(--mono);font-size:13px;min-width:0}
+.node .val{font-family:var(--mono);font-size:12px;color:var(--ok);background:var(--panel);border-radius:4px;padding:1px 6px;align-self:flex-start;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.node .val.u{color:var(--muted)}
+.rowctl{display:flex;gap:4px}
+.rowctl button{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:0 8px;min-height:24px;font-size:12px}
+.sep{border-top:1px dashed var(--line);margin:1px 0}
+.side{display:flex;flex-direction:column;gap:10px;min-width:0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.box .hd{display:flex;align-items:center;justify-content:space-between;gap:6px}
+pre.code{margin:6px 0 0;font-family:var(--mono);font-size:13px;line-height:1.55;tab-size:2;white-space:pre;overflow:auto;max-height:340px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.out-line{font-family:var(--mono);font-size:13px;display:flex;gap:8px}
+.out-line span:first-child{color:var(--muted)}
+.warn{margin:4px 0 0;padding-left:16px;color:var(--bad);font-size:12.5px}
+.note{color:var(--muted);font-size:12.5px;margin:4px 0 0}
+@media (max-width:900px){
+  .work{grid-template-columns:minmax(0,1fr)}
+  .shelf{flex-direction:row;flex-wrap:wrap}
+  .shelf h2{width:100%}
+  .stage{height:62vh}
+}
+
+.modes{display:flex;gap:0;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.mode{border:0;background:var(--panel);padding:5px 12px;min-height:32px}
+.mode[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.dtools{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.dtools .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.dwork{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,360px);gap:10px;min-height:520px}
+.dstage{position:relative;border:1px solid var(--line);border-radius:8px;overflow:auto;background:var(--panel);min-height:380px;touch-action:pan-x pan-y}
+svg.dia{display:block;width:1100px;height:720px;background-image:radial-gradient(var(--grid) 1.2px,transparent 1.4px);background-size:22px 22px;user-select:none}
+.dia .obj circle{fill:var(--card);stroke-width:2.5}
+.dia .obj text{font-family:var(--mono);font-size:14px;fill:var(--ink);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.dia .obj.sel circle,.dia .edge.sel path.main{stroke:var(--accent)!important}
+.dia .obj{cursor:grab}
+.dia .edge path.main{fill:none;stroke:var(--ink);stroke-width:2}
+.dia .edge path.hit{fill:none;stroke:transparent;stroke-width:16;cursor:pointer}
+.dia .edge.bad path.main{stroke:var(--bad)}
+.dia .edge.comp path.main{stroke:var(--accent);stroke-dasharray:6 4}
+.dia .edge text{font-family:var(--mono);font-size:13px;fill:var(--ink);text-anchor:middle;paint-order:stroke;stroke:var(--panel);stroke-width:4px;pointer-events:none}
+.dia .edge.bad text{fill:var(--bad)}
+.dia .edge.comp text{fill:var(--accent)}
+.dia .live{fill:none;stroke:var(--accent);stroke-width:2;stroke-dasharray:5 4}
+.dia marker path{fill:context-stroke}
+.field{display:flex;flex-direction:column;gap:3px;margin:6px 0}
+.field label{font-size:12px;color:var(--muted)}
+.field input,.field select{border:1px solid var(--line);background:var(--card);border-radius:5px;padding:4px 7px;font-family:var(--mono);font-size:13px;min-width:0;width:100%}
+.chk{border-top:1px dashed var(--line);margin-top:8px;padding-top:6px}
+.chk table{border-collapse:collapse;font-family:var(--mono);font-size:12.5px;margin-top:4px}
+.chk td,.chk th{padding:2px 8px 2px 0;text-align:left;font-weight:400}
+.chk th{color:var(--muted)}
+.okm{color:var(--ok)}.ngm{color:var(--bad)}
+.dside{display:flex;flex-direction:column;gap:10px;min-width:0}
+@media (max-width:900px){.dwork{grid-template-columns:minmax(0,1fr)}.dstage{height:56vh}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="bar">
+  <h1>Sign ブロックエディタ<small>線でつなぐと Sign の文章になる</small></h1>
+  <div class="modes" role="tablist" aria-label="画面"><button class="mode" role="tab" id="m-blocks" aria-selected="true">ブロック</button><button class="mode" role="tab" id="m-diag" aria-selected="false">集合と矢印</button></div>
+  <div class="tools" id="blocktools">
+    <label for="ex" class="note" style="margin:0">見本</label>
+    <select id="ex" class="btn"></select>
+    <button class="btn" id="clear">空にする</button>
+  </div>
+</header>
+
+<div class="tabs" id="tabs" role="tablist" data-mode="blocks"></div>
+<div class="fnhead" id="fnhead" data-mode="blocks" hidden>
+  <label for="fname">関数名</label><input id="fname" size="10" autocomplete="off" spellcheck="false">
+  <label for="fparams">仮引数</label><input id="fparams" size="14" autocomplete="off" spellcheck="false" placeholder="n a">
+  <button class="btn" id="delfn">この関数を消す</button>
+  <span id="fnlink" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"></span>
+</div>
+
+<div class="work" id="blockwork" data-mode="blocks">
+  <aside class="shelf" aria-label="ブロック棚">
+    <h2>ブロック</h2>
+    <button class="chip" data-add="num"><i style="background:var(--c-value)"></i>数</button>
+    <button class="chip" data-add="unit"><i style="background:var(--c-unit)"></i>未定義 __</button>
+    <button class="chip" data-add="op"><i style="background:var(--c-op)"></i>演算</button>
+    <button class="chip" data-add="cases"><i style="background:var(--c-cases)"></i>条件の行</button>
+    <button class="chip" data-add="call"><i style="background:var(--c-call)"></i>関数を呼ぶ</button>
+    <button class="chip" data-add="result"><i style="background:var(--c-result)"></i>出力</button>
+  </aside>
+  <div class="stage" id="stage"><div class="board" id="board"><svg class="wires" id="wires"></svg></div></div>
+  <section class="side">
+    <div class="box"><div class="hd"><h2>Sign</h2><button class="btn" id="copy">コピー</button></div>
+      <pre class="code" id="code" tabindex="0"></pre><ul class="warn" id="warns"></ul></div>
+    <div class="box"><h2>値(この画面での簡易評価)</h2><div id="outs"></div>
+      <p class="note">整数・小数・__ の計算と、条件の行・再帰を、Sign 本体と同じ規則で評価します。本体とのずれは生成した文章を <code>sign_interp.py</code> に通して確かめられます。</p></div>
+  </section>
+</div>
+
+
+<div id="diag" data-mode="diag" hidden style="display:flex;flex-direction:column;gap:10px;flex:1">
+  <div class="dtools">
+    <button class="btn" id="d-obj">+ 型(集合)を置く</button>
+    <button class="btn" id="d-arrow" aria-pressed="false">矢印を引く</button>
+    <button class="btn" id="d-comp" aria-pressed="false">矢印をつないで合成</button>
+    <button class="btn primary" id="d-compok" hidden>この合成に決める</button>
+    <span class="note" id="d-hint" style="margin:0"></span>
+    <span style="margin-left:auto;display:flex;gap:6px;align-items:center">
+      <label for="d-ex" class="note" style="margin:0">見本</label><select id="d-ex" class="btn"></select>
+      <button class="btn" id="d-clear">空にする</button></span>
+  </div>
+  <div class="dwork">
+    <div class="dstage" id="dstage"><svg class="dia" id="dia" viewBox="0 0 1100 720" aria-label="集合と矢印の図">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z"/></marker></defs>
+      <g id="d-edges"></g><g id="d-objs"></g><path class="live" id="d-live" d=""/></svg></div>
+    <section class="dside">
+      <div class="box" id="d-insp"></div>
+      <div class="box"><div class="hd"><h2>Sign</h2><button class="btn" id="d-copy">コピー</button></div>
+        <pre class="code" id="d-code" tabindex="0"></pre><ul class="warn" id="d-warns"></ul></div>
+      <div class="box"><div class="hd"><h2>可換の確かめ</h2><button class="btn" id="d-addchk">+ 確かめ</button></div><div id="d-chks"></div>
+        <p class="note">同じ始まりと終わりの 2 本の道に、同じ値を流して、結果が揃うかを見ます。本体には x と + - * / % と比較(&lt; &lt;= &gt; &gt;= =)、&amp;・| と括弧が使えます。</p></div>
+    </section>
+  </div>
+</div>
+<script>
+"use strict";
+/* ---------- 状態 ---------- */
+const KEY="sign-blocks-v1";
+let S=null, selected=null, uid=1;
+const $=s=>document.querySelector(s);
+const tabOf=id=>S.tabs.find(t=>t.id===id);
+const cur=()=>tabOf(S.active);
+const newId=()=>"n"+(uid++);
+const IDENT=/^[A-Za-z_][A-Za-z0-9_]*$/;
+
+function blank(){return{active:"main",tabs:[{id:"main",name:"main",params:[],nodes:{}}]}}
+function addNode(tab,type,x,y,props){const id=newId();tab.nodes[id]=Object.assign({id,type,x,y,inputs:{}},props||{});return id}
+function link(tab,to,port,from){tab.nodes[to].inputs[port]=from}
+function ensureFn(tab){
+  if(tab.id==="main")return;
+  const want=tab.params, have=Object.values(tab.nodes).filter(n=>n.type==="param");
+  for(const h of have) if(!want.includes(h.name)){delete tab.nodes[h.id];dropRefs(tab,h.id)}
+  want.forEach((p,i)=>{ if(!have.some(h=>h.name===p)) addNode(tab,"param",16,16+i*74,{name:p}) });
+  if(!Object.values(tab.nodes).some(n=>n.type==="result")) addNode(tab,"result",560,120,{});
+}
+function dropRefs(tab,id){for(const n of Object.values(tab.nodes))for(const k in n.inputs)if(n.inputs[k]===id)n.inputs[k]=null}
+
+/* ---------- 値と評価(sign_interp.py の規則) ---------- */
+class Flt{constructor(v){this.v=v}}
+const U=null;
+const isU=v=>v===U, isNum=v=>typeof v==="number"||v instanceof Flt, nv=v=>v instanceof Flt?v.v:v;
+function show(v){ if(isU(v))return"__"; if(v instanceof Flt)return Number.isInteger(v.v)?v.v.toFixed(1):String(v.v); return String(v) }
+function arith(op,a,b){
+  if(isU(a))return isNum(b)?b:U; if(isU(b))return isNum(a)?a:U;
+  const fl=a instanceof Flt||b instanceof Flt, x=nv(a), y=nv(b); let r;
+  if(op==="+")r=x+y; else if(op==="-")r=x-y; else if(op==="*")r=x*y;
+  else if(op==="/"){ if(y===0)return U; r=fl?x/y:Math.trunc(x/y) }
+  else if(op==="%"){ if(y===0)return U; r=x%y }
+  else return U;
+  return fl?new Flt(r):r;
+}
+function witness(a,b){return(nv(a)===0||nv(a)===1)?b:a}
+function compare(op,a,b){
+  const x=nv(a),y=nv(b);
+  const ok=op==="<"?x<y:op==="<="?x<=y:op===">"?x>y:op===">="?x>=y:x===y;
+  return ok?witness(a,b):U;
+}
+const OPS=["+","-","*","/","%","<","<=",">",">=","=","&","|"];
+class Budget extends Error{}
+function evaluator(){
+  let steps=0, depth=0;
+  const fns={}; for(const t of S.tabs) if(t.id!=="main") fns[t.name]=t;
+  function ev(tab,id,env,memo){
+    if(!id)return U;
+    if(memo.has(id))return memo.get(id);
+    const n=tab.nodes[id]; if(!n)return U;
+    if(++steps>400000)throw new Budget("steps");
+    let v=U;
+    switch(n.type){
+      case"num":{const s=String(n.value??"").trim(); if(/^-?\d+$/.test(s))v=parseInt(s,10); else if(/^-?\d+\.\d+$/.test(s))v=new Flt(parseFloat(s)); break}
+      case"unit":v=U;break;
+      case"param":v=env[n.name]??U;break;
+      case"op":{
+        const a=ev(tab,n.inputs.a,env,memo);
+        if(n.op==="&"){ v=isU(a)?U:ev(tab,n.inputs.b,env,memo) }
+        else if(n.op==="|"){ v=isU(a)?ev(tab,n.inputs.b,env,memo):a }
+        else if(["<","<=",">",">=","="].includes(n.op)){ if(isU(a))v=U; else{const b=ev(tab,n.inputs.b,env,memo); v=isU(b)?U:compare(n.op,a,b)} }
+        else v=arith(n.op,a,ev(tab,n.inputs.b,env,memo));
+        break}
+      case"cases":{
+        v=U; let hit=false;
+        for(let i=0;i<n.rows;i++){ const c=ev(tab,n.inputs["c"+i],env,memo); if(!isU(c)){v=ev(tab,n.inputs["v"+i],env,memo);hit=true;break} }
+        if(!hit)v=ev(tab,n.inputs.d,env,memo);
+        break}
+      case"call":{
+        const f=fns[n.fn]; if(!f){v=U;break}
+        const args=f.params.map((_,i)=>ev(tab,n.inputs["a"+i],env,memo));
+        if(args.some(isU)){v=U;break}
+        if(++depth>1500)throw new Budget("depth");
+        const e2={}; f.params.forEach((p,i)=>e2[p]=args[i]);
+        const res=Object.values(f.nodes).find(m=>m.type==="result");
+        v=res?ev(f,res.inputs.in,e2,new Map()):U;
+        depth--; break}
+      case"result":v=ev(tab,n.inputs.in,env,memo);break;
+    }
+    memo.set(id,v); return v;
+  }
+  ev.call=(name,args)=>{const f=fns[name];if(!f)return U;if(args.some(isU))return U;if(++depth>1500)throw new Budget("depth");
+    const e2={};f.params.forEach((p,i)=>e2[p]=args[i]);const res=Object.values(f.nodes).find(m=>m.type==="result");const v=res?ev(f,res.inputs.in,e2,new Map()):U;depth--;return v};
+  return ev;
+}
+
+/* ---------- Sign の文章を作る ---------- */
+function generate(){
+  const warns=[]; const out=[];
+  const warn=m=>{if(!warns.includes(m))warns.push(m)};
+  function ex(tab,id,top,stack){
+    if(!id){warn("つながっていない入力は __ になります(関数に渡すと、その関数は何も返しません)");return"__"}
+    const n=tab.nodes[id]; if(!n)return"__";
+    if(stack.includes(id)){warn("線が輪になっています。輪の所は __ にしました");return"__"}
+    const st=stack.concat(id), wrap=s=>top?s:"("+s+")";
+    switch(n.type){
+      case"num":{const s=String(n.value??"").trim();
+        if(!/^-?\d+(\.\d+)?$/.test(s)){warn("数が読めません: "+(s||"(空)"));return"__"}
+        return s[0]==="-"?wrap("0 - "+s.slice(1)):s}
+      case"unit":return"__";
+      case"param":return n.name;
+      case"op":return wrap(ex(tab,n.inputs.a,false,st)+" "+n.op+" "+ex(tab,n.inputs.b,false,st));
+      case"call":{
+        if(!n.fn||!S.tabs.some(t=>t.name===n.fn&&t.id!=="main")){warn("呼ぶ関数を選んでいません");return"__"}
+        const f=S.tabs.find(t=>t.name===n.fn);
+        const s=[n.fn].concat(f.params.map((_,i)=>ex(tab,n.inputs["a"+i],false,st))).join(" ");
+        return f.params.length?wrap(s):s}
+      case"cases":warn("「条件の行」は、関数の出力・別の行の値・既定にだけつなげます");return"__";
+    }
+    return"__";
+  }
+  function rows(tab,id,ind,stack){
+    const n=id&&tab.nodes[id];
+    if(!n||n.type!=="cases")return[ind+ex(tab,id,true,stack)];
+    if(stack.includes(id)){warn("線が輪になっています。輪の所は __ にしました");return[ind+"__"]}
+    const st=stack.concat(id), L=[];
+    for(let i=0;i<n.rows;i++){
+      const c=n.inputs["c"+i], v=n.inputs["v"+i], vn=v&&tab.nodes[v];
+      const cond=ex(tab,c,true,st);
+      if(vn&&vn.type==="cases"){
+        const inner=rows(tab,v,ind+"\t",st);
+        L.push(ind+cond+" :"); L.push(...(inner.length?inner:[ind+"\t__"]));
+      }else L.push(ind+cond+" : "+ex(tab,v,true,st));
+    }
+    const d=n.inputs.d;
+    if(d){const dn=tab.nodes[d]; if(dn&&dn.type==="cases")L.push(...rows(tab,d,ind,st)); else L.push(ind+ex(tab,d,true,st))}
+    return L;
+  }
+  const seen=new Set();
+  for(const t of S.tabs){
+    if(t.id==="main")continue;
+    if(!IDENT.test(t.name)){warn("関数名が使えません: "+(t.name||"(空)"));continue}
+    if(seen.has(t.name)){warn("関数名が重なっています: "+t.name);continue}
+    seen.add(t.name);
+    if(!t.params.length){warn(t.name+": 仮引数が 1 つも無い関数は作れません");continue}
+    if(t.params.some(p=>!IDENT.test(p))){warn(t.name+": 仮引数の名前が使えません");continue}
+    const res=Object.values(t.nodes).find(n=>n.type==="result");
+    const body=res?rows(t,res.inputs.in,"\t",[]):["\t__"];
+    out.push(t.name+" : "+t.params.join(" ")+" ?",...body,"");
+  }
+  const main=tabOf("main");
+  const rs=Object.values(main.nodes).filter(n=>n.type==="result").sort((a,b)=>a.y-b.y||a.x-b.x);
+  for(const r of rs) out.push(ex(main,r.inputs.in,true,[]));
+  return{text:out.join("\n").replace(/\n+$/,""),warns};
+}
+
+/* ---------- 描画 ---------- */
+const board=$("#board"), wires=$("#wires");
+const els={};
+function render(){
+  for(const k in els){els[k].remove();delete els[k]}
+  const tab=cur();
+  for(const n of Object.values(tab.nodes)) board.appendChild(els[n.id]=buildNode(tab,n));
+  refreshTabs(); refreshHead(); update();
+}
+const TITLES={num:"数",unit:"未定義 __",param:"仮引数",op:"演算",cases:"条件の行",call:"関数を呼ぶ",result:"出力"};
+function inRow(n,key,label){
+  const r=document.createElement("div");r.className="prow";
+  r.innerHTML=`<span class="port in${n.inputs[key]?" on":""}" data-node="${n.id}" data-key="${key}" role="button" aria-label="入力 ${label}"></span><span class="plabel"></span>`;
+  r.lastChild.textContent=label;return r;
+}
+function buildNode(tab,n){
+  const el=document.createElement("div");el.className="node t-"+n.type+(selected===n.id?" sel":"");
+  el.style.left=n.x+"px";el.style.top=n.y+"px";el.dataset.id=n.id;
+  const fixed=(n.type==="param")||(n.type==="result"&&tab.id!=="main");
+  el.innerHTML=`<div class="nhead"><b>${TITLES[n.type]}</b>${fixed?"":'<button class="x" aria-label="このブロックを消す">×</button>'}</div><div class="nbody"></div>`;
+  const body=el.lastChild;
+  if(n.type!=="result"){const o=document.createElement("span");o.className="port out"+(isUsed(tab,n.id)?" on":"");o.dataset.node=n.id;o.setAttribute("role","button");o.setAttribute("aria-label","出力");el.appendChild(o)}
+  if(n.type==="num"){const i=document.createElement("input");i.type="text";i.value=n.value??"0";i.inputMode="decimal";i.setAttribute("aria-label","数の値");
+    i.oninput=()=>{n.value=i.value;update()};body.appendChild(i)}
+  if(n.type==="param"){const s=document.createElement("div");s.style.fontFamily="var(--mono)";s.textContent=n.name;body.appendChild(s)}
+  if(n.type==="op"){
+    const s=document.createElement("select");s.setAttribute("aria-label","演算子");
+    for(const o of OPS){const op=document.createElement("option");op.value=op.textContent=o;s.appendChild(op)}
+    s.value=n.op||"+";n.op=s.value;s.onchange=()=>{n.op=s.value;update()};body.appendChild(s);
+    body.appendChild(inRow(n,"a","a"));body.appendChild(inRow(n,"b","b"));
+  }
+  if(n.type==="cases"){
+    n.rows=n.rows||1;
+    for(let i=0;i<n.rows;i++){body.appendChild(inRow(n,"c"+i,"条件 "+(i+1)));body.appendChild(inRow(n,"v"+i,"値 "+(i+1)));const sp=document.createElement("div");sp.className="sep";body.appendChild(sp)}
+    body.appendChild(inRow(n,"d","既定"));
+    const rc=document.createElement("div");rc.className="rowctl";
+    rc.innerHTML='<button data-act="plus">+ 行</button><button data-act="minus">− 行</button>';
+    rc.onclick=e=>{const a=e.target.dataset.act;if(a==="plus")n.rows++;else if(a==="minus"&&n.rows>1){n.rows--;delete n.inputs["c"+n.rows];delete n.inputs["v"+n.rows]}else return;render()};
+    body.appendChild(rc);
+  }
+  if(n.type==="call"){
+    const s=document.createElement("select");s.setAttribute("aria-label","呼ぶ関数");
+    const fns=S.tabs.filter(t=>t.id!=="main");
+    s.innerHTML='<option value="">(選ぶ)</option>'+fns.map(t=>`<option value="${t.name}">${t.name}</option>`).join("");
+    s.value=fns.some(t=>t.name===n.fn)?n.fn:"";n.fn=s.value;
+    s.onchange=()=>{n.fn=s.value;n.inputs={};render()};body.appendChild(s);
+    const f=fns.find(t=>t.name===n.fn); if(f)f.params.forEach((p,i)=>body.appendChild(inRow(n,"a"+i,p)));
+  }
+  if(n.type==="result"){body.appendChild(inRow(n,"in",tab.id==="main"?"値":"返す値"))}
+  if(tab.id==="main"&&n.type!=="result"||(tab.id==="main"&&n.type==="result")){const v=document.createElement("div");v.className="val u";v.dataset.val=n.id;v.textContent="";body.appendChild(v)}
+  return el;
+}
+const isUsed=(tab,id)=>Object.values(tab.nodes).some(m=>Object.values(m.inputs).includes(id));
+
+function portPos(p){const b=board.getBoundingClientRect(),r=p.getBoundingClientRect();return[r.left+r.width/2-b.left,r.top+r.height/2-b.top]}
+function curve(x1,y1,x2,y2){const d=Math.max(40,Math.abs(x2-x1)*.5);return`M${x1},${y1} C${x1+d},${y1} ${x2-d},${y2} ${x2},${y2}`}
+function drawWires(live){
+  const tab=cur();let h="";
+  for(const n of Object.values(tab.nodes))for(const [k,from] of Object.entries(n.inputs)){
+    if(!from||!els[from]||!els[n.id])continue;
+    const po=els[from].querySelector(".port.out"),pi=els[n.id].querySelector(`.port.in[data-key="${k}"]`);
+    if(!po||!pi)continue;const[a,b]=portPos(po),[c,d]=portPos(pi);h+=`<path d="${curve(a,b,c,d)}"/>`;
+  }
+  if(live)h+=`<path class="live" d="${live}"/>`;
+  wires.innerHTML=h;
+}
+
+/* ---------- 更新 ---------- */
+function update(){
+  const g=generate();$("#code").textContent=g.text||"(ブロックを置いて、線でつないでください)";
+  $("#warns").innerHTML=g.warns.map(w=>`<li>${w.replace(/</g,"&lt;")}</li>`).join("");
+  evaluate();drawWires();save();
+}
+function evaluate(){
+  const tab=cur(),outs=$("#outs");
+  document.querySelectorAll("[data-val]").forEach(e=>{e.textContent="";e.className="val u"});
+  if(tab.id!=="main"){outs.innerHTML='<p class="note">関数の中の値は、呼び出されたときに決まります。「main」の盤で呼ぶと値が出ます。</p>';return}
+  const ev=evaluator(),rs=Object.values(tab.nodes).filter(n=>n.type==="result").sort((a,b)=>a.y-b.y||a.x-b.x);
+  let html="",i=0;
+  try{
+    for(const n of Object.values(tab.nodes)){ if(n.type==="result"||true){ const e=document.querySelector(`[data-val="${n.id}"]`);if(!e)continue;
+      const v=ev(tab,n.id,{},new Map());e.textContent=show(v);e.className="val"+(isU(v)?" u":"") } }
+    for(const r of rs){const v=ev(tab,r.id,{},new Map());i++;html+=`<div class="out-line"><span>出力 ${i}</span><span>${show(v)}</span></div>`}
+  }catch(e){ if(e instanceof Budget)html='<p class="warn" style="list-style:none;padding:0">実行が長すぎるので止めました(再帰が深すぎるか、終わらない呼び出しです)。</p>'; else throw e }
+  outs.innerHTML=html||'<p class="note">「出力」ブロックをつなぐと、ここに値が出ます。</p>';
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({S,uid}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d&&d.S&&d.S.tabs){S=d.S;uid=d.uid||1000;return true}}catch(e){}return false}
+
+/* ---------- 盤の操作 ---------- */
+let drag=null;
+board.addEventListener("pointerdown",e=>{
+  const port=e.target.closest(".port");
+  if(port){
+    e.preventDefault();
+    const tab=cur();
+    if(port.classList.contains("out")){startWire(e,port.dataset.node);return}
+    const n=tab.nodes[port.dataset.node],key=port.dataset.key,from=n.inputs[key];
+    if(from){ n.inputs[key]=null; startWire(e,from,true); } else startWire(e,null,false,port);
+    return;
+  }
+  const head=e.target.closest(".nhead");
+  if(head&&!e.target.closest(".x")){
+    const el=head.parentElement,n=cur().nodes[el.dataset.id];
+    select(n.id);
+    drag={kind:"node",n,el,sx:e.clientX,sy:e.clientY,ox:n.x,oy:n.y};head.setPointerCapture(e.pointerId);e.preventDefault();
+  }else{const nd=e.target.closest(".node");select(nd?nd.dataset.id:null)}
+});
+board.addEventListener("pointermove",e=>{
+  if(!drag)return;
+  if(drag.kind==="node"){
+    drag.n.x=Math.max(0,Math.round(drag.ox+e.clientX-drag.sx));drag.n.y=Math.max(0,Math.round(drag.oy+e.clientY-drag.sy));
+    drag.el.style.left=drag.n.x+"px";drag.el.style.top=drag.n.y+"px";drawWires();
+  }
+});
+board.addEventListener("pointerup",()=>{if(drag&&drag.kind==="node"){drag=null;update()}});
+board.addEventListener("click",e=>{
+  const x=e.target.closest(".x");
+  if(x){removeNode(x.closest(".node").dataset.id)}
+});
+function select(id){selected=id;document.querySelectorAll(".node").forEach(el=>el.classList.toggle("sel",el.dataset.id===id))}
+function removeNode(id){const tab=cur();delete tab.nodes[id];dropRefs(tab,id);if(selected===id)selected=null;render()}
+document.addEventListener("keydown",e=>{
+  if((e.key==="Delete"||e.key==="Backspace")&&selected&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){
+    const n=cur().nodes[selected];if(n&&n.type!=="param"&&!(n.type==="result"&&cur().id!=="main")){e.preventDefault();removeNode(selected)}
+  }
+});
+
+function startWire(e,fromId,detached,fromInPort){
+  const tab=cur();let srcId=fromId,hot=null;
+  const stage=$("#stage"),x0=e.clientX,y0=e.clientY;
+  const move=ev=>{
+    const b=board.getBoundingClientRect(),x=ev.clientX-b.left,y=ev.clientY-b.top;
+    if(hot)hot.classList.remove("hot");
+    const t=document.elementFromPoint(ev.clientX,ev.clientY),p=t&&t.closest&&t.closest(".port");
+    hot=srcId&&p&&p.classList.contains("in")?p:(!srcId&&p&&p.classList.contains("out")?p:null);
+    if(hot)hot.classList.add("hot");
+    let live;
+    if(srcId){const po=els[srcId].querySelector(".port.out"),[a,c]=portPos(po);live=curve(a,c,x,y)}
+    else{const[a,c]=portPos(fromInPort);live=curve(x,y,a,c)}
+    drawWires(live);
+    const r=stage.getBoundingClientRect();
+    if(ev.clientX>r.right-30)stage.scrollLeft+=14; if(ev.clientX<r.left+30)stage.scrollLeft-=14;
+    if(ev.clientY>r.bottom-30)stage.scrollTop+=14; if(ev.clientY<r.top+30)stage.scrollTop-=14;
+  };
+  const up=ev=>{
+    window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);window.removeEventListener("pointercancel",up);
+    const t=document.elementFromPoint(ev.clientX,ev.clientY),p=t&&t.closest&&t.closest(".port");
+    const click=detached&&Math.hypot(ev.clientX-x0,ev.clientY-y0)<6;     // 動かさずに離した: つなぎ直さず、外したままにする
+    if(click){}
+    else if(srcId&&p&&p.classList.contains("in")){
+      const dst=tab.nodes[p.dataset.node];
+      if(dst.id!==srcId)dst.inputs[p.dataset.key]=srcId;
+    }else if(!srcId&&p&&p.classList.contains("out")){
+      tab.nodes[fromInPort.dataset.node].inputs[fromInPort.dataset.key]=p.dataset.node;
+    }
+    render();
+  };
+  window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);window.addEventListener("pointercancel",up);
+  move(e);
+}
+
+/* ---------- 棚・タブ・道具 ---------- */
+document.querySelector(".shelf").addEventListener("click",e=>{
+  const b=e.target.closest("[data-add]");if(!b)return;
+  const tab=cur(),stage=$("#stage"),type=b.dataset.add;
+  if(type==="result"&&tab.id!=="main"){return}
+  const k=Object.keys(tab.nodes).length;
+  const x=stage.scrollLeft+40+(k%6)*30,y=stage.scrollTop+24+(k%8)*34;
+  const props={num:{value:"0"},op:{op:"+"},cases:{rows:1},call:{fn:""}}[type]||{};
+  const id=addNode(tab,type,x,y,props);selected=id;render();
+});
+function refreshTabs(){
+  const t=$("#tabs");t.innerHTML="";
+  for(const tab of S.tabs){const b=document.createElement("button");b.className="tab";b.setAttribute("role","tab");b.setAttribute("aria-selected",tab.id===S.active);
+    b.textContent=tab.id==="main"?"main":tab.name;b.onclick=()=>{S.active=tab.id;selected=null;render()};t.appendChild(b)}
+  const a=document.createElement("button");a.className="tab add";a.textContent="+ 関数";a.onclick=()=>{
+    let i=1;while(S.tabs.some(x=>x.name==="f"+i))i++;
+    const tab={id:"t"+(uid++),name:"f"+i,params:["n"],nodes:{}};S.tabs.push(tab);ensureFn(tab);S.active=tab.id;selected=null;render()};
+  t.appendChild(a);
+}
+function refreshHead(){
+  const tab=cur(),h=$("#fnhead");h.hidden=tab.id==="main";
+  if(tab.id!=="main"){$("#fname").value=tab.name;$("#fparams").value=tab.params.join(" ");
+    const a=(typeof D!=="undefined"&&D)?D.arrows.find(x=>x.link===tab.id):null,fl=$("#fnlink");
+    if(a){fl.innerHTML=`<span class="note" style="margin:0">図式: ${esc(dobj(a.from)?.name||"?")} → ${esc(dobj(a.to)?.name||"?")}</span><button class="btn" id="tod">図式で開く</button>`;$("#tod").onclick=()=>placeFnInDiagram(tab)}
+    else if(tab.params.length===1){fl.innerHTML='<button class="btn" id="tod">図式に矢印として置く</button>';$("#tod").onclick=()=>placeFnInDiagram(tab)}
+    else fl.innerHTML='<span class="note" style="margin:0">仮引数が 1 つなら、図式の矢印にできます</span>'}
+  document.querySelector('[data-add="result"]').disabled=tab.id!=="main";
+}
+$("#fname").addEventListener("input",e=>{const t=cur();const old=t.name;t.name=e.target.value.trim();
+  for(const x of S.tabs)for(const n of Object.values(x.nodes))if(n.type==="call"&&n.fn===old)n.fn=t.name;refreshTabs();update()});
+$("#fparams").addEventListener("change",e=>{const t=cur();t.params=[...new Set(e.target.value.split(/\s+/).filter(Boolean))];ensureFn(t);
+  for(const x of S.tabs)for(const n of Object.values(x.nodes))if(n.type==="call"&&n.fn===t.name)n.inputs={};render()});
+$("#delfn").addEventListener("click",()=>{const t=cur(),i=S.tabs.indexOf(t);
+  if(typeof D!=="undefined"&&D)for(const a of D.arrows)if(a.link===t.id){a.name=t.name;a.link=null;a.body="x";dsave()}
+  for(const x of S.tabs)for(const n of Object.values(x.nodes))if(n.type==="call"&&n.fn===t.name){n.fn="";n.inputs={}}
+  S.tabs.splice(i,1);S.active="main";render()});
+$("#clear").addEventListener("click",()=>{S=blank();selected=null;render()});
+$("#copy").addEventListener("click",async()=>{
+  const text=$("#code").textContent,b=$("#copy");
+  try{await navigator.clipboard.writeText(text);b.textContent="コピーしました"}
+  catch(e){const r=document.createRange();r.selectNodeContents($("#code"));const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent="選択しました"}
+  setTimeout(()=>b.textContent="コピー",1400)});
+
+/* ---------- 見本 ---------- */
+const EX={
+  sum:{label:"1 から n までの合計(再帰)",build(){
+    const s=blank(),f={id:"t1",name:"sum",params:["n","a"],nodes:{}};s.tabs.push(f);ensureFn(f);
+    const P=nm=>Object.values(f.nodes).find(n=>n.name===nm).id, R=Object.values(f.nodes).find(n=>n.type==="result").id;
+    f.nodes[P("n")].y=16;f.nodes[P("a")].y=110;
+    const c0=addNode(f,"num",16,210,{value:"0"}); const le=addNode(f,"op",240,16,{op:"<="}); link(f,le,"a",P("n")); link(f,le,"b",c0);
+    const one=addNode(f,"num",16,310,{value:"1"}); const dec=addNode(f,"op",240,176,{op:"-"}); link(f,dec,"a",P("n")); link(f,dec,"b",one);
+    const add=addNode(f,"op",240,340,{op:"+"}); link(f,add,"a",P("a")); link(f,add,"b",P("n"));
+    const call=addNode(f,"call",470,250,{fn:"sum"}); link(f,call,"a0",dec); link(f,call,"a1",add);
+    const cs=addNode(f,"cases",700,40,{rows:1}); link(f,cs,"c0",le); link(f,cs,"v0",P("a")); link(f,cs,"d",call);
+    f.nodes[R].x=930;f.nodes[R].y=110; link(f,R,"in",cs);
+    const m=s.tabs[0],n100=addNode(m,"num",40,40,{value:"100"}),z=addNode(m,"num",40,160,{value:"0"});
+    const c=addNode(m,"call",270,70,{fn:"sum"}); link(m,c,"a0",n100); link(m,c,"a1",z);
+    const r=addNode(m,"result",510,80,{}); link(m,r,"in",c); s.active="main"; return s}},
+  unit:{label:"欠けても止まらない計算",build(){
+    const s=blank(),m=s.tabs[0]; const U1=()=>addNode(m,"unit",30,0,{});
+    const mk=(y,a,op,b)=>{const A=a==="u"?U1():addNode(m,"num",30,y,{value:a}),B=b==="u"?U1():addNode(m,"num",30,y+60,{value:b});
+      m.nodes[A].y=y;m.nodes[B].y=y+60;const o=addNode(m,"op",230,y+10,{op}); link(m,o,"a",A); link(m,o,"b",B);
+      const r=addNode(m,"result",440,y+10,{}); link(m,r,"in",o)};
+    mk(20,"5","+","u"); mk(140,"u","*","3"); mk(260,"7","/","0"); mk(380,"3","<","2"); return s}},
+  nest:{label:"入れ子の条件(符号と大きさ)",build(){
+    const s=blank(),f={id:"t1",name:"kind",params:["n"],nodes:{}};s.tabs.push(f);ensureFn(f);
+    const N=Object.values(f.nodes).find(n=>n.type==="param").id, R=Object.values(f.nodes).find(n=>n.type==="result").id;
+    const z=addNode(f,"num",16,110,{value:"0"}), gt0=addNode(f,"op",240,16,{op:">"}); link(f,gt0,"a",N); link(f,gt0,"b",z);
+    const h=addNode(f,"num",16,210,{value:"100"}), gt100=addNode(f,"op",240,176,{op:">"}); link(f,gt100,"a",N); link(f,gt100,"b",h);
+    const v3=addNode(f,"num",240,340,{value:"3"}), v2=addNode(f,"num",240,430,{value:"2"});
+    const inner=addNode(f,"cases",470,180,{rows:1}); link(f,inner,"c0",gt100); link(f,inner,"v0",v3); link(f,inner,"d",v2);
+    const v0=addNode(f,"num",470,420,{value:"0"});
+    const outer=addNode(f,"cases",700,60,{rows:1}); link(f,outer,"c0",gt0); link(f,outer,"v0",inner); link(f,outer,"d",v0);
+    f.nodes[R].x=930;f.nodes[R].y=110; link(f,R,"in",outer);
+    const m=s.tabs[0]; [150,5,-4].forEach((v,i)=>{const a=addNode(m,"num",40,30+i*130,{value:String(v)}),c=addNode(m,"call",270,30+i*130,{fn:"kind"}),r=addNode(m,"result",510,30+i*130,{});link(m,c,"a0",a);link(m,r,"in",c)});
+    s.active="main"; return s}}
+};
+const exSel=$("#ex");exSel.innerHTML='<option value="">(選ぶ)</option>'+Object.entries(EX).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join("");
+exSel.addEventListener("change",()=>{if(!exSel.value)return;S=EX[exSel.value].build();selected=null;render();exSel.value=""});
+
+new ResizeObserver(()=>drawWires()).observe($("#stage"));
+if(!load()){S=EX.sum.build()}
+for(const t of S.tabs)for(const n of Object.values(t.nodes)){const m=+String(n.id).replace(/\D/g,"");if(m>=uid)uid=m+1}
+render();
+window.__signBlocks={generate,get S(){return S},EX,render,setState(s){S=s;render()}};
+</script>
+<script>
+"use strict";
+/* ================= 集合と矢印 ================= */
+const DKEY="sign-diag-v1", NS="http://www.w3.org/2000/svg";
+let D=null, dsel=null, dtool=null /* "arrow" | "comp" | null */, pending=[], did=1;
+const TYPES=["Int","Float","Char","String","List","Struct","Vector"];
+const TCOL={Int:"--c-value",Float:"--c-op",Char:"--c-cases",String:"--c-cases",List:"--c-call",Struct:"--c-call",Vector:"--c-op"};
+const dnew=()=>({objs:[],arrows:[],comps:[],checks:[]});
+const dobj=id=>D.objs.find(o=>o.id===id), darrow=id=>D.arrows.find(a=>a.id===id), dcomp=id=>D.comps.find(c=>c.id===id);
+const linkTab=a=>a&&a.link?S.tabs.find(t=>t.id===a.link&&t.id!=="main"):null;
+const an=a=>linkTab(a)?linkTab(a).name:a.name;
+const radius=o=>Math.max(34,o.name.length*4.6+20);
+
+/* --- 本体の式(x と四則・比較・&・|)---- */
+function parseBody(src){
+  const toks=[];let i=0;const s=src.trim();
+  if(!s)return{err:"本体が空です"};
+  const re=/\s*(\d+\.\d+|\d+|x\b|<=|>=|[-+*\/%<>=&|()])/y;
+  while(i<s.length){re.lastIndex=i;const m=re.exec(s);if(!m){if(/^\s*$/.test(s.slice(i)))break;return{err:"読めない字があります: "+s.slice(i).trim()[0]}}
+    let t=m[1];const prevOp=!toks.length||/^(?:[-+*\/%<>=&|(]|<=|>=)$/.test(toks[toks.length-1].t);
+    const afterSpace=!/\s/.test(s.slice(re.lastIndex,re.lastIndex+1));
+    toks.push({t,neg:t==="-"&&prevOp&&afterSpace});i=re.lastIndex}
+  let p=0;const peek=()=>toks[p],next=()=>toks[p++];
+  const PREC={"|":1,"&":2,"<":3,"<=":3,">":3,">=":3,"=":3,"+":4,"-":4,"*":5,"/":5,"%":5};
+  function atom(){
+    const k=next();if(!k)throw"式が途中で終わっています";
+    if(k.neg){const e=atom();return{t:"neg",e}}
+    if(k.t==="(")return paren();
+    if(k.t==="x")return{t:"x"};
+    if(/^\d/.test(k.t))return{t:"num",v:k.t.includes(".")?new Flt(parseFloat(k.t)):parseInt(k.t,10)};
+    throw"ここに "+k.t+" は置けません";
+  }
+  function paren(){const e=expr(0,true);const c=next();if(!c||c.t!==")")throw"括弧が閉じていません";return e}
+  function expr(minp,isParen){
+    // 同じ括弧の中に & と | が混ざる、比較が 2 つ並ぶ式は、読みが仕様から確かめられないので断る
+    const start=p;let depth=0,ops=[];
+    for(let q=start;q<toks.length;q++){const t=toks[q];if(t.neg)continue;if(t.t==="(")depth++;else if(t.t===")"){if(depth===0)break;depth--}else if(depth===0&&PREC[t.t])ops.push(t.t)}
+    if(minp===0){ if(ops.includes("&")&&ops.includes("|"))throw"& と | が混ざっています。括弧で区切ってください";
+      if(ops.filter(o=>PREC[o]===3).length>1)throw"比較が 2 つ並んでいます。括弧で区切ってください" }
+    let l=atom();
+    for(;;){const o=peek();if(!o||o.neg||!PREC[o.t]||PREC[o.t]<minp)break;next();const r=expr(PREC[o.t]+1);l={t:"bin",op:o.t,l,r}}
+    return l;
+  }
+  try{const e=expr(0);if(p<toks.length)throw"式の後ろに余りがあります: "+toks[p].t;return{ast:e}}catch(x){return{err:String(x)}}
+}
+function evalAst(a,x){
+  switch(a.t){
+    case"num":return a.v; case"x":return x;
+    case"neg":{const v=evalAst(a.e,x);return isNum(v)?(v instanceof Flt?new Flt(-v.v):-v):U}
+    case"bin":{const l=evalAst(a.l,x);
+      if(a.op==="&")return isU(l)?U:evalAst(a.r,x);
+      if(a.op==="|")return isU(l)?evalAst(a.r,x):l;
+      if(["<","<=",">",">=","="].includes(a.op)){if(isU(l))return U;const r=evalAst(a.r,x);return isU(r)?U:compare(a.op,l,r)}
+      return arith(a.op,l,evalAst(a.r,x))}
+  }
+}
+function infer(a,xt){
+  switch(a.t){case"num":return a.v instanceof Flt?"Float":"Int";case"x":return xt;case"neg":return infer(a.e,xt);
+    case"bin":{const l=infer(a.l,xt),r=infer(a.r,xt);
+      if(a.op==="&")return r; if(a.op==="|")return l&&r&&l===r?l:null;
+      if(["<","<=",">",">=","="].includes(a.op))return l&&r&&l===r?l:(l&&r?"Float":null);
+      if(!l||!r)return null;return(l==="Float"||r==="Float")?"Float":"Int"}}
+}
+
+/* --- 診断 ---- */
+/* ブロックの関数の「返す型」を、線を辿って決める。分からない所は null(照合しない)。再帰の呼び出しは null として数えない。 */
+function inferTab(tab,ptypes,stack){
+  const res=Object.values(tab.nodes).find(n=>n.type==="result");if(!res)return null;
+  const memo=new Map();
+  const uni=ts=>{const k=ts.filter(Boolean);return k.length&&k.every(t=>t===k[0])?k[0]:null};
+  function nodeT(id,seen){
+    if(!id)return null;if(memo.has(id))return memo.get(id);if(seen.includes(id))return null;
+    const n=tab.nodes[id];if(!n)return null;const sn=seen.concat(id);let t=null;
+    switch(n.type){
+      case"num":t=/^-?\d+$/.test(String(n.value).trim())?"Int":/^-?\d+\.\d+$/.test(String(n.value).trim())?"Float":null;break;
+      case"param":t=ptypes[n.name]||null;break;
+      case"op":{const a=nodeT(n.inputs.a,sn),b=nodeT(n.inputs.b,sn);
+        if(n.op==="&")t=b;else if(n.op==="|")t=a&&b&&a===b?a:null;
+        else if(["<","<=",">",">=","="].includes(n.op))t=a&&b?(a===b?a:"Float"):null;
+        else t=a&&b?((a==="Float"||b==="Float")?"Float":"Int"):null;break}
+      case"cases":{const ts=[];for(let i=0;i<n.rows;i++)ts.push(nodeT(n.inputs["v"+i],sn));ts.push(nodeT(n.inputs.d,sn));t=uni(ts);break}
+      case"call":{
+        const f=S.tabs.find(x=>x.name===n.fn&&x.id!=="main");
+        if(!f||stack.includes(f.id))break;
+        const pt={};f.params.forEach((p,i)=>pt[p]=nodeT(n.inputs["a"+i],sn));
+        t=inferTab(f,pt,stack.concat(f.id));break}
+    }
+    memo.set(id,t);return t;
+  }
+  return nodeT(res.inputs.in,[]);
+}
+function arrowDiag(a){
+  if(linkTab(a)){const t=linkTab(a);if(t.params.length!==1)return{err:"リンクした関数の仮引数は 1 つにします(いまは "+t.params.length+" 個)"};
+    const dom=dobj(a.from)?.name,cod=dobj(a.to)?.name,xt=dom==="Int"||dom==="Float"?dom:null;
+    const ty=inferTab(t,{[t.params[0]]:xt},[t.id]);
+    if(ty&&cod&&ty!==cod)return{err:`型が合いません: ブロックの関数は ${ty} を返し、終域は ${cod}`,linked:true,type:ty};
+    return{linked:true,type:ty}}
+  const dom=dobj(a.from)?.name,cod=dobj(a.to)?.name,pb=parseBody(a.body);
+  if(pb.err)return{err:"本体: "+pb.err};
+  const xt=dom==="Int"||dom==="Float"?dom:null, t=infer(pb.ast,xt);
+  if(t&&cod&&t!==cod)return{err:`型が合いません: 本体は ${t}、終域は ${cod}`};
+  return{ast:pb.ast,type:t};
+}
+function chainDiag(ids){
+  const as=ids.map(darrow);if(as.some(a=>!a))return"矢印がありません";
+  for(let i=1;i<as.length;i++)if(as[i].from!==as[i-1].to)return`${as[i-1].name} の終わりと ${as[i].name} の始まりが同じ集合ではありません`;
+  return null;
+}
+const pathsAll=()=>[...D.arrows.map(a=>({id:a.id,name:an(a),src:a.from,dst:a.to,ids:[a.id]})),
+  ...D.comps.map(c=>{const as=c.arrows.map(darrow);return{id:c.id,name:c.name,src:as[0]?.from,dst:as[as.length-1]?.to,ids:c.arrows}})];
+function evalPath(p,x){
+  let v=x,ev=null;
+  try{
+    for(const id of p.ids){if(isU(v))return U;const a=darrow(id);const d=arrowDiag(a);
+      if(d.linked){ev=ev||evaluator();v=ev.call(linkTab(a).name,[v])}
+      else{if(!d.ast)return"error";v=evalAst(d.ast,v)}}
+  }catch(e){if(e instanceof Budget)return"error";throw e}
+  return v;
+}
+
+/* --- 絵 ---- */
+const dEdges=$("#d-edges"),dObjs=$("#d-objs"),dia=$("#dia");
+function mk(tag,attrs,text){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e}
+function edgeList(){
+  const L=D.arrows.map(a=>({kind:"a",id:a.id,from:a.from,to:a.to,label:an(a),body:a.body}));
+  for(const c of D.comps){const as=c.arrows.map(darrow);if(as.length&&as.every(Boolean))L.push({kind:"c",id:c.id,from:as[0].from,to:as[as.length-1].to,label:c.name})}
+  return L;
+}
+function drawD(live){
+  dEdges.innerHTML="";dObjs.innerHTML="";
+  const E=edgeList(),groups={};
+  for(const e of E){const k=[e.from,e.to].sort().join("|");(groups[k]=groups[k]||[]).push(e)}
+  for(const e of E){
+    const o1=dobj(e.from),o2=dobj(e.to);if(!o1||!o2)continue;
+    const g=groups[[e.from,e.to].sort().join("|")];let idx=g.indexOf(e),n=g.length;
+    const off=(idx-(n-1)/2)*52*(e.from>e.to?-1:1)+(n===1&&e.kind==="c"?0:0);
+    let d,lx,ly;
+    if(e.from===e.to){const r=radius(o1),x=o1.x,y=o1.y-r;const h=70+idx*34;
+      d=`M${x-14},${y+1} C${x-h*.8},${y-h} ${x+h*.8},${y-h} ${x+14},${y+1}`;lx=x;ly=y-h*.75-6}
+    else{
+      const dx=o2.x-o1.x,dy=o2.y-o1.y,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;
+      const cx=(o1.x+o2.x)/2+nx*off*2,cy=(o1.y+o2.y)/2+ny*off*2;
+      const u=(ox,oy,r)=>{const vx=cx-ox,vy=cy-oy,l=Math.hypot(vx,vy)||1;return[ox+vx/l*r,oy+vy/l*r]};
+      const[x0,y0]=u(o1.x,o1.y,radius(o1)),[x1,y1]=u(o2.x,o2.y,radius(o2)+4);
+      d=`M${x0},${y0} Q${cx},${cy} ${x1},${y1}`;lx=.25*x0+.5*cx+.25*x1+nx*(off>=0?1:-1)*14*(off===0?1:1);ly=.25*y0+.5*cy+.25*y1+ny*(off>=0?1:-1)*14;
+      if(off===0){lx=(x0+x1)/2+nx*14;ly=(y0+y1)/2+ny*14}
+    }
+    let bad=false,tip="";
+    if(e.kind==="a"){const dg=arrowDiag(darrow(e.id));if(dg.err){bad=true;tip=dg.err}}
+    else{const err=chainDiag(dcomp(e.id).arrows);if(err){bad=true;tip=err}}
+    const sel=dsel&&dsel.id===e.id||(pending.includes(e.id));
+    const gE=mk("g",{class:"edge"+(e.kind==="c"?" comp":"")+(bad?" bad":"")+(sel?" sel":""),"data-id":e.id,"data-k":e.kind});
+    if(tip){const t=mk("title",{},tip);gE.appendChild(t)}
+    gE.appendChild(mk("path",{class:"hit",d}));
+    const mp=mk("path",{class:"main",d,"marker-end":"url(#ah)"});gE.appendChild(mp);
+    gE.appendChild(mk("text",{x:lx,y:ly},e.label+(bad?" ⚠":"")));
+    dEdges.appendChild(gE);
+  }
+  for(const o of D.objs){
+    const g=mk("g",{class:"obj"+(dsel&&dsel.id===o.id?" sel":""),"data-id":o.id});
+    const col=TCOL[o.name]||"--muted";
+    g.appendChild(mk("circle",{cx:o.x,cy:o.y,r:radius(o),style:`stroke:var(${col})`}));
+    g.appendChild(mk("text",{x:o.x,y:o.y},o.name||"?"));
+    dObjs.appendChild(g);
+  }
+  $("#d-live").setAttribute("d",live||"");
+}
+
+/* --- 文章 ---- */
+function genD(){
+  const warns=[],L=[];const w=m=>{if(!warns.includes(m))warns.push(m)};
+  const names=new Set();
+  const okName=(n)=>{if(!IDENT.test(n)){w("名前が使えません: "+(n||"(空)"));return false}if(names.has(n)){w("名前が重なっています: "+n);return false}names.add(n);return true};
+  for(const a of D.arrows){
+    const dg=arrowDiag(a),dom=dobj(a.from)?.name,cod=dobj(a.to)?.name,nm=an(a);
+    if(!okName(nm))continue;
+    if(dg.err){w(nm+": "+dg.err);continue}
+    L.push("`"+nm+" : "+dom+" → "+cod+"`");
+    if(dg.linked){const chunk=blockDef(linkTab(a));if(chunk)L.push(...chunk);else w(nm+": ブロックの関数がまだ文章になりません")}
+    else L.push(nm+" : x ? "+a.body.trim());
+  }
+  for(const c of D.comps){
+    const err=chainDiag(c.arrows);if(!okName(c.name))continue;
+    if(err){w(c.name+": "+err);continue}
+    const as=c.arrows.map(darrow);
+    L.push("`"+c.name+" : "+dobj(as[0].from).name+" → "+dobj(as[as.length-1].to).name+"(図式の順に合成)`");
+    L.push(c.name+" : "+as.map(an).join(" "));
+  }
+  const P=Object.fromEntries(pathsAll().map(p=>[p.id,p]));
+  for(const k of D.checks){
+    const p=P[k.p],q=P[k.q];if(!p||!q)continue;
+    for(const v of parseInputs(k.inputs).vals){const lit=v instanceof Flt?show(v):(v<0?"(0 - "+(-v)+")":String(v));
+      if(v instanceof Flt&&v.v<0)continue;
+      L.push(`(${p.name} ${lit}) = (${q.name} ${lit})`)}
+  }
+  return{text:L.join("\n"),warns};
+}
+function parseInputs(s){
+  const vals=[],bad=[];for(const t of s.split(/[\s,]+/).filter(Boolean)){if(/^-?\d+$/.test(t))vals.push(parseInt(t,10));else if(/^-?\d+\.\d+$/.test(t))vals.push(new Flt(parseFloat(t)));else bad.push(t)}
+  return{vals,bad};
+}
+
+/* --- 右の欄 ---- */
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}
+function inspect(){
+  const el=$("#d-insp");let h="";
+  if(dsel&&dsel.k==="o"&&dobj(dsel.id)){const o=dobj(dsel.id);
+    h=`<div class="hd"><h2>型(集合)</h2><button class="btn" id="i-del">消す</button></div>
+      <div class="field"><label for="i-name">型の名前</label><input id="i-name" list="d-types" value="${esc(o.name)}" autocomplete="off" spellcheck="false"></div>
+      <datalist id="d-types">${TYPES.map(t=>`<option value="${t}">`).join("")}</datalist>
+      <p class="note">矢印の端の型は、Int と Float なら本体と照らして検査します。</p>`}
+  else if(dsel&&dsel.k==="a"&&darrow(dsel.id)){const a=darrow(dsel.id),dg=arrowDiag(a);
+    h=`<div class="hd"><h2>矢印(関数)</h2><button class="btn" id="i-del">消す</button></div>
+      <div class="note" style="margin:0">${esc(dobj(a.from).name)} → ${esc(dobj(a.to).name)}</div>
+      <div class="field"><label for="i-name">名前</label><input id="i-name" value="${esc(an(a))}" autocomplete="off" spellcheck="false"></div>
+      ${dg.linked?`<p class="note" style="margin:4px 0">中身はブロックの関数 <b>${esc(an(a))}</b> です(線でつないだ計算)。</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn primary" id="i-open">ブロックで開く</button><button class="btn" id="i-unlink">リンクを外す</button></div>`
+      :`<div class="field"><label for="i-body">本体(x を使う)</label><input id="i-body" value="${esc(a.body)}" autocomplete="off" spellcheck="false"></div>
+        <button class="btn" id="i-tolink">ブロックで編集する →</button>`}
+      ${sigLine(an(a))}
+      <p class="${dg.err?"ngm":"okm"} note" id="i-diag">${dg.err?esc(dg.err):(dg.linked?(dg.type?`型は合っています(ブロックの関数は ${dg.type} を返す)`:"返す型が決まらないので、照合していません"):"型は合っています"+(dg.type?`(本体は ${dg.type})`:""))}</p>`}
+  else if(dsel&&dsel.k==="c"&&dcomp(dsel.id)){const c=dcomp(dsel.id),err=chainDiag(c.arrows);
+    h=`<div class="hd"><h2>合成</h2><button class="btn" id="i-del">消す</button></div>
+      <div class="note" style="margin:0">${esc(c.arrows.map(id=>darrow(id)?an(darrow(id)):"?").join(" ; "))}(図式の順)</div>
+      <div class="field"><label for="i-name">名前</label><input id="i-name" value="${esc(c.name)}" autocomplete="off" spellcheck="false"></div>
+      ${err?`<p class="ngm note">${esc(err)}</p>`:""}`}
+  else h=`<h2>選んだもの</h2><p class="note">丸(型)や矢印(関数)をクリックすると、ここで名前や本体を直せます。</p>`;
+  el.innerHTML=h;
+  const nm=$("#i-name");if(nm)nm.oninput=()=>{const t=dsel.k==="o"?dobj(dsel.id):dsel.k==="a"?darrow(dsel.id):dcomp(dsel.id);
+    if(dsel.k==="a"&&linkTab(t)){const lt=linkTab(t);const old=lt.name;lt.name=nm.value.trim();for(const x of S.tabs)for(const n of Object.values(x.nodes))if(n.type==="call"&&n.fn===old)n.fn=lt.name;save()}
+    else t.name=nm.value.trim();updD(false)};
+  const ol=$("#i-open");if(ol)ol.onclick=()=>{const a=darrow(dsel.id);S.active=a.link;selected=null;setMode("blocks")};
+  const ul=$("#i-unlink");if(ul)ul.onclick=()=>{const a=darrow(dsel.id);a.name=an(a);a.link=null;a.body="x";render2()};
+  const tl=$("#i-tolink");if(tl)tl.onclick=()=>linkFromArrow(darrow(dsel.id));
+  const bd=$("#i-body");if(bd)bd.oninput=()=>{darrow(dsel.id).body=bd.value;updD(false);const dg=arrowDiag(darrow(dsel.id));const e=$("#i-diag");e.className=(dg.err?"ngm":"okm")+" note";e.textContent=dg.err?dg.err:"型は合っています"+(dg.type?`(本体は ${dg.type})`:"")};
+  const dl=$("#i-del");if(dl)dl.onclick=()=>removeSel();
+}
+function removeSel(){
+  if(!dsel)return;
+  if(dsel.k==="o"){D.arrows=D.arrows.filter(a=>a.from!==dsel.id&&a.to!==dsel.id);D.objs=D.objs.filter(o=>o.id!==dsel.id)}
+  else if(dsel.k==="a")D.arrows=D.arrows.filter(a=>a.id!==dsel.id);
+  else D.comps=D.comps.filter(c=>c.id!==dsel.id);
+  const ids=new Set(D.arrows.map(a=>a.id));D.comps=D.comps.filter(c=>c.arrows.every(i=>ids.has(i)));
+  const ps=new Set(pathsAll().map(p=>p.id));D.checks=D.checks.filter(k=>ps.has(k.p)&&ps.has(k.q));
+  dsel=null;pending=[];render2();
+}
+function checksUI(){
+  const box=$("#d-chks"),P=pathsAll();
+  if(!D.checks.length){box.innerHTML='<p class="note">「+ 確かめ」で、2 本の道を選んで比べます。</p>';return}
+  box.innerHTML=D.checks.map(k=>{
+    const opt=(sel)=>P.map(p=>`<option value="${p.id}"${p.id===sel?" selected":""}>${esc(p.name)} (${esc(dobj(p.src)?.name||"?")}→${esc(dobj(p.dst)?.name||"?")})</option>`).join("");
+    const p=P.find(x=>x.id===k.p),q=P.find(x=>x.id===k.q),pi=parseInputs(k.inputs);
+    let tbl="";
+    if(p&&q){
+      if(p.src!==q.src||p.dst!==q.dst)tbl='<p class="ngm note">2 本の道の始まりか終わりが違います</p>';
+      else{
+        const rows=pi.vals.map(v=>{const a=evalPath(p,v),b=evalPath(q,v),ok=a!=="error"&&b!=="error"&&show(a)===show(b);return`<tr><td>${show(v)}</td><td>${a==="error"?"?":show(a)}</td><td>${b==="error"?"?":show(b)}</td><td class="${ok?"okm":"ngm"}">${ok?"✓":"✗"}</td></tr>`});
+        tbl=`<table><tr><th>x</th><th>${esc(p.name)}</th><th>${esc(q.name)}</th><th></th></tr>${rows.join("")}</table>`;
+        if(pi.bad.length)tbl+=`<p class="ngm note">読めない入力: ${esc(pi.bad.join(" "))}</p>`;
+      }
+    }
+    return`<div class="chk" data-k="${k.id}"><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <select class="ck-p" aria-label="道 1">${opt(k.p)}</select><span>=</span><select class="ck-q" aria-label="道 2">${opt(k.q)}</select>
+      <button class="btn ck-del" aria-label="この確かめを消す">×</button></div>
+      <div class="field"><label>流す値</label><input class="ck-in" value="${esc(k.inputs)}" spellcheck="false" autocomplete="off"></div>${tbl}</div>`}).join("");
+  box.querySelectorAll(".chk").forEach(c=>{const k=D.checks.find(x=>x.id===c.dataset.k);
+    c.querySelector(".ck-p").onchange=e=>{k.p=e.target.value;updD(true)};c.querySelector(".ck-q").onchange=e=>{k.q=e.target.value;updD(true)};
+    c.querySelector(".ck-in").oninput=e=>{k.inputs=e.target.value;updD(true,true)};
+    c.querySelector(".ck-del").onclick=()=>{D.checks=D.checks.filter(x=>x!==k);updD(true)}});
+}
+function updD(withChecks,keepFocus){
+  const g=genD();$("#d-code").textContent=g.text||"(型を置き、矢印を引くと、ここに Sign が出ます)";
+  $("#d-warns").innerHTML=g.warns.map(x=>`<li>${esc(x)}</li>`).join("");
+  drawD();if(withChecks!==false&&!keepFocus)checksUI();else if(keepFocus){/* 入力中は表を作り直すとフォーカスが外れるので、表だけ更新 */
+    const act=document.activeElement,k=act&&act.closest&&act.closest(".chk");const tmp=document.createElement("div");
+    const saved=act&&act.className,start=act&&act.selectionStart;checksUI();
+    const n=$("#d-chks").querySelector(`.chk[data-k="${k&&k.dataset.k}"] .ck-in`);if(n){n.focus();try{n.setSelectionRange(start,start)}catch(e){}}}
+  dsave();
+}
+function render2(){updD(true);inspect();hint()}
+function hint(){
+  const h=$("#d-hint"),ok=$("#d-compok");ok.hidden=dtool!=="comp";
+  $("#d-arrow").setAttribute("aria-pressed",dtool==="arrow");$("#d-comp").setAttribute("aria-pressed",dtool==="comp");
+  if(dtool==="arrow")h.textContent="丸から丸へドラッグして矢印を引きます";
+  else if(dtool==="comp"){const err=chainDiag(pending);h.textContent=pending.length?(pending.map(id=>an(darrow(id))).join(" ; ")+(err?" … "+err:"")):"つなぎたい矢印を、図式の順にクリックします";ok.disabled=pending.length<2||!!err}
+  else h.textContent="";
+}
+function dsave(){try{localStorage.setItem(DKEY,JSON.stringify({D,did}))}catch(e){}}
+function dload(){try{const d=JSON.parse(localStorage.getItem(DKEY)||"null");if(d&&d.D){D=d.D;did=d.did||1000;return true}}catch(e){}return false}
+
+
+/* --- ブロックとの行き来 ---- */
+function blockDef(tab){
+  const g=generate(),chunks=g.text.split("\n\n");
+  const c=chunks.find(x=>x.startsWith(tab.name+" : "));
+  return c?c.split("\n"):null;
+}
+function astToTab(tab,ast){
+  const P=Object.values(tab.nodes).find(n=>n.type==="param"&&n.name==="x"),R=Object.values(tab.nodes).find(n=>n.type==="result");
+  let leafY=120;const maxX={v:0};
+  function lay(a){
+    if(a.t==="x")return{id:P.id,h:-1,y:P.y};
+    if(a.t==="num"){const id=addNode(tab,"num",16,leafY,{value:show(a.v)});const y=leafY;leafY+=100;return{id,h:0,y}}
+    if(a.t==="neg"){const z=addNode(tab,"num",16,leafY,{value:"0"});const zy=leafY;leafY+=100;const e=lay(a.e);const h=Math.max(0,e.h)+1;
+      const id=addNode(tab,"op",250+(h-1)*230,(zy+e.y)/2,{op:"-"});link(tab,id,"a",z);link(tab,id,"b",e.id);return{id,h,y:(zy+e.y)/2}}
+    const l=lay(a.l),r=lay(a.r),h=Math.max(l.h,r.h,0)+1,y=Math.max(40,(l.y+r.y)/2);
+    const id=addNode(tab,"op",250+(h-1)*230,y,{op:a.op});link(tab,id,"a",l.id);link(tab,id,"b",r.id);return{id,h,y};
+  }
+  const root=lay(ast);R.x=250+Math.max(1,root.h)*230+10;R.y=Math.max(40,root.y);R.inputs.in=root.id;
+}
+function linkFromArrow(a){
+  let name=a.name,i=1;
+  while(S.tabs.some(t=>t.name===name))name=a.name+(++i);
+  const tab={id:"t"+(uid++),name,params:["x"],nodes:{}};S.tabs.push(tab);ensureFn(tab);
+  const pb=parseBody(a.body);if(pb.ast)astToTab(tab,pb.ast);
+  a.link=tab.id;a.name=name;save();
+  S.active=tab.id;selected=null;setMode("blocks");
+}
+function placeFnInDiagram(tab){
+  if(D.arrows.some(a=>a.link===tab.id)){const a=D.arrows.find(a=>a.link===tab.id);dsel={k:"a",id:a.id};setMode("diag");return}
+  const k=D.objs.length,mk=(n,x,y)=>{const id="o"+(did++);D.objs.push({id,name:n,x,y});return id};
+  const A=mk("Int",140+(k%4)*60,120+Math.floor(k/2)*70),B=mk("Int",440+(k%4)*60,120+Math.floor(k/2)*70);
+  const a={id:"a"+(did++),from:A,to:B,name:tab.name,body:"x",link:tab.id};D.arrows.push(a);dsel={k:"a",id:a.id};setMode("diag");
+}
+
+/* --- 操作 ---- */
+let ddrag=null;
+const svgPt=e=>{const r=dia.getBoundingClientRect();return[(e.clientX-r.left)*1100/r.width,(e.clientY-r.top)*720/r.height]};
+dia.addEventListener("pointerdown",e=>{
+  const og=e.target.closest(".obj"),eg=e.target.closest(".edge");
+  if(og){const o=dobj(og.dataset.id);
+    if(dtool==="arrow"){e.preventDefault();ddrag={kind:"wire",from:o.id};dia.setPointerCapture(e.pointerId);return}
+    dsel={k:"o",id:o.id};const[x,y]=svgPt(e);ddrag={kind:"move",o,dx:o.x-x,dy:o.y-y,moved:false};dia.setPointerCapture(e.pointerId);e.preventDefault();drawD();inspect();return}
+  if(eg){const id=eg.dataset.id,k=eg.dataset.k;
+    if(dtool==="comp"&&k==="a"){pending.push(id);hint();drawD();return}
+    dsel={k,id};drawD();inspect();return}
+  dsel=null;drawD();inspect();
+});
+dia.addEventListener("pointermove",e=>{
+  if(!ddrag)return;const[x,y]=svgPt(e);
+  if(ddrag.kind==="move"){ddrag.o.x=Math.round(Math.max(40,Math.min(1060,x+ddrag.dx)));ddrag.o.y=Math.round(Math.max(40,Math.min(680,y+ddrag.dy)));ddrag.moved=true;drawD()}
+  else{const o=dobj(ddrag.from);drawD(`M${o.x},${o.y} L${x},${y}`)}
+});
+dia.addEventListener("pointerup",e=>{
+  if(!ddrag)return;const d=ddrag;ddrag=null;
+  if(d.kind==="move"){updD(false);return}
+  const t=document.elementFromPoint(e.clientX,e.clientY),og=t&&t.closest&&t.closest(".obj");
+  if(og){let i=1;while(D.arrows.some(a=>an(a)==="f"+i)||D.comps.some(c=>c.name==="f"+i)||S.tabs.some(t=>t.name==="f"+i))i++;
+    const a={id:"a"+(did++),from:d.from,to:og.dataset.id,name:"f"+i,body:"x"};D.arrows.push(a);dsel={k:"a",id:a.id}}
+  render2();
+});
+$("#d-obj").onclick=()=>{const k=D.objs.length;D.objs.push({id:"o"+(did++),name:"Int",x:120+(k%5)*170,y:110+Math.floor(k/5)*150});dsel={k:"o",id:D.objs[k].id};render2()};
+$("#d-arrow").onclick=()=>{dtool=dtool==="arrow"?null:"arrow";pending=[];hint();drawD()};
+$("#d-comp").onclick=()=>{dtool=dtool==="comp"?null:"comp";pending=[];hint();drawD()};
+$("#d-compok").onclick=()=>{
+  let i=1;while(D.arrows.some(a=>an(a)==="h"+i)||D.comps.some(c=>c.name==="h"+i))i++;
+  const c={id:"c"+(did++),name:"h"+i,arrows:pending.slice()};D.comps.push(c);dsel={k:"c",id:c.id};pending=[];dtool=null;render2()};
+$("#d-addchk").onclick=()=>{const P=pathsAll();if(P.length<2)return;D.checks.push({id:"k"+(did++),p:P[P.length-2].id,q:P[P.length-1].id,inputs:"3 -2 10"});updD(true)};
+$("#d-clear").onclick=()=>{D=dnew();dsel=null;pending=[];dtool=null;render2()};
+$("#d-copy").onclick=async()=>{const b=$("#d-copy"),text=$("#d-code").textContent;
+  try{await navigator.clipboard.writeText(text);b.textContent="コピーしました"}catch(e){const r=document.createRange();r.selectNodeContents($("#d-code"));const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent="選択しました"}
+  setTimeout(()=>b.textContent="コピー",1400)};
+document.addEventListener("keydown",e=>{
+  if($("#diag").hidden)return;
+  if((e.key==="Delete"||e.key==="Backspace")&&dsel&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();removeSel()}
+  if(e.key==="Escape"){dtool=null;pending=[];hint();drawD()}
+});
+
+/* --- 見本 ---- */
+const DEX={
+  square:{label:"可換な四角(x+1 して倍 = 倍して x+2)",build(){
+    const d=dnew(),o=(n,x,y)=>{const id="o"+(did++);d.objs.push({id,name:n,x,y});return id};
+    const A=o("Int",160,160),B=o("Int",520,160),C=o("Int",160,500),Dd=o("Int",520,500);
+    const ar=(n,f,t,b)=>{const id="a"+(did++);d.arrows.push({id,name:n,from:f,to:t,body:b});return id};
+    const f=ar("inc",A,B,"x + 1"),g=ar("twice",B,Dd,"x * 2"),g2=ar("twice2",A,C,"x * 2"),f2=ar("plus2",C,Dd,"x + 2");
+    d.comps.push({id:"c"+(did++),name:"h1",arrows:[f,g]},{id:"c"+(did++),name:"h2",arrows:[g2,f2]});
+    d.checks.push({id:"k"+(did++),p:d.comps[0].id,q:d.comps[1].id,inputs:"3 -2 10 0"});return d}},
+  noncomm:{label:"可換でない四角と、型の合わない矢印",build(){
+    const d=dnew(),o=(n,x,y)=>{const id="o"+(did++);d.objs.push({id,name:n,x,y});return id};
+    const A=o("Int",160,160),B=o("Int",520,160),C=o("Int",160,500),Dd=o("Int",520,500);
+    const ar=(n,f,t,b)=>{const id="a"+(did++);d.arrows.push({id,name:n,from:f,to:t,body:b});return id};
+    const f=ar("inc",A,B,"x + 1"),g=ar("twice",B,Dd,"x * 2"),g2=ar("twice2",A,C,"x * 2"),f2=ar("inc2",C,Dd,"x + 1");
+    ar("half",Dd,A,"x / 2.0");
+    d.comps.push({id:"c"+(did++),name:"h1",arrows:[f,g]},{id:"c"+(did++),name:"h2",arrows:[g2,f2]});
+    d.checks.push({id:"k"+(did++),p:d.comps[0].id,q:d.comps[1].id,inputs:"3 -2 10 0"});return d}}
+};
+$("#d-ex").innerHTML='<option value="">(選ぶ)</option>'+Object.entries(DEX).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join("");
+$("#d-ex").onchange=e=>{if(!e.target.value)return;D=DEX[e.target.value].build();dsel=null;pending=[];dtool=null;e.target.value="";render2()};
+
+/* --- 画面の切り替え ---- */
+function setMode(m){
+  document.querySelectorAll("[data-mode]").forEach(el=>{
+    if(el.dataset.mode==="blocks"&&el.id==="fnhead"){el.hidden=m!=="blocks"||cur().id==="main"}else el.hidden=el.dataset.mode!==m});
+  $("#blocktools").hidden=m!=="blocks";
+  $("#m-blocks").setAttribute("aria-selected",m==="blocks");$("#m-diag").setAttribute("aria-selected",m==="diag");
+  if(m==="blocks")render();else render2();
+  try{localStorage.setItem("sign-mode",m)}catch(e){}
+}
+$("#m-blocks").onclick=()=>setMode("blocks");$("#m-diag").onclick=()=>setMode("diag");
+if(!dload())D=DEX.square.build();
+for(const a of D.arrows)if(a.link&&!S.tabs.some(t=>t.id===a.link)){a.link=null}
+for(const k of ["objs","arrows","comps","checks"])for(const x of D[k]){const m=+String(x.id).replace(/\D/g,"");if(m>=did)did=m+1}
+let startMode="blocks";try{startMode=localStorage.getItem("sign-mode")||"blocks"}catch(e){}
+setMode(startMode==="diag"?"diag":"blocks");
+window.__signDiag={genD,get D(){return D},DEX,setMode,evalPath,pathsAll};
+</script>
+<script>
+"use strict";
+/* ================= 本物の処理系につなぐ(sign_editor.py から配られたときだけ) ================= */
+let SERVER=false;
+const optState={strict:false,opt:false};
+window.__sig={};
+function sigLine(name){const g=window.__sig&&window.__sig[name];return g?`<p class="note" style="margin:4px 0">静的パスの型: <code>${esc(g)}</code></p>`:""}
+function realBox(idSuffix,getCode){
+  const box=document.createElement("div");box.className="box";box.hidden=true;box.dataset.real="1";
+  box.innerHTML=`<div class="hd"><h2>処理系で実行(本物)</h2></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin:6px 0;font-size:13px">
+      <label><input type="checkbox" id="r-strict-${idSuffix}"> 厳密(--strict)</label>
+      <label><input type="checkbox" id="r-opt-${idSuffix}"> 最適化(--opt)</label></div>
+    <button class="btn primary" id="r-run-${idSuffix}">実行と型検査</button>
+    <div id="r-out-${idSuffix}" style="margin-top:8px"></div>`;
+  const strict=box.querySelector(`#r-strict-${idSuffix}`),opt=box.querySelector(`#r-opt-${idSuffix}`),out=box.querySelector(`#r-out-${idSuffix}`);
+  strict.checked=optState.strict;opt.checked=optState.opt;
+  strict.onchange=()=>{optState.strict=strict.checked;syncOpts()};opt.onchange=()=>{optState.opt=opt.checked;syncOpts()};
+  box.querySelector(`#r-run-${idSuffix}`).onclick=async()=>{
+    const code=getCode();out.innerHTML='<p class="note">実行しています…</p>';
+    try{
+      const post=(p,b)=>fetch(p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}).then(r=>r.json());
+      const [run,ty]=await Promise.all([post("/api/run",{code,strict:optState.strict,opt:optState.opt}),post("/api/types",{code})]);
+      window.__sig={};for(const l of ty.signatures||[]){const m=/^(\S+) : (.*)$/.exec(l);if(m)window.__sig[m[1]]=l}
+      let h="";
+      (run.results||[]).forEach((v,i)=>h+=`<div class="out-line"><span>出力 ${i+1}</span><span>${esc(v)}</span></div>`);
+      if(!(run.results||[]).length&&!run.error)h+='<p class="note">値を返す行がありません。</p>';
+      if(run.stdout)h+=`<p class="note" style="margin-bottom:0">標準出力</p><pre class="code" style="max-height:120px">${esc(run.stdout)}</pre>`;
+      if(run.error){const e=run.error;let ex="";
+        if(e.line){const ln=code.split("\n")[e.line-1]||"";ex=`<pre class="code" style="max-height:90px">${esc(String(e.line).padStart(3)+" | "+ln+"\n"+" ".repeat(6+(e.col||1)-1)+"^")}</pre>`}
+        h+=`<p class="warn" style="list-style:none;padding:0;margin:6px 0 0">エラー${e.line?` (${e.line}:${e.col})`:""}: ${esc(e.message)}</p>${ex}`}
+      if((run.warnings||[]).length)h+=`<ul class="warn">${run.warnings.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`;
+      if((ty.signatures||[]).length)h+=`<p class="note" style="margin-bottom:0">静的パスの型</p><pre class="code" style="max-height:120px">${esc(ty.signatures.join("\n"))}</pre>`;
+      if((ty.errors||[]).length)h+=`<ul class="warn">${ty.errors.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`;
+      out.innerHTML=h;
+      if(typeof inspect==="function"&&!$("#diag").hidden)inspect();
+    }catch(e){out.innerHTML=`<p class="warn" style="list-style:none;padding:0">サーバーにつながりません: ${esc(e.message)}</p>`}
+  };
+  return box;
+}
+function syncOpts(){document.querySelectorAll('input[id^="r-strict-"]').forEach(c=>c.checked=optState.strict);document.querySelectorAll('input[id^="r-opt-"]').forEach(c=>c.checked=optState.opt);
+  try{localStorage.setItem("sign-real-opts",JSON.stringify(optState))}catch(e){}}
+async function enableServer(){
+  if(!/^https?:$/.test(location.protocol)||!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname))return;
+  try{const r=await fetch("/api/ping");if(!(await r.json()).ok)return}catch(e){return}
+  SERVER=true;
+  try{Object.assign(optState,JSON.parse(localStorage.getItem("sign-real-opts")||"{}"))}catch(e){}
+  const b=realBox("b",()=>generate().text), d=realBox("d",()=>genD().text);
+  document.querySelector(".side").appendChild(b);document.querySelector(".dside").appendChild(d);
+  b.hidden=false;d.hidden=false;
+  // 盤の保存と読み込み
+  const bar=document.createElement("div");bar.className="dtools";bar.id="projbar";
+  bar.innerHTML=`<label for="pj-name" class="note" style="margin:0">盤の名前</label><input id="pj-name" class="btn" style="min-width:0;width:150px" value="無題" autocomplete="off">
+    <button class="btn" id="pj-save">保存</button><select id="pj-list" class="btn" aria-label="保存した盤"></select><button class="btn" id="pj-open">開く</button><span class="note" id="pj-msg" style="margin:0"></span>`;
+  document.querySelector("header.bar").after(bar);
+  const msg=t=>{$("#pj-msg").textContent=t;setTimeout(()=>{if($("#pj-msg").textContent===t)$("#pj-msg").textContent=""},2500)};
+  async function refreshList(){const l=await (await fetch("/api/projects")).json();$("#pj-list").innerHTML=l.length?l.map(n=>`<option>${esc(n)}</option>`).join(""):'<option value="">(保存した盤なし)</option>'}
+  $("#pj-save").onclick=async()=>{const n=$("#pj-name").value.trim();
+    const r=await fetch("/api/projects/"+encodeURIComponent(n),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({S,uid,D,did})});
+    const j=await r.json();msg(r.ok?"保存しました":(j.error||"保存できません"));refreshList()};
+  $("#pj-open").onclick=async()=>{const n=$("#pj-list").value;if(!n)return;
+    const r=await fetch("/api/projects/"+encodeURIComponent(n));if(!r.ok){msg("開けません");return}
+    const j=await r.json();if(!j.S||!j.S.tabs||!j.D){msg("盤の形式が違います");return}
+    S=j.S;uid=j.uid||uid;D=j.D;did=j.did||did;selected=null;dsel=null;pending=[];dtool=null;$("#pj-name").value=n;
+    for(const a of D.arrows)if(a.link&&!S.tabs.some(t=>t.id===a.link))a.link=null;
+    setMode($("#m-diag").getAttribute("aria-selected")==="true"?"diag":"blocks");msg("開きました")};
+  refreshList();
+  syncOpts();
+}
+enableServer();
+</script>

@@ -1,0 +1,69 @@
+`sprite_demo.sn — スプライト(BLIT)の見本。おばけの絵を動かす。← → で動き(向きで左右反転)、↑ ↓ で大きさ(拡大)、クリックでその位置へ、q で終わる`
+`  python3 sign_console.py sprite_demo.sn --display=window:5:96x96`
+`絵は 1 画素 1 語(0xRRGGBB)で番地 IMG に置く。置かなかった語(.)は透明。装置の BLIT(命令 6)で、位置 (X,Y)・大きさ・拡大・向きを指定して一度に描く。`
+
+gfx : 0x9100000
+color : gfx + 0x08
+px : gfx + 0x0C
+py : gfx + 0x10
+cmd : gfx + 0x14
+arg0 : gfx + 0x18
+arg1 : gfx + 0x1C
+src : gfx + 0x28
+scale : gfx + 0x30
+flip : gfx + 0x34
+
+seq2 : a b ? b
+seq3 : a b c ? c
+seq4 : a b c d ? d
+seq5 : a b c d e ? e
+seq8 : a b c d e f g h ? h
+
+IMG : 0x600000
+X : 0x3000
+Y : 0x3004
+S : 0x3008
+FL : 0x300C
+get : a ? @a
+
+`絵(8×8)。# は黄、o は白、@ は黒、. は透明`
+ART : [`..####..` , `.######.` , `##oo#oo#` , `##o@#o@#` , `########` , `########` , `##.##.##` , `#..##..#`]
+
+`文字 → 色。透明(__)は書かない`
+colorof : ch ?
+	ch = 0u23 : 0xFFCC00
+	ch = 0u6F : 0xFFFFFF
+	ch = 0u40 : 0x202020
+	__
+
+lrow : r s i ?
+	i >= ||s|| : 0
+	seq2 (((IMG + (((r * 8) + i) * 4)) # (colorof (s ' i))) | 0) (lrow r s (i + 1))
+
+lart : r ?
+	r >= 8 : 0
+	seq2 (lrow r (ART ' r) 0) (lart (r + 1))
+
+clear : c ? seq2 (color # c) (cmd # 2)
+present : z ? cmd # 3
+
+draw : z ? seq8 (px # (get X)) (py # (get Y)) (arg0 # 8) (arg1 # 8) (src # IMG) (scale # (get S)) (flip # (get FL)) (cmd # 6)
+
+clampv : v lo hi ?
+	v < lo : lo
+	v > hi : hi
+	v
+
+on_key : code ?
+	code = 28 : seq2 (X # (clampv ((get X) - 4) 0 88)) (FL # 1)
+	code = 29 : seq2 (X # (clampv ((get X) + 4) 0 88)) (FL # 0)
+	code = 30 : S # (clampv ((get S) + 1) 1 6)
+	code = 31 : S # (clampv ((get S) - 1) 1 6)
+	code = 113 : 0 - 1
+	0
+
+on_click : x y b ? seq3 (X # (clampv (x - 8) 0 88)) (Y # (clampv (y - 8) 0 88)) 0
+
+init : z ? seq5 (lart 0) (X # 40) (Y # 40) (S # 2) (FL # 0)
+
+tick : z ? seq3 (clear 0x101830) (draw 0) (present 0)

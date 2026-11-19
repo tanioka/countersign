@@ -1,0 +1,8 @@
+fib : n ?
+	n < 2 : n
+	(fib (n - 1)) + (fib (n - 2))
+h : k ?
+	(fib 34) = 0 : fib 28
+	(fib 33) = 3524578 : fib 35
+	fib 30
+h 0

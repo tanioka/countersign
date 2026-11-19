@@ -1,0 +1,25 @@
+`led_gpio.sn — Raspberry Pi の本物の LED を 1 秒周期で点滅させる(Sign の L チカ。led_blink.sn の GPIO 版)。
+`  つなぎ方: GPIO17(基板の 11 番ピン)── 抵抗 330Ω ── LED の足の長い方(+)、LED の短い方(−)── GND(例: 9 番ピン)
+`  動かし方: python3 sign_console.py led_gpio.sn --display=null --gpio      止めるのは Ctrl+C(止めると LED は消える)
+`  パソコンでの練習: --gpio=fake にすると、ピンの変化が標準エラーに「[gpio] 17 = 1」と出る(本物のピンは使わない)
+`  動かしたまま PERIOD(ミリ秒)や LED_PIN は書き換えられるが、アラームの間隔は init で頼んだまま。変えるときは起動し直す
+
+GPIO : 0x9500000
+LED_PIN : 17
+PERIOD : 500
+LED : 0x500000
+tm_every : 0x9200010
+
+seq2 : a b ? b
+seq3 : a b c ? c
+
+`ピンの値の番地は、GPIO + 4 × ピン番号。そこへ 1 を書くと HIGH(点灯)、0 で LOW(消灯)`
+pin : n v ? (GPIO + (4 * n)) # v
+
+init : z ? seq3 (LED # 0) (tm_every # PERIOD) (pin LED_PIN 0)
+
+on_timer : id ?
+	(LED # (1 - (@LED))) : pin LED_PIN (@LED)
+	0
+
+tick : z ? 0

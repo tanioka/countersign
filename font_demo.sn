@@ -1,0 +1,5 @@
+`font_demo.sn — font.sn の見本。ディスプレイに文字を描く。  python3 sign_interp.py font_demo.sn --display=png:font_demo.png:160x64`
+
+`font.sn`@~
+
+seq5 (font_print `Hello, Sign!` 4 4 1 0xFFFF00) (font_print `ABC xyz 0123456789` 4 14 1 0x00FF88) (font_print `BIG` 4 26 3 0xFF6644) (font_int 2026 60 26 3 0x66AAFF) ((0x9100000 + 0x14) # 3)

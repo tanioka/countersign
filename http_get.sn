@@ -1,0 +1,55 @@
+`http_get.sn — ホストの / を HTTP/1.0 で(TLS を 1 にすれば https で)取ってきて、返ってきたものをそのまま出す(Sign で書いた最小の HTTP クライアント)。
+`  python3 sign_interp.py http_get.sn --net=example.com          (HOST・PORT は下で書き換える。--net=ホスト名 でその相手だけに許可)
+`  自分のパソコンの Web サーバーなら: HOST を 127.0.0.1、PORT をその番号にして --net=local。
+`  https にするには TLS を 1、PORT を 443 にする(証明書はぜんぶ確認する。社内 CA などは --net-ca=ファイル.pem)。プロキシ越しは --net-proxy=http://プロキシ:8080(socks5:// も)。
+`  python3 sign_interp.py http_get.sn --net=example.com --net-proxy=env           (環境変数 HTTPS_PROXY などに従う)
+
+`std.sn`@~
+
+HOST : `example.com`
+PORT : 80
+TLS : 0
+
+NET : 4x09900000
+HB : 4x00600000
+REQ : 4x00610000
+RESP : 4x00620000
+TMP : 4x00605000
+
+`装置の 4 バイトの結果レジスタは負の数(-エラー番号)を 32 bit で持つので、符号を戻す(4 バイトの読みは 0 拡張。value_representation.md §5)`
+s32 : v ?
+	v >= 2147483648 : v - 4294967296
+	v
+
+`ネットワーク装置を呼ぶ: 番号 n と引数 a〜f を書いて GO を押し、結果(RET)を返す`
+net_call : n a b c d e f ? seq9 (NET # n) ((NET + 4) # a) ((NET + 8) # b) ((NET + 12) # c) ((NET + 16) # d) ((NET + 20) # e) ((NET + 24) # f) ((NET + 0x20) # 1) (s32 (@(NET + 0x24)))
+
+`改行(13 10)を REQ の終わりに足す`
+add_crlf : z ? seq4 (TMP # 13) ((TMP + 4) # 10) ((TMP + 8) # 0) (str_cat REQ TMP)
+`リクエスト「GET / HTTP/1.0」「Host: ホスト」と空行`
+build : z ? seq9 (str_put REQ `GET / HTTP/1.0`) (add_crlf 0) (str_put TMP `Host: `) (str_cat REQ TMP) (str_cat REQ HB) (add_crlf 0) (add_crlf 0) 0 0
+
+`受け取った分を出して、また受け取る。0 以下(相手が閉じた・時間切れ・エラー)で終わる`
+pump : h ? pump2 h (net_call 3 h RESP 1000 0 0 0)
+pump2 : h n ?
+	n < 1 : n
+	(show n) : pump h
+
+show : n ? seq2 ((RESP + (4 * n)) # 0) (print_mem RESP)
+
+run : h ?
+	h < 0 : seq2 (print `つなげませんでした: エラー `) (println_int h)
+	seq4 (build 0) (net_call 2 h REQ (str_len REQ) 0 0 0) (pump h) (net_call 4 h 0 0 0 0 0)
+
+`つないで、TLS が 1 なら暗号化にする(失敗するとエラー番号が h に入って、run が出す)`
+open : z ? open2 (net_call 1 HB (str_len HB) PORT 0 0 0)
+open2 : h ?
+	h < 0 : h
+	TLS = 1 : tls h (net_call 13 h HB (str_len HB) 0 0 0)
+	h
+
+tls : h r ?
+	r < 0 : r
+	h
+
+run (seq2 (str_put HB HOST) (open 0))

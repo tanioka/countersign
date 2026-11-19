@@ -1,0 +1,35 @@
+`sys_demo.sn — システムコール装置(sign_sys.py)の見本。ファイルへ書き、読み直して、標準出力へ出し、大きさを答える。`
+`  python3 sign_interp.py sys_demo.sn --sys     (--sys は今のフォルダの中だけ読み書きできる。--sys=DIR で別のフォルダ)`
+`バッファは 1 語 = 1 バイト(4 バイト刻み)。パスは「バッファ + 長さ」。結果は RET を読む。負なら -エラー番号。`
+
+SYS : 4x09400000
+nr : SYS + 0x00
+a0 : SYS + 0x04
+a1 : SYS + 0x08
+a2 : SYS + 0x0C
+go : SYS + 0x14
+ret : SYS + 0x18
+
+seq3 : a b c ? c
+seq4 : a b c d ? d
+seq6 : a b c d e f ? f
+
+PATH : 4x00600000
+BUF : 4x00610000
+BUF2 : 4x00620000
+
+sys : n x y z ? seq6 (nr # n) (a0 # x) (a1 # y) (a2 # z) (go # 1) (@ret)
+
+putstr : base s i ?
+	i >= ||s|| : 0
+	seq3 ((base + (i * 4)) # ((s ' i) - 0u0)) (putstr base s (i + 1)) 0
+
+`1. out.txt を作り直して 16 バイト書く(15 文字 + 改行)`
+write_it : fd ? seq3 (sys 2 fd BUF 16) (sys 4 fd 0 0) (read_it (sys 3 PATH 7 0))
+`2. 開き直して読み、標準出力へ出す`
+read_it : fd ? show_it fd (sys 1 fd BUF2 64)
+show_it : fd n ? seq3 (sys 2 1 BUF2 n) (sys 4 fd 0 0) (sys 7 PATH 7 0)
+
+main : z ? seq4 (putstr PATH `out.txt` 0) (putstr BUF `hello from Sign` 0) ((BUF + 60) # 10) (write_it (sys 3 PATH 7 1))
+
+main 0

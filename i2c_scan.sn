@@ -1,0 +1,20 @@
+`i2c_scan.sn — I2C のバスにつないだ部品を探す(Linux の i2cdetect と同じ)。応答したアドレスを 16 進で 1 行ずつ出す。
+`  Raspberry Pi: python3 sign_interp.py i2c_scan.sn --i2c           (バス 1 = GPIO2 の SDA・GPIO3 の SCL。raspi-config で I2C を有効にしておく)
+`  パソコンでの練習: python3 sign_interp.py i2c_scan.sn --i2c=fake:0x48,0x50
+
+`std.sn`@~
+
+I2C : 4x09600000
+TMP : 4x00600000
+
+`アドレス a に応答があるか(あれば 0)`
+probe : a ? seq3 ((I2C + 0) # a) ((I2C + 0x14) # 4) (@(I2C + 0x18))
+
+found : a ? seq4 (print `0x`) (str_hex TMP a) (println_mem TMP) 0
+scan : a ?
+	a > 0x77 : 0
+	(probe a) = 0 : seq2 (found a) (scan (a + 1))
+	scan (a + 1)
+
+seq2 : a b ? b
+scan 0x03

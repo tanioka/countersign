@@ -1,0 +1,73 @@
+`sqlite.sn — SQLite を Sign から使う(仕様に無い追加)。SQLite 装置(sign_db.py)の上で動く。--db が要る。命令の詳しい説明は sign_db.py の先頭。
+`  使い方: 先頭に「 sqlite.sn を バッククォートで囲み @~ を続ける 」と書く(std.sn も一緒に読み込まれる)。 python3 sign_interp.py x.sn --db[=フォルダ]
+`  文字列(バッククォートで囲んだ物)は ASCII だけ。メモリの文字列(0 終わり。UTF-8 のバイトも可)を使うときは、名前の後ろに _mem をつけた版を使う(db_open_mem db_exec_mem db_prep_mem db_bind_text_mem)。
+`    db_open 名前 0          開く → h(負 = エラー)。名前は :memory: か、フォルダの下の相対名。 0 = 読み書き(無ければ作る)  1 = 読むだけ。   db_close h
+`    db_exec h SQL           文を 1 つ実行 → 変えた行数(負 = エラー)。  BEGIN・COMMIT・ROLLBACK もこれで(自動では始めない)
+`    db_prep h SQL           文を準備 → s。SQL の ? に値を結ぶ:  db_bind_int s i 整数   db_bind_text s i 文字列   db_bind_null s i    (i は 1 から)
+`    db_step s               1 = 行が読めた  0 = もう無い(INSERT などは実行して 0)  負 = エラー。  db_reset s(やり直し)  db_done s(捨てる)
+`    db_cols s               列の数。  db_int s i  列 i(0 から)を整数で。  db_text s i dst max  文字列で dst へ(長さを返す)。  db_name s i dst max  列の名前
+`    db_type s i             1 整数 2 小数 3 文字列 4 バイト列 5 NULL
+`    db_rowid h              最後に INSERT した行の番号。  db_changes h  最後の文が変えた行数。  db_errmsg h dst max  最後のエラーの文面
+`    db_print_row s          今の行を、列をタブで区切って 1 行で出す(NULL は空)
+`  エラー番号: -2 ファイル無し  -5 そのほか  -12 多すぎる  -16 使用中  -17 制約違反  -22 引数か文がおかしい  -30 読むだけ  -75 範囲外  -95 許していない(絶対パス・「..」・ATTACH)
+`  作業場: 0x7C1000〜0x7DFFFF(使わないでください)。
+
+`std.sn`@~
+
+DB_DEV : 4x09A00000
+DB_TMP : 4x007C1000
+DB_PATH : 4x007C2000
+DB_BIND : 4x007C3000
+DB_SQL : 4x007D0000
+
+`4 バイト幅で読むと負の戻り値(エラー)が符号なしになるので、32 ビットの符号つきに戻す`
+db_s32 : v ?
+	v >= 2147483648 : v - 4294967296
+	v
+
+db_call : n a b c d ? seq7 (DB_DEV # n) ((DB_DEV + 4) # a) ((DB_DEV + 8) # b) ((DB_DEV + 12) # c) ((DB_DEV + 16) # d) ((DB_DEV + 0x20) # 1) (db_s32 (@(DB_DEV + 0x24)))
+
+`Sign の文字列 s を buf へ写して、その番地を返す(長すぎたり ASCII 以外なら __)。装置は読んですぐ自分の中へ取り込むので、buf は使い回してよい`
+db_str : buf s lim ? db_str2 buf s lim ||s||
+db_str2 : buf s lim n ?
+	n < (lim / 4) : seq2 (str_put buf s) buf
+	__
+
+db_open_mem : p flags ? db_call 1 p flags 0 0
+db_open : path flags ? db_open_mem (db_str DB_PATH path 0x1000) flags
+db_close : h ? db_call 2 h 0 0 0
+db_exec_mem : h p ? db_call 3 h p 0 0
+db_exec : h sql ? db_exec_mem h (db_str DB_SQL sql 0x10000)
+db_prep_mem : h p ? db_call 4 h p 0 0
+db_prep : h sql ? db_prep_mem h (db_str DB_SQL sql 0x10000)
+db_bind_int : s i v ? db_call 5 s i v 0
+db_bind_text_mem : s i p ? db_call 6 s i p 0
+db_bind_text : s i str ? db_bind_text_mem s i (db_str DB_BIND str 0xD000)
+db_bind_null : s i ? db_call 7 s i 0 0
+db_bind_blob : s i p n ? db_call 8 s i p n
+db_step : s ? db_call 9 s 0 0 0
+db_cols : s ? db_call 10 s 0 0 0
+db_type : s i ? db_call 11 s i 0 0
+db_int : s i ? db_call 12 s i 0 0
+db_text : s i dst max ? db_call 13 s i dst max
+db_name : s i dst max ? db_call 14 s i dst max
+db_reset : s ? db_call 15 s 0 0 0
+db_done : s ? db_call 16 s 0 0 0
+db_rowid : h ? db_call 17 h 0 0 0
+db_changes : h ? db_call 18 h 0 0 0
+db_errmsg : h dst max ? db_call 19 h dst max 0
+
+`列 i から後ろを、タブ区切りで出す`
+db_print_cols : s i n ?
+	i >= n : 0
+	db_print_col s i n (db_text s i DB_TMP 4096)
+
+db_print_col : s i n r ?
+	r < 0 : r
+	seq3 (print_mem DB_TMP) (db_tab s i n) (db_print_cols s (i + 1) n)
+
+db_tab : s i n ?
+	(i + 1) < n : print `	`
+	0
+
+db_print_row : s ? seq2 (db_print_cols s 0 (db_cols s)) (newline 0)

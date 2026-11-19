@@ -1,0 +1,29 @@
+`--strict 用の小さなベンチ。底（終わりの行）をきちんと書いた再帰だけで作ってある`
+`確かめること：(1) 続ける枝を先に置き、最後の行で __ を返す形は両方のモードで止まる`
+`(2) 深さの上限（--strict は 6237）を越えない範囲では、両方のモードで同じ答えになる`
+`(3) 上限を越えると --strict は呼び出しが __ になる（知らせが出る）。既定は続ける`
+`(3) の確かめ方：sum_to 1000 を sum_to 7000 に変えると、既定は 24503500、--strict は知らせ(resource-depth)つきで別の値になる`
+`走らせ方：python3 sign.py bench/strict_bench.sn と python3 sign.py --strict bench/strict_bench.sn`
+`../std.sn`@~
+seq2 : a b ? b
+
+`続ける間の枝を先に置き、最後の行で __ を返す（終わりの印に __ の枝を使わない）`
+count : n lim ?
+	n <= lim : count (n + 1) lim
+	__
+
+`和：底は 0 を返す枝で書く`
+sum_to : n ?
+	n > 0 : n + (sum_to (n - 1))
+	0
+
+`フィボナッチ：底は 1 を返す枝`
+fib : n ?
+	n < 2 : n
+	(fib (n - 1)) + (fib (n - 2))
+
+`深さ 1000 の再帰（上限 6237 より十分下）`
+println_int (sum_to 1000)
+println_int (fib 20)
+count 1 3000
+println `count 終わり`

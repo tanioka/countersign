@@ -1,0 +1,89 @@
+`Sign で書いた字句解析器`
+`語 ＝ 次の空白まで。ただし文字列の中と括りの中の空白は数えない`
+
+`Sign は中置演算子を必ず空白で区切る（operator_table.md の基本原則）ので、`
+`文字クラスの最長一致は要らない——is_digit も <= も !== も、空白に挟まれて最初から1語である`
+
+`括りは中へ降りずに丸ごと1語で返す。中身を字句へ掛け直すのは構文解析の仕事である`
+`——呼ぶのは構文から字句への一方向で、字句が構文を呼ぶことは無い（ふつうの再帰下降）`
+`文字列だけは中を保護したまま、二度と字句に掛けない`
+
+space : \ 
+tab : \	
+cr : 0u000D
+newline : 0u000A
+is_space : c ? c = space | c = tab | c = cr | c = newline
+
+quote : \`
+escape : \\
+
+`字下げも括りである。前処理が段の上がり下がりを STX / ETX へ均してあるので、字句から見れば`
+`丸括弧と同じ形をしている（実測：f : x ?⏎<TAB>x + 1 は "f : x ? <STX>x + 1<ETX>" になる）。`
+`ここに書いていなかったので印が語にくっつき、中の行の切れ目（CR）も空白として消えていた`
+blk_open : 0u0002
+blk_close : 0u0003
+open_br : c ?
+	c = \[ : c
+	c = \( : c
+	c = \{ : c
+	c = blk_open : c
+	__
+
+close_br : c ?
+	c = \] : c
+	c = \) : c
+	c = \} : c
+	c = blk_close : c
+	__
+
+`--- 文字列の保護 ---`
+`閉じるバッククォートまで取る／捨てる。閉じが無ければ残り全部（行コメント）`
+
+take_quote : [~s] ?
+	!s : ``
+	s ' 0 = quote : s ' 0
+	s ' 0 (take_quote s ' 1~)
+
+drop_quote : [c ~rest] ?
+	c = quote : rest
+	drop_quote rest
+
+`--- 語の切り出し ---`
+`d は括りの深さ。深さ 0 の空白だけが語を切る`
+
+take_word : d [~s] ?
+	!s : ``
+	d = 0 & is_space s ' 0 : ``
+	s ' 0 = escape : s ' 0 s ' 1 take_word d (s ' 2~)
+	s ' 0 = quote : s ' 0 (take_quote s ' 1~) take_word d (drop_quote s ' 1~)
+	open_br s ' 0 : s ' 0 take_word d + 1 (s ' 1~)
+	close_br s ' 0 : s ' 0 take_word d - 1 (s ' 1~)
+	s ' 0 take_word d (s ' 1~)
+
+drop_word : d [~s] ?
+	!s : s
+	d = 0 & is_space s ' 0 : s
+	s ' 0 = escape : drop_word d (s ' 2~)
+	s ' 0 = quote : drop_word d (drop_quote s ' 1~)
+	open_br s ' 0 : drop_word d + 1 (s ' 1~)
+	close_br s ' 0 : drop_word d - 1 (s ' 1~)
+	drop_word d (s ' 1~)
+
+drop_space : [~s] ?
+	!s : s
+	is_space s ' 0 : drop_space (s ' 1~)
+	s
+
+`--- 字句解析本体 ---`
+`トークン列はカンマ（直積）で積む——スペース（余積）で積むと String の吸収則で1本に連結される`
+`後置 ~ は「相手のスロットを並べる」。付けないと再帰の結果が1スロットとして積まれる`
+
+tokens : [~s] ?
+	s & is_space s ' 0 : tokens (drop_space s)
+	s : (take_word 0 s) , (tokens (drop_word 0 s))~
+	__
+
+`実行例`
+`foo 123 + bar42 は4語（bar42 は文法どおり1識別子）`
+
+||tokens `foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t` foo 123 + bar42 (x y) `s t``||

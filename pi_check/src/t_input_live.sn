@@ -1,0 +1,15 @@
+`std.sn`@~
+CNT : 4x09300000
+TYP : 4x09300004
+COD : 4x09300008
+POP : 4x09300014
+SLEEP : 4x09200004
+pi : n ? println_int n
+one : z ? seq3 (pi @TYP) (pi @COD) (POP # 0)
+drain : n ?
+	@CNT = 0 : n
+	seq2 (one 0) (drain (n + 1))
+loop : t n ?
+	t >= 150 : n
+	loop (t + 1) (seq2 (SLEEP # 20) (drain n))
+pi (loop 0 0)

@@ -1,0 +1,206 @@
+`mqtt.sn — Sign で書いた MQTT 3.1.1 のクライアント(仕様に無い追加)。ネットワーク装置(sign_net.py)の上で動く。
+`  使い方: 先頭に「 mqtt.sn を バッククォートで囲み @~ を続ける 」と書く(std.sn も一緒に読み込まれる)。--net が要る(暗号化は TLS_START 番号 13。ポート 8883 など)。
+`  つなぐ: h = TCP のハンドル(ネットワーク装置の CONNECT で得たもの。TLS にするなら TLS_START をしたもの)。
+`    mqtt_connect h クライアントID 生存秒                     つないで CONNACK を待つ。0 = 受け付けられた。1〜5 = 断られた(MQTT の戻りコード: 2 ID 不可・4 ユーザー名/パスワード不正・5 認可なし)。負 = エラー(-errno)
+`    mqtt_connect_auth h クライアントID ユーザー名 パスワード 生存秒
+`  出す: mqtt_publish h トピック 本文 QoS 保持     (QoS は 0 か 1。保持は 0 か 1。QoS 1 は PUBACK を待つ。0 か負 = エラー)。 本文を数値で出す: mqtt_publish_int h トピック n QoS 保持
+`  受ける: mqtt_subscribe h フィルタ QoS            (QoS は 0 か 1。SUBACK を待つ。許された QoS(0・1)。128 = 断られた。負 = エラー)
+`    mqtt_poll h ミリ秒                              受信を見る(0 = 待たずに見る)。何も来なければ 0。来たらパケットの種類(3 = メッセージ、13 = PINGRESP …)、負 = エラー(-110 などで、-104 は相手が閉じた)
+`      メッセージ(3)が来たら、トピックは MQ_TOPIC、本文は MQ_PAYLOAD にメモリの文字列(0 終わり)で入り、本文の長さは (@MQ_PLEN)。QoS 1 のメッセージには自動で PUBACK を返す。次の mqtt_poll・待ちで上書きされる。
+`  保つ: mqtt_ping h(PINGREQ。生存秒の半分くらいごとに送る。返事 13 は mqtt_poll で来る)  mqtt_disconnect h
+`  限界: QoS 2 は無い(要求すると -22)。1 つのメッセージは本文・トピック込みで 8000 バイトまで(超えると -90。接続は使えなくなるので閉じる)。待っている間(CONNECT・SUBSCRIBE・PUBLISH の QoS 1)に届いたメッセージは、
+`    PUBACK だけ返して捨てる。Will(遺言)・セッションの引き継ぎ(clean session だけ)・MQTT 5 は無い。再接続は呼ぶ側が作り直す。
+`  作業場: 0x7A0000〜0x7BFFFF(使わないでください)。
+
+`std.sn`@~
+
+MQ_NET : 4x09900000
+MQ_OUT : 4x007A0000
+MQ_BODY : 4x007A8000
+MQ_TOPIC : 4x007B0000
+MQ_PAYLOAD : 4x007B2000
+MQ_HDR : 4x007BB000
+MQ_PLEN : 4x007BB100
+MQ_PIDC : 4x007BB104
+MQ_S1 : 4x007BC000
+MQ_S2 : 4x007BD000
+MQ_S3 : 4x007BE000
+MQ_S4 : 4x007BF000
+
+`装置の 4 バイトの結果レジスタは負の数(-エラー番号)を 32 bit で持つので、符号を戻す(4 バイトの読みは 0 拡張。value_representation.md §5)`
+s32 : v ?
+	v >= 2147483648 : v - 4294967296
+	v
+
+`ネットワーク装置を呼ぶ(番号 n と引数 a〜f)`
+mq_net : n a b c d e f ? seq9 (MQ_NET # n) ((MQ_NET + 4) # a) ((MQ_NET + 8) # b) ((MQ_NET + 12) # c) ((MQ_NET + 16) # d) ((MQ_NET + 20) # e) ((MQ_NET + 24) # f) ((MQ_NET + 0x20) # 1) (s32 (@(MQ_NET + 0x24)))
+
+`==================== 組み立て(p の off 番目から。書いたあとの off を返す) ====================`
+mq_b : p off v ? seq2 ((p + (off * 4)) # v) (off + 1)
+mq_u16 : p off v ? mq_b p (mq_b p off ((v >> 8) && 255)) (v && 255)
+`メモリの文字列 s を「長さ 2 バイト + 中身」で`
+mq_mem : p off s ? mq_mem2 p (mq_u16 p off (str_len s)) s (str_len s)
+mq_mem2 : p off s n ? seq2 (arr_copy (p + (off * 4)) s n) (off + n)
+`n バイトをそのまま`
+mq_raw : p off s n ? seq2 (arr_copy (p + (off * 4)) s n) (off + n)
+`残りの長さ(1〜3 バイトの可変長)`
+mq_rl : p off n ?
+	n < 128 : mq_b p off n
+	n < 16384 : mq_b p (mq_b p off ((n && 127) || 128)) (n >> 7)
+	mq_b p (mq_b p (mq_b p off ((n && 127) || 128)) (((n >> 7) && 127) || 128)) (n >> 14)
+
+`本文 MQ_BODY の n バイトに、先頭 b0 と残りの長さをつけて送る。0 か -errno`
+mq_frame : h b0 n ? mq_frame2 h n (mq_rl MQ_OUT (mq_b MQ_OUT 0 b0) n)
+mq_frame2 : h n off ? seq2 (arr_copy (MQ_OUT + (off * 4)) MQ_BODY n) (mq_chk (mq_net 2 h MQ_OUT (off + n) 0 0 0))
+mq_chk : r ?
+	r < 0 : r
+	0
+
+mq_pid : z ? seq2 (MQ_PIDC # (((@MQ_PIDC) % 65535) + 1)) (@MQ_PIDC)
+
+`==================== 読む ====================`
+`ちょうど n バイトを dst へ。0 か負(-11 = 待ち時間切れ、-104 = 相手が閉じた)`
+mq_rd : h dst n got ?
+	got >= n : 0
+	mq_rd2 h dst n got (mq_net 3 h (dst + (got * 4)) (n - got) 0 0 0)
+
+mq_rd2 : h dst n got r ?
+	r < 0 : r
+	r = 0 : 0 - 104
+	mq_rd h dst n (got + r)
+
+`残りの長さを読む。値か負`
+mq_rlr : h mult acc ? mq_rlr2 h mult acc (mq_rd h (MQ_HDR + 4) 1 0)
+mq_rlr2 : h mult acc r ?
+	r < 0 : r
+	mq_rlr3 h mult acc (@(MQ_HDR + 4))
+
+mq_rlr3 : h mult acc b ?
+	mult > 2097152 : 0 - 74
+	(b && 128) = 0 : acc + ((b && 127) * mult)
+	mq_rlr h (mult * 128) (acc + ((b && 127) * mult))
+
+mqtt_poll : h ms ? mq_poll1 h (seq2 (mq_net 10 h ms 0 0 0 0) (mq_rd h MQ_HDR 1 0))
+mq_poll1 : h r ?
+	r = (0 - 11) : 0
+	r < 0 : r
+	seq2 (mq_net 10 h 5000 0 0 0 0) (mq_pk h (@MQ_HDR))
+
+mq_pk : h b0 ? mq_pk2 h b0 (mq_rlr h 1 0)
+mq_pk2 : h b0 n ?
+	n < 0 : n
+	n > 8000 : 0 - 90
+	mq_pk3 h b0 n (mq_rd h MQ_BODY n 0)
+
+mq_pk3 : h b0 n r ?
+	r < 0 : r
+	(b0 >> 4) = 3 : mq_pub h b0 n
+	b0 >> 4
+
+`PUBLISH の中身を MQ_TOPIC・MQ_PAYLOAD へ。QoS 1 には PUBACK を返す。3 を返す`
+mq_pub : h b0 n ? mq_pub2 h b0 n (((@MQ_BODY) << 8) || (@(MQ_BODY + 4)))
+mq_pub2 : h b0 n tl ?
+	tl > 2000 : 0 - 90
+	(tl + 2) > n : 0 - 74
+	((((b0 >> 1) && 3) > 0) & ((tl + 4) > n)) : 0 - 74
+	seq5 (arr_copy MQ_TOPIC (MQ_BODY + 8) tl) ((MQ_TOPIC + (tl * 4)) # 0) (mq_pub_ack h b0 tl) (mq_pub_pay b0 n tl) 3
+
+mq_pub_ack : h b0 tl ?
+	((b0 >> 1) && 3) = 1 : mq_puback h (@(MQ_BODY + ((tl + 2) * 4))) (@(MQ_BODY + ((tl + 3) * 4)))
+	0
+
+mq_puback : h hi lo ? seq5 ((MQ_OUT + 0) # 0x40) ((MQ_OUT + 4) # 2) ((MQ_OUT + 8) # hi) ((MQ_OUT + 12) # lo) (mq_net 2 h MQ_OUT 4 0 0 0)
+mq_pub_pay : b0 n tl ?
+	((b0 >> 1) && 3) > 0 : mq_pay2 n (tl + 4)
+	mq_pay2 n (tl + 2)
+
+mq_pay2 : n start ? seq3 (arr_copy MQ_PAYLOAD (MQ_BODY + (start * 4)) (n - start)) ((MQ_PAYLOAD + ((n - start) * 4)) # 0) (MQ_PLEN # (n - start))
+
+`種類 want のパケットが来るまで待つ(来たメッセージは PUBACK だけ返して捨てる)。want か負`
+mq_wait : h want ? mq_wait2 h want (mqtt_poll h 5000)
+mq_wait2 : h want r ?
+	r = want : want
+	r = 0 : 0 - 110
+	r < 0 : r
+	mq_wait h want
+
+`==================== つなぐ ====================`
+`プロトコル名 "MQTT" を長さつきで本文の先頭に書く。6 を返す`
+mq_proto : z ? mq_b MQ_BODY (mq_b MQ_BODY (mq_b MQ_BODY (mq_b MQ_BODY (mq_b MQ_BODY (mq_b MQ_BODY 0 0) 4) 77) 81) 84) 84
+mq_flags : um pm ?
+	(um > 0) & (pm > 0) : 0xC2
+	um > 0 : 0x82
+	0x02
+
+mq_lit : dst s ? seq2 (str_put dst s) dst
+`クライアント ID・ユーザー名・パスワードはメモリの文字列の番地(um が 0 ならユーザー名なし、pm が 0 ならパスワードなし)`
+mq_conn : h idm um pm keep ? seq3 (MQ_PIDC # 0) (mq_net 10 h 5000 0 0 0 0) (mq_conn2 h (mq_cb4 idm um pm (mq_u16 MQ_BODY (mq_b MQ_BODY (mq_b MQ_BODY (mq_proto 0) 4) (mq_flags um pm)) keep)))
+mq_cb4 : idm um pm off ? mq_cb5 um pm (mq_mem MQ_BODY off idm)
+mq_cb5 : um pm off ?
+	um > 0 : mq_cb6 pm (mq_mem MQ_BODY off um)
+	off
+
+mq_cb6 : pm off ?
+	pm > 0 : mq_mem MQ_BODY off pm
+	off
+
+mq_conn2 : h n ? mq_conn3 h (mq_frame h 0x10 n)
+mq_conn3 : h r ?
+	r < 0 : r
+	mq_conn4 h (mq_rd h MQ_HDR 4 0)
+
+mq_conn4 : h r ?
+	r < 0 : r
+	(@MQ_HDR) = 0x20 : @(MQ_HDR + 12)
+	0 - 74
+
+mqtt_connect : h id keep ? mq_conn h (mq_lit MQ_S1 id) 0 0 keep
+mqtt_connect_auth : h id user pass keep ? mq_conn h (mq_lit MQ_S1 id) (mq_lit MQ_S2 user) (mq_lit MQ_S3 pass) keep
+
+`==================== 出す ====================`
+`トピック tm(メモリの文字列)に、本文 buf の n バイトを出す`
+mqtt_publish_bytes : h tm buf n qos retain ?
+	(qos < 0) | (qos > 1) : 0 - 22
+	(str_len tm) < 1 : 0 - 22
+	((str_len tm) + n) > 7900 : 0 - 90
+	mq_pb2 h tm buf n qos retain
+
+mq_pb2 : h tm buf n qos retain ?
+	qos = 1 : mq_pb3 h (mq_raw MQ_BODY (mq_u16 MQ_BODY (mq_mem MQ_BODY 0 tm) (mq_pid 0)) buf n) (0x32 || (retain && 1)) 1
+	mq_pb3 h (mq_raw MQ_BODY (mq_mem MQ_BODY 0 tm) buf n) (0x30 || (retain && 1)) 0
+
+mq_pb3 : h n b0 qos ? mq_pb4 (mq_frame h b0 n) h qos
+mq_pb4 : r h qos ?
+	r < 0 : r
+	qos = 1 : mq_pb5 (mq_wait h 4)
+	0
+
+mq_pb5 : r ?
+	r < 0 : r
+	0
+
+mqtt_publish_mem : h tm pm qos retain ? mqtt_publish_bytes h tm pm (str_len pm) qos retain
+mqtt_publish : h topic body qos retain ? mqtt_publish_mem h (mq_lit MQ_S1 topic) (mq_lit MQ_S2 body) qos retain
+mqtt_publish_int : h topic n qos retain ? mqtt_publish_mem h (mq_lit MQ_S1 topic) (seq2 (str_int MQ_S2 n) MQ_S2) qos retain
+
+`==================== 受ける ====================`
+`フィルタ fm(メモリの文字列)を購読する。許された QoS(0・1)、128 = 断られた、負 = エラー`
+mqtt_subscribe_mem : h fm qos ?
+	(qos < 0) | (qos > 1) : 0 - 22
+	(str_len fm) < 1 : 0 - 22
+	mq_sb2 h (mq_b MQ_BODY (mq_mem MQ_BODY (mq_u16 MQ_BODY 0 (mq_pid 0)) fm) qos)
+
+mq_sb2 : h n ? mq_sb3 h (mq_frame h 0x82 n)
+mq_sb3 : h r ?
+	r < 0 : r
+	mq_sb4 (mq_wait h 9)
+
+mq_sb4 : r ?
+	r < 0 : r
+	@(MQ_BODY + 8)
+
+mqtt_subscribe : h filter qos ? mqtt_subscribe_mem h (mq_lit MQ_S1 filter) qos
+
+`==================== 保つ・閉じる ====================`
+mqtt_ping : h ? seq3 ((MQ_OUT + 0) # 0xC0) ((MQ_OUT + 4) # 0) (mq_chk (mq_net 2 h MQ_OUT 2 0 0 0))
+mqtt_disconnect : h ? seq3 ((MQ_OUT + 0) # 0xE0) ((MQ_OUT + 4) # 0) (mq_chk (mq_net 2 h MQ_OUT 2 0 0 0))

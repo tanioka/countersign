@@ -1,0 +1,12 @@
+`特殊化(第110段): map で器を作り直し、fold で畳む。名前の無い関数 $[* 2] と $[a b ? a + b] を渡す。
+`once xs = fold … (map $[* 2] xs) = 110 を 1000000 回足す。答え 110000000。(輪と器を作る呼びを同じ関数に置けないので once に分けてある)
+map : f [h ~t] ? (@f h) (map f t)~
+fold : f acc [h ~t] ?
+	||t|| = 0 : @f acc h
+	fold f (@f acc h) t
+once : l ? fold $[a b ? a + b] 0 (map $[* 2] l)
+xs : 1 2 3 4 5 6 7 8 9 10
+drv : k acc ?
+	k < 1 : acc
+	drv (k - 1) (acc + (once xs))
+drv 1000000 0

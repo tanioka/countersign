@@ -1,0 +1,27 @@
+`draw_circle.sn — 文字で絵を描く。UART(0x9000000)へ 1 文字ずつ書く`
+
+out : 0x9000000
+
+W : 41
+H : 21
+newline : 0u000A
+
+`--- 1 画素。円の内側は # 、外側は . ---`
+
+pixel : x y ?
+	(x - 20) * (x - 20) + (y - 10) * (y - 10) * 4 <= 400 : \#
+	\.
+
+`--- 1 行。x を 0 から W まで進める ---`
+
+row : y x ?
+	x >= W : out # newline
+	out # (pixel x y) : row y (x + 1)
+
+`--- 全体。y を 0 から H まで進める ---`
+
+draw : y ?
+	y >= H : y
+	row y 0 : draw (y + 1)
+
+draw 0

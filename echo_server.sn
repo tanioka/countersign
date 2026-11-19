@@ -1,0 +1,30 @@
+`echo_server.sn — Sign で書いた TCP のエコーサーバー。PORT で待ち受け、つないできた相手が送ったものをそのまま返す。1 つの接続が閉じたら終わる。
+`  python3 sign_interp.py echo_server.sn --net=local         (自分のパソコンの中だけ。別の端末から:  nc 127.0.0.1 9000)
+`  他のパソコンからも受けたいときは --net(待ち受けが 0.0.0.0 になる。ファイアウォールとつなぐ相手に注意)
+
+`std.sn`@~
+
+PORT : 9000
+NET : 4x09900000
+BUF : 4x00600000
+
+`装置の 4 バイトの結果レジスタは負の数(-エラー番号)を 32 bit で持つので、符号を戻す(4 バイトの読みは 0 拡張。value_representation.md §5)`
+s32 : v ?
+	v >= 2147483648 : v - 4294967296
+	v
+
+net_call : n a b c d e f ? seq9 (NET # n) ((NET + 4) # a) ((NET + 8) # b) ((NET + 12) # c) ((NET + 16) # d) ((NET + 20) # e) ((NET + 24) # f) ((NET + 0x20) # 1) (s32 (@(NET + 0x24)))
+
+`受け取って、同じものを返す。0 以下(相手が閉じた・エラー)で終わる`
+echo : c ? echo2 c (net_call 3 c BUF 1000 0 0 0)
+echo2 : c n ?
+	n < 1 : n
+	(net_call 2 c BUF n 0 0 0) : echo c
+	0
+
+serve : l ? serve2 (net_call 6 l 0 0 0 0 0)
+serve2 : c ?
+	c < 0 : c
+	seq3 (echo c) (net_call 4 c 0 0 0 0 0) 0
+
+seq4 (println `待ち受け開始`) (println_int PORT) (serve (net_call 5 PORT 5 0 0 0 0)) 0

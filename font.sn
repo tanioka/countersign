@@ -1,0 +1,134 @@
+`font.sn — 画面に文字を描く、5×7 の ASCII フォント(Sign で書いた、仕様に無い追加)。ディスプレイ装置(sign_gfx.py)が要る。`
+`  使い方: 先頭に「 font.sn を バッククォートで囲み @~ を続ける 」と書く(std.sn も一緒に読み込まれる)。`
+`  font_char c x y 倍率 色        1 文字(c は ASCII の番号 32〜126)を (x,y) に描く。返す値は次の文字の x(= x + 6*倍率)。範囲外の番号は何も描かない。`
+`  font_text s x y 倍率 色        メモリの文字列 s(std.sn の str_ と同じ形)を描く。改行(10)で x を戻して次の行(8*倍率 下)へ。最後に描いた次の x を返す。`
+`  font_print 文字列 x y 倍率 色   Sign の文字列(バッククォートで囲んだ物)をそのまま描く。`
+`  font_int n x y 倍率 色         整数を 10 進で描く。`
+`  font_width s 倍率              メモリの文字列 s の横幅(画素数。改行を含まない 1 行用)。中央寄せ・右寄せに使う。`
+`  1 文字は 5×7 画素、字の間に 1 画素の空き(送り幅 6、行の送り 8)。倍率は 1〜64。`
+`  仕組み: 字の形を 35 語の絵にして作業場に書き、ディスプレイの BLIT を「型抜き」(FLIP のビット 2)で描く。描いたあと COLOR は引数の色に変わり、SCALE=1・FLIP=0 に戻す。`
+`  内部の作業場: 0x7E0000〜0x7E2FFF(使わないでください)。`
+
+`std.sn`@~
+
+FONT_G : 0x9100000
+FONT_BUF : 4x007E0000
+FONT_STR : 4x007E1000
+
+`字の形。35 ビットの数(上の行から、左から右へ。最上位ビットが左上)。範囲外は 0(空白)。`
+font_glyph : c ?
+	c = 32 : 0x0
+	c = 33 : 0x108421004
+	c = 34 : 0x294A00000
+	c = 35 : 0x295F57D4A
+	c = 36 : 0x11F4717C4
+	c = 37 : 0x672222273
+	c = 38 : 0x32544564D
+	c = 39 : 0x108800000
+	c = 40 : 0x88842082
+	c = 41 : 0x208210888
+	c = 42 : 0x9575480
+	c = 43 : 0x84F9080
+	c = 44 : 0x3088
+	c = 45 : 0xF8000
+	c = 46 : 0x18C
+	c = 47 : 0x2222200
+	c = 48 : 0x3A33AE62E
+	c = 49 : 0x11842108E
+	c = 50 : 0x3A211111F
+	c = 51 : 0x7C441062E
+	c = 52 : 0x8CA97C42
+	c = 53 : 0x7E1E0862E
+	c = 54 : 0x1910F462E
+	c = 55 : 0x7C2222108
+	c = 56 : 0x3A317462E
+	c = 57 : 0x3A317844C
+	c = 58 : 0x18C03180
+	c = 59 : 0x18C03088
+	c = 60 : 0x88882082
+	c = 61 : 0x1F07C00
+	c = 62 : 0x208208888
+	c = 63 : 0x3A2111004
+	c = 64 : 0x3A37ADE0E
+	c = 65 : 0x3A31FC631
+	c = 66 : 0x7A31F463E
+	c = 67 : 0x3A308422E
+	c = 68 : 0x72518C65C
+	c = 69 : 0x7E10F421F
+	c = 70 : 0x7E10F4210
+	c = 71 : 0x3A30BC62F
+	c = 72 : 0x4631FC631
+	c = 73 : 0x38842108E
+	c = 74 : 0x1C4210A4C
+	c = 75 : 0x4654C5251
+	c = 76 : 0x42108421F
+	c = 77 : 0x4775AC631
+	c = 78 : 0x4639ACE31
+	c = 79 : 0x3A318C62E
+	c = 80 : 0x7A31F4210
+	c = 81 : 0x3A318D64D
+	c = 82 : 0x7A31F5251
+	c = 83 : 0x3E107043E
+	c = 84 : 0x7C8421084
+	c = 85 : 0x46318C62E
+	c = 86 : 0x46318C544
+	c = 87 : 0x4631AD771
+	c = 88 : 0x462A22A31
+	c = 89 : 0x462A21084
+	c = 90 : 0x7C222221F
+	c = 91 : 0x39084210E
+	c = 92 : 0x20820820
+	c = 93 : 0x38421084E
+	c = 94 : 0x115100000
+	c = 95 : 0x1F
+	c = 96 : 0x208200000
+	c = 97 : 0xE0BE2F
+	c = 98 : 0x4216CC63E
+	c = 99 : 0xE8422E
+	c = 100 : 0x42D9C62F
+	c = 101 : 0xE8FE0E
+	c = 102 : 0x1928E2108
+	c = 103 : 0x1F18BC2E
+	c = 104 : 0x4216CC631
+	c = 105 : 0x100C2108E
+	c = 106 : 0x80610A4C
+	c = 107 : 0x4212A6292
+	c = 108 : 0x30842108E
+	c = 109 : 0x1AAD6B5
+	c = 110 : 0x16CC631
+	c = 111 : 0xE8C62E
+	c = 112 : 0x1E8FA10
+	c = 113 : 0xD9BC21
+	c = 114 : 0x16CC210
+	c = 115 : 0xF8383E
+	c = 116 : 0x211C42126
+	c = 117 : 0x118C66D
+	c = 118 : 0x118C544
+	c = 119 : 0x118D6AA
+	c = 120 : 0x1151151
+	c = 121 : 0x2318BC2E
+	c = 122 : 0x1F1111F
+	c = 123 : 0xC8441083
+	c = 124 : 0x108421084
+	c = 125 : 0x608411098
+	c = 126 : 0x9B0000
+	0
+
+font_fill : g i ?
+	i > 34 : 0
+	((FONT_BUF + (i * 4)) # ((g >> (34 - i)) && 1)) : font_fill g (i + 1)
+	0
+
+font_blit : x y sc col ? seq9 (4x09100008 # col) (4x0910000C # x) (4x09100010 # y) (4x09100018 # 5) (4x0910001C # 7) (4x09100028 # FONT_BUF) (4x09100030 # sc) (4x09100034 # 4) (4x09100014 # 6)
+font_char : c x y sc col ?
+	seq5 (font_fill (font_glyph c) 0) (font_blit x y sc col) (4x09100030 # 1) (4x09100034 # 0) (x + (6 * sc))
+
+font_text : s x y sc col ? font_text2 s x x y sc col
+font_text2 : s x0 x y sc col ?
+	(@s) = 0 : x
+	(@s) = 10 : font_text2 (s + 4) x0 x0 (y + (8 * sc)) sc col
+	font_text2 (s + 4) x0 (font_char (@s) x y sc col) y sc col
+
+font_print : lit x y sc col ? seq2 (str_put FONT_STR lit) (font_text FONT_STR x y sc col)
+font_int : n x y sc col ? seq2 (str_int FONT_STR n) (font_text FONT_STR x y sc col)
+font_width : s sc ? ((str_len s) * 6 * sc) - sc

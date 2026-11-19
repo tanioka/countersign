@@ -1,0 +1,175 @@
+gfx : 0x9100000
+inp : 0x9300000
+color : gfx + 0x08
+px : gfx + 0x0C
+py : gfx + 0x10
+cmd : gfx + 0x14
+arg0 : gfx + 0x18
+arg1 : gfx + 0x1C
+tmid : 0x9200008
+tmafter : 0x920000C
+tmevery : 0x9200010
+tmcancel : 0x9200014
+src : gfx + 0x28
+scale : gfx + 0x30
+flip : gfx + 0x34
+count : inp + 0x00
+etype : inp + 0x04
+ecode : inp + 0x08
+pop : inp + 0x14
+SEED : 0x1FFFF0
+TMV : 0x1FFFD4
+MQN : 0x1FFFD8
+MQB : 0x1FFC00
+QUIT : 0x1FFFF4
+MX : 0x1FFFE0
+MY : 0x1FFFE4
+MB : 0x1FFFE8
+
+seq2 : a b ? b
+seq3 : a b c ? c
+seq4 : a b c d ? d
+seq5 : a b c d e ? e
+seq6 : a b c d e f ? f
+seq7 : a b c d e f g ? g
+seq8 : a b c d e f g h ? h
+seq9 : a b c d e f g h i ? i
+seq10 : a b c d e f g h i j ? j
+
+ab : v ?
+	v < 0 : 0 - v
+	v
+
+mx2 : a b ?
+	a > b : a
+	b
+
+mn2 : a b ?
+	a < b : a
+	b
+
+ne : a b ?
+	a < b : 1
+	a > b : 1
+	__
+
+clear : c ? seq2 (color # c) (cmd # 2)
+rect : x y w h c ? seq8 (color # c) (px # x) (py # y) (arg0 # w) (arg1 # h) (cmd # 5) 0 0
+line : x y x2 y2 c ? seq8 (color # c) (px # x) (py # y) (arg0 # x2) (arg1 # y2) (cmd # 4) 0 0
+present : z ? cmd # 3
+
+mask : d ?
+	d = 0 : 63
+	d = 1 : 6
+	d = 2 : 91
+	d = 3 : 79
+	d = 4 : 102
+	d = 5 : 109
+	d = 6 : 125
+	d = 7 : 7
+	d = 8 : 127
+	111
+
+seg : m k x y w h c ?
+	(((m / k) % 2) = 1) : rect x y w h c
+	0
+
+digit : d x y c ? seq8 (seg (mask d) 1 x y 3 1 c) (seg (mask d) 2 (x + 2) y 1 3 c) (seg (mask d) 4 (x + 2) (y + 2) 1 3 c) (seg (mask d) 8 x (y + 4) 3 1 c) (seg (mask d) 16 x (y + 2) 1 3 c) (seg (mask d) 32 x y 1 3 c) (seg (mask d) 64 x (y + 2) 3 1 c) 0
+number : v x y c ? seq4 (digit ((v / 1000) % 10) x y c) (digit ((v / 100) % 10) (x + 4) y c) (digit ((v / 10) % 10) (x + 8) y c) (digit (v % 10) (x + 12) y c)
+
+rnd2 : n s ? seq2 (SEED # s) ((s / 65536) % n)
+rnd : n ? rnd2 n ((((@SEED) * 1103515245) + 12345) % 2147483648)
+
+drain : q ?
+	@count = 0 : q
+	@etype = 6 : seq2 (pop # 0) (0 - 1)
+	@etype = 1 & @ecode = 113 : seq2 (pop # 0) (0 - 1)
+	seq2 (pop # 0) (drain q)
+
+fin : z ?
+	(@QUIT) = 1 : 0 - 1
+	drain 0
+
+chk : z ?
+	(@QUIT) = 1 : 0 - 1
+	0
+
+ARTV : 0x1FFFD0
+S1X : 0x1F0000
+S1Y : 0x1F0004
+S1S : 0x1F0008
+S1F : 0x1F000C
+S1C : 0x1F0010
+S1H : 0x1F0014
+
+pcol : ch ?
+	ch = 0u61 : 0x000000
+	ch = 0u62 : 0xFFFFFF
+	ch = 0u63 : 0xE0453A
+	ch = 0u64 : 0xF0912A
+	ch = 0u65 : 0xF5D90A
+	ch = 0u66 : 0x3FB950
+	ch = 0u67 : 0x1F8A70
+	ch = 0u68 : 0x2AA8E0
+	ch = 0u69 : 0x2155D4
+	ch = 0u6A : 0x7A4BD8
+	ch = 0u6B : 0xC24EC4
+	ch = 0u6C : 0xFF9FB2
+	ch = 0u6D : 0x8A5A2B
+	ch = 0u6E : 0xD9B38C
+	ch = 0u6F : 0x8892A0
+	ch = 0u70 : 0x3A3F48
+	0 - 1
+
+ldrow : base w r s i ?
+	i >= ||s|| : 0
+	seq2 (((base + (((r * w) + i) * 4)) # (pcol (s ' i))) | 0) (ldrow base w r s (i + 1))
+
+ldart : base w h rows r ?
+	r >= h : 0
+	seq2 (ldrow base w r (rows ' r) 0) (ldart base w h rows (r + 1))
+
+ovl : a aw b bw ?
+	((a < (b + bw)) & (b < (a + aw))) : 1
+	__
+
+ART1_1 : [`..eeee..` , `.eeeeee.` , `eebbebbe` , `eebaebae` , `eeeeeeee` , `eeeeeeee` , `ee.ee.ee` , `e..ee..e`]
+ART1_2 : [`..eeee..` , `.eeeeee.` , `eebbebbe` , `eebaebae` , `eeeeeeee` , `eeeeeeee` , `.ee..ee.` , `ee....ee`]
+
+loadart : z ? (seq3 (ldart 0x400000 8 8 ART1_1 0) (ldart 0x400100 8 8 ART1_2 0) ((ARTV # 140442872) | 0))
+artchk : z ?
+	(@ARTV) = 140442872 : 0
+	loadart 0
+
+sdraw1 : z ?
+	(@S1H) = 1 : seq9 (px # (@S1X)) (py # (@S1Y)) (arg0 # 8) (arg1 # 8) (src # (0x400000 + ((((@S1C) % 2) * 256)))) (scale # (@S1S)) (flip # (@S1F)) (cmd # 6) 0
+	0
+
+v1 : 0x200000
+v2 : 0x200004
+v3 : 0x200008
+v4 : 0x20000C
+v5 : 0x200010
+
+blk1 : z ?
+	((@v1) < 0) : (seq2 ((v1 # 0) | 0) ((v3 # (0 - (@v3))) | 0))
+	0
+
+blk2 : z ?
+	((@v1) > 86) : (seq2 ((v1 # 86) | 0) ((v3 # (0 - (@v3))) | 0))
+	0
+
+blk3 : z ?
+	((@v2) > 86) : (seq3 ((v2 # 86) | 0) ((v4 # (0 - ((((@v4) * 9) / 10) | 0))) | 0) ((v5 # ((@v5) + 1)) | 0))
+	0
+
+init : z ? (seq10 ((SEED # 12345) | 0) ((QUIT # 0) | 0) ((MX # 0) | 0) ((MY # 0) | 0) ((MB # 0) | 0) ((S1X # 0) | 0) ((S1Y # 0) | 0) ((S1S # 1) | 0) ((S1F # 0) | 0) (seq10 ((S1C # 0) | 0) ((S1H # 1) | 0) ((artchk 0) | 0) ((v1 # 0) | 0) ((v2 # 0) | 0) ((v3 # 0) | 0) ((v4 # 0) | 0) ((v5 # 0) | 0) ((v1 # 40) | 0) (seq3 ((v2 # 10) | 0) ((v3 # 2) | 0) ((v4 # 0) | 0))))
+
+tick : z ? (seq10 ((artchk 0) | 0) ((v4 # ((@v4) + 1)) | 0) ((v1 # ((@v1) + (@v3))) | 0) ((v2 # ((@v2) + (@v4))) | 0) ((blk1 0) | 0) ((blk2 0) | 0) ((blk3 0) | 0) ((clear 0x101830) | 0) ((rect (@v1) (@v2) 8 8 0xFFCC00) | 0) (seq3 ((number (ab (@v5)) 2 2 0xFFFFFF) | 0) ((present 0) | 0) (chk 0)))
+
+on_key : code ?
+	code = 28 : (seq2 ((v3 # ((@v3) + (0 - 1))) | 0) (chk 0))
+	code = 29 : (seq2 ((v3 # ((@v3) + 1)) | 0) (chk 0))
+	0
+
+on_click : x y b ? (seq7 ((MX # x) | 0) ((MY # y) | 0) ((MB # b) | 0) ((v1 # (@MX)) | 0) ((v2 # (@MY)) | 0) ((v4 # 0) | 0) (chk 0))

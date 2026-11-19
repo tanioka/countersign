@@ -1,0 +1,31 @@
+`animate.sn — 四角を右へ動かす。描いて、見せて、待つ`
+
+gfx : 0x9100000
+timer : 0x9200000
+
+color : 4x09100008
+px : 4x0910000C
+py : 4x09100010
+cmd : 4x09100014
+arg0 : 4x09100018
+arg1 : 4x0910001C
+now : 4x09200000
+sleep : 4x09200004
+
+seq2 : a b ? b
+seq3 : a b c ? c
+seq8 : a b c d e f g h ? h
+
+clear : c ? seq2 (color # c) (cmd # 2)
+rect : x y w h c ? seq8 (color # c) (px # x) (py # y) (arg0 # w) (arg1 # h) (cmd # 5) 0 0
+present : z ? cmd # 3
+wait : ms ? sleep # ms
+
+`--- 1 こま。x の位置に四角を描き、50ms 待って次へ ---`
+
+frame : x ?
+	x >= 24 : x
+	seq3 (clear 0) (rect x 4 8 8 0xFFFFFF) (present 0) : seq2 (wait 50) (frame (x + 6))
+
+frame 0
+@now

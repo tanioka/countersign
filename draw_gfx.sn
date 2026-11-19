@@ -1,0 +1,34 @@
+`draw_gfx.sn — 描画装置(sign_gfx.py)を番地で操る。番地の表は sign_gfx.py の冒頭`
+
+gfx : 0x9100000
+
+width : gfx + 0x00
+height : gfx + 0x04
+color : gfx + 0x08
+px : gfx + 0x0C
+py : gfx + 0x10
+cmd : gfx + 0x14
+arg0 : gfx + 0x18
+arg1 : gfx + 0x1C
+
+plot_cmd : 1
+clear_cmd : 2
+present_cmd : 3
+line_cmd : 4
+rect_cmd : 5
+
+`--- 命令。値を置いてから CMD を書く ---`
+
+clear : c ? seq2 (color # c) (cmd # clear_cmd)
+rect : x y w h c ? seq8 (color # c) (px # x) (py # y) (arg0 # w) (arg1 # h) (cmd # rect_cmd) 0 0
+line : x y x2 y2 c ? seq8 (color # c) (px # x) (py # y) (arg0 # x2) (arg1 # y2) (cmd # line_cmd) 0 0
+present : z ? cmd # present_cmd
+
+seq2 : a b ? b
+seq8 : a b c d e f g h ? h
+
+clear 0x000040
+rect 4 4 20 10 0xFF0000
+line 0 0 63 31 0xFFFF00
+line 0 31 63 0 0x00FF00
+present 0

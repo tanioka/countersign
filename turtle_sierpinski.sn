@@ -1,0 +1,78 @@
+`turtle_sierpinski.sn — タートルグラフィックと、シェルピンスキーの矢じり曲線。亀の位置と向きは普通のメモリ、線は描画装置の LINE 命令`
+`向きは 0..5 の6方位(60度刻み)。三角関数は使わず、1 歩の変位を表で持つ`
+`実行: python3 sign_interp.py turtle_sierpinski.sn --display=png:sierpinski.png:520x270`
+
+gfx : 0x9100000
+color : 4x09100008
+px : 4x0910000C
+py : 4x09100010
+cmd : 4x09100014
+arg0 : 4x09100018
+arg1 : 4x0910001C
+
+seq2 : a b ? b
+seq3 : a b c ? c
+seq5 : a b c d e ? e
+seq8 : a b c d e f g h ? h
+
+`--- 亀の状態 ---`
+
+tx : 0x00000100
+ty : 0x00000108
+th : 0x00000110
+ink : 0x00000118
+
+`--- 向きごとの 1 歩(長さ 8 の六角格子。dy は 8 × 0.866 ≒ 7) ---`
+
+dx : h ?
+	h = 0 : 8
+	h = 1 : 4
+	h = 2 : 0 - 4
+	h = 3 : 0 - 8
+	h = 4 : 0 - 4
+	4
+
+dy : h ?
+	h = 0 : 0
+	h = 1 : 0 - 7
+	h = 2 : 0 - 7
+	h = 3 : 0
+	h = 4 : 7
+	7
+
+`--- 描画装置 ---`
+
+clear : c ? seq2 (color # c) (cmd # 2)
+line : x y x2 y2 c ? seq8 (color # c) (px # x) (py # y) (arg0 # x2) (arg1 # y2) (cmd # 4) 0 0
+present : z ? cmd # 3
+
+`--- タートルの命令 ---`
+
+wrap : h ?
+	h < 0 : h + 6
+	h >= 6 : h - 6
+	h
+
+home : x y h c ? seq5 (tx # x) (ty # y) (th # h) (ink # c) 0
+turn : d ? th # (wrap ((@th) + d))
+goto : x y ? seq3 (line (@tx) (@ty) x y (@ink)) (tx # x) (ty # y)
+forward : n ? goto ((@tx) + (dx (@th)) * n) ((@ty) + (dy (@th)) * n)
+left : z ? turn 1
+right : z ? turn 5
+
+`--- シェルピンスキーの矢じり曲線。A と B が互いを呼ぶ(順序は関係ない) ---`
+
+arrow_a : n ?
+	n = 0 : forward 1
+	seq5 (arrow_b (n - 1)) (left 0) (arrow_a (n - 1)) (left 0) (arrow_b (n - 1))
+
+arrow_b : n ?
+	n = 0 : forward 1
+	seq5 (arrow_a (n - 1)) (right 0) (arrow_b (n - 1)) (right 0) (arrow_a (n - 1))
+
+`--- 描く。次数は偶数なら向きが戻り、底辺が水平に出る ---`
+
+clear 0x101830
+home 4 20 0 0xFFD060
+arrow_a 6
+present 0

@@ -1,0 +1,94 @@
+`turtle_square.sn — 同じタートルで、四角いシェルピンスキー曲線(Sierpinski closed curve)。向きは 8 方位(45度刻み)`
+`frame_ms を 0 にすると動画にならず一度に描く。order は L 式の段数(3 で 約 300 歩。1 段増やすと大きさが倍になるので歩幅と窓を合わせる)`
+`実行(窓): python3 sign_interp.py turtle_square_anim.sn --display=window:2:360x360 --timer`
+`実行(窓なしの確認): python3 sign_interp.py turtle_square_anim.sn --display=png:{n}.png:360x360 --timer=virtual`
+
+frame_ms : 8
+order : 3
+
+gfx : 0x9100000
+timer : 0x9200000
+color : 4x09100008
+px : 4x0910000C
+py : 4x09100010
+cmd : 4x09100014
+arg0 : 4x09100018
+arg1 : 4x0910001C
+sleep : 4x09200004
+
+seq2 : a b ? b
+seq3 : a b c ? c
+seq5 : a b c d e ? e
+seq7 : a b c d e f g ? g
+seq8 : a b c d e f g h ? h
+seq9 : a b c d e f g h i ? i
+
+`--- 亀の状態 ---`
+
+tx : 0x00000100
+ty : 0x00000108
+th : 0x00000110
+ink : 0x00000118
+
+`--- 向きごとの 1 歩。軸は 10、斜めは (7,7)(10÷√2 ≒ 7) ---`
+
+dx : h ?
+	h = 0 : 10
+	h = 1 : 7
+	h = 2 : 0
+	h = 3 : 0 - 7
+	h = 4 : 0 - 10
+	h = 5 : 0 - 7
+	h = 6 : 0
+	7
+
+dy : h ?
+	h = 0 : 0
+	h = 1 : 0 - 7
+	h = 2 : 0 - 10
+	h = 3 : 0 - 7
+	h = 4 : 0
+	h = 5 : 7
+	h = 6 : 10
+	7
+
+`--- 描画装置 ---`
+
+clear : c ? seq2 (color # c) (cmd # 2)
+line : x y x2 y2 c ? seq8 (color # c) (px # x) (py # y) (arg0 # x2) (arg1 # y2) (cmd # 4) 0 0
+present : z ? cmd # 3
+show : z ?
+	frame_ms > 0 : seq2 (present 0) (sleep # frame_ms)
+	0
+
+`--- タートルの命令 ---`
+
+wrap : h ?
+	h < 0 : h + 8
+	h >= 8 : h - 8
+	h
+
+home : x y h c ? seq5 (tx # x) (ty # y) (th # h) (ink # c) 0
+turn : d ? th # (wrap ((@th) + d))
+goto : x y ? seq3 (line (@tx) (@ty) x y (@ink)) (tx # x) (ty # y)
+forward : n ? seq2 (goto ((@tx) + (dx (@th)) * n) ((@ty) + (dy (@th)) * n)) (show 0)
+left : z ? turn 1
+right : z ? turn 7
+quarter : z ? turn 6
+
+`--- 曲線。part m は XF+G+XF 、 sq_x n は X の n 段の展開 ---`
+
+part : m ? seq7 (sq_x m) (forward 1) (left 0) (forward 1) (left 0) (sq_x m) (forward 1)
+
+sq_x : n ?
+	n = 0 : 0
+	seq5 (part (n - 1)) (quarter 0) (forward 1) (quarter 0) (part (n - 1))
+
+`--- F--XF--F--XF ---`
+
+curve : n ? seq9 (forward 1) (quarter 0) (sq_x n) (forward 1) (quarter 0) (forward 1) (quarter 0) (sq_x n) (forward 1)
+
+clear 0x101830
+home 180 10 0 0x80E0FF
+curve order
+present 0
