@@ -8,7 +8,7 @@ Claude Docs で書いた本を Markdown にして置いています。実行は�
 | 第1巻 動くレシピ集 | [01_recipes.md](01_recipes.md) | 掲載済み |
 | 第2巻 ネットワークと保存 | `02_network-and-storage.md` | 掲載済み |
 | 第3巻 描画とゲーム | [03_draw-and-game.md](03_draw-and-game.md) | 掲載済み(図9枚つき) |
-| 第4巻 音・部品・ファイル | `04_sound-parts-files.md` | 未掲載 |
+| 第4巻 音・部品・ファイル | `04_sound-parts-files.md` | 掲載済み |
 | 第5巻 ブロックでゲーム | `05_blocks-game.md` | 掲載(図5枚つき) |
 | 第6巻 標準ライブラリと確かめる道具 | `06_stdlib-and-checks.md` | 未掲載 |
 | 第7巻 大きなゲームを読む | `07_reading-suika.md` | 未掲載 |
