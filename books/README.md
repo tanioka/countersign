@@ -9,7 +9,7 @@ Claude Docs で書いた本を Markdown にして置いています。実行は�
 | 第2巻 ネットワークと保存 | `02_network-and-storage.md` | 未掲載 |
 | 第3巻 描画とゲーム | [03_draw-and-game.md](03_draw-and-game.md) | 掲載済み |
 | 第4巻 音・部品・ファイル | `04_sound-parts-files.md` | 未掲載 |
-| 第5巻 ブロックでゲーム | `05_blocks-game.md` | 未掲載 |
+| 第5巻 ブロックでゲーム | `05_blocks-game.md` | 掲載(図5枚つき) |
 | 第6巻 標準ライブラリと確かめる道具 | `06_stdlib-and-checks.md` | 未掲載 |
 | 第7巻 大きなゲームを読む | `07_reading-suika.md` | 未掲載 |
 | 第8巻 仕様と実装の違い | [08_spec-vs-impl.md](08_spec-vs-impl.md) | 掲載済み |
