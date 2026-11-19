@@ -7,7 +7,7 @@ Claude Docs で書いた本を Markdown にして置いています。実行は�
 | Sign入門 | [00_sign-nyumon.md](00_sign-nyumon.md) | 掲載済み |
 | 第1巻 動くレシピ集 | [01_recipes.md](01_recipes.md) | 掲載済み |
 | 第2巻 ネットワークと保存 | `02_network-and-storage.md` | 未掲載 |
-| 第3巻 描画とゲーム | [03_draw-and-game.md](03_draw-and-game.md) | 掲載済み |
+| 第3巻 描画とゲーム | [03_draw-and-game.md](03_draw-and-game.md) | 掲載済み(図9枚つき) |
 | 第4巻 音・部品・ファイル | `04_sound-parts-files.md` | 未掲載 |
 | 第5巻 ブロックでゲーム | `05_blocks-game.md` | 掲載(図5枚つき) |
 | 第6巻 標準ライブラリと確かめる道具 | `06_stdlib-and-checks.md` | 未掲載 |
