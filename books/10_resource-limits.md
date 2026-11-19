@@ -1,7 +1,7 @@
-# Sign レシピ集 第10巻 資源の上限と、止まり方
+# 第10巻 資源の上限と、止まり方
 
 <!-- nav -->
-[← 前: Sign で作る — 知らせとエラーの読み方](09_messages-and-errors.md) | [目次](README.md) | [次: 第11巻『Raspberry Pi で Sign を動かす』 →](11_raspberry-pi.md)
+[← 前: 第9巻 知らせとエラーの読み方](09_messages-and-errors.md) | [目次](README.md) | [次: 第11巻 Raspberry Pi で Sign を動かす →](11_raspberry-pi.md)
 <!-- /nav -->
 
 Nov 5, 2026
@@ -246,5 +246,5 @@ println_int (lp 100000 0)
 ---
 
 <!-- nav -->
-[← 前: Sign で作る — 知らせとエラーの読み方](09_messages-and-errors.md) | [目次](README.md) | [次: 第11巻『Raspberry Pi で Sign を動かす』 →](11_raspberry-pi.md)
+[← 前: 第9巻 知らせとエラーの読み方](09_messages-and-errors.md) | [目次](README.md) | [次: 第11巻 Raspberry Pi で Sign を動かす →](11_raspberry-pi.md)
 <!-- /nav -->

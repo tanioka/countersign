@@ -1,7 +1,7 @@
-# Sign で作る — 仕様と実装の違い
+# 第8巻 仕様と実装の違い
 
 <!-- nav -->
-[← 前: Sign で作る — 大きなゲームを読む](07_reading-suika.md) | [目次](README.md) | [次: Sign で作る — 知らせとエラーの読み方 →](09_messages-and-errors.md)
+[← 前: 第7巻 大きなゲームを読む](07_reading-suika.md) | [目次](README.md) | [次: 第9巻 知らせとエラーの読み方 →](09_messages-and-errors.md)
 <!-- /nav -->
 
 ｓ2026-11-03 · @たににゃん
@@ -395,5 +395,5 @@ grep -l -- "sqlite" *.md *.sn
 ---
 
 <!-- nav -->
-[← 前: Sign で作る — 大きなゲームを読む](07_reading-suika.md) | [目次](README.md) | [次: Sign で作る — 知らせとエラーの読み方 →](09_messages-and-errors.md)
+[← 前: 第7巻 大きなゲームを読む](07_reading-suika.md) | [目次](README.md) | [次: 第9巻 知らせとエラーの読み方 →](09_messages-and-errors.md)
 <!-- /nav -->

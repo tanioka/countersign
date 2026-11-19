@@ -1,7 +1,7 @@
-# Sign で作る — 標準ライブラリと確かめる道具
+# 第6巻 標準ライブラリと確かめる道具
 
 <!-- nav -->
-[← 前: Sign で作る — ブロックでゲーム](05_blocks-game.md) | [目次](README.md) | [次: Sign で作る — 大きなゲームを読む →](07_reading-suika.md)
+[← 前: 第5巻 ブロックでゲーム](05_blocks-game.md) | [目次](README.md) | [次: 第7巻 大きなゲームを読む →](07_reading-suika.md)
 <!-- /nav -->
 
 Nov 3, 2026 · @たににゃん
@@ -544,5 +544,5 @@ b 2 3 2 ^ ^ :
 ---
 
 <!-- nav -->
-[← 前: Sign で作る — ブロックでゲーム](05_blocks-game.md) | [目次](README.md) | [次: Sign で作る — 大きなゲームを読む →](07_reading-suika.md)
+[← 前: 第5巻 ブロックでゲーム](05_blocks-game.md) | [目次](README.md) | [次: 第7巻 大きなゲームを読む →](07_reading-suika.md)
 <!-- /nav -->

@@ -1,7 +1,7 @@
 # Sign入門 — 空白で呼び、再帰で回す言語
 
 <!-- nav -->
-[目次](README.md) | [次: Sign で作る — 動くレシピ集 →](01_recipes.md)
+[目次](README.md) | [次: 第1巻 動くレシピ集 →](01_recipes.md)
 <!-- /nav -->
 
 Nov 1, 2026 · @たににゃん
@@ -1182,5 +1182,5 @@ tri 4 1
 ---
 
 <!-- nav -->
-[目次](README.md) | [次: Sign で作る — 動くレシピ集 →](01_recipes.md)
+[目次](README.md) | [次: 第1巻 動くレシピ集 →](01_recipes.md)
 <!-- /nav -->

@@ -1,7 +1,7 @@
-# Sign で作る — 描画とゲーム
+# 第3巻 描画とゲーム
 
 <!-- nav -->
-[← 前: Sign で作る — ネットワークと保存](02_network-and-storage.md) | [目次](README.md) | [次: Sign で作る — 音・部品・ファイル →](04_sound-parts-files.md)
+[← 前: 第2巻 ネットワークと保存](02_network-and-storage.md) | [目次](README.md) | [次: 第4巻 音・部品・ファイル →](04_sound-parts-files.md)
 <!-- /nav -->
 
 Nov 3, 2026 · @たににゃん
@@ -733,5 +733,5 @@ python3 sign_interp.py turtle_square_anim.sn --display=png:q{n}.png:360x360 --ti
 ---
 
 <!-- nav -->
-[← 前: Sign で作る — ネットワークと保存](02_network-and-storage.md) | [目次](README.md) | [次: Sign で作る — 音・部品・ファイル →](04_sound-parts-files.md)
+[← 前: 第2巻 ネットワークと保存](02_network-and-storage.md) | [目次](README.md) | [次: 第4巻 音・部品・ファイル →](04_sound-parts-files.md)
 <!-- /nav -->

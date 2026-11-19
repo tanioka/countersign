@@ -1,7 +1,7 @@
-# Sign で作る — 動くレシピ集
+# 第1巻 動くレシピ集
 
 <!-- nav -->
-[← 前: Sign入門 — 空白で呼び、再帰で回す言語](00_sign-nyumon.md) | [目次](README.md) | [次: Sign で作る — ネットワークと保存 →](02_network-and-storage.md)
+[← 前: Sign入門 — 空白で呼び、再帰で回す言語](00_sign-nyumon.md) | [目次](README.md) | [次: 第2巻 ネットワークと保存 →](02_network-and-storage.md)
 <!-- /nav -->
 
 2026-11-02 · @たににゃん
@@ -490,5 +490,5 @@ T=23.50 C RH=61.00 %
 ---
 
 <!-- nav -->
-[← 前: Sign入門 — 空白で呼び、再帰で回す言語](00_sign-nyumon.md) | [目次](README.md) | [次: Sign で作る — ネットワークと保存 →](02_network-and-storage.md)
+[← 前: Sign入門 — 空白で呼び、再帰で回す言語](00_sign-nyumon.md) | [目次](README.md) | [次: 第2巻 ネットワークと保存 →](02_network-and-storage.md)
 <!-- /nav -->

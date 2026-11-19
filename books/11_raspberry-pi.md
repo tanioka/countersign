@@ -1,7 +1,7 @@
-# 第11巻『Raspberry Pi で Sign を動かす』
+# 第11巻 Raspberry Pi で Sign を動かす
 
 <!-- nav -->
-[← 前: Sign レシピ集 第10巻 資源の上限と、止まり方](10_resource-limits.md) | [目次](README.md) | [次: 第12巻『Sign のコンパイラ』 →](12_compiler.md)
+[← 前: 第10巻 資源の上限と、止まり方](10_resource-limits.md) | [目次](README.md) | [次: 第12巻 Sign のコンパイラ →](12_compiler.md)
 <!-- /nav -->
 
 2026-11-08 · @たににゃん
@@ -330,5 +330,5 @@ python3 sign.py echo_server.sn --net=local
 ---
 
 <!-- nav -->
-[← 前: Sign レシピ集 第10巻 資源の上限と、止まり方](10_resource-limits.md) | [目次](README.md) | [次: 第12巻『Sign のコンパイラ』 →](12_compiler.md)
+[← 前: 第10巻 資源の上限と、止まり方](10_resource-limits.md) | [目次](README.md) | [次: 第12巻 Sign のコンパイラ →](12_compiler.md)
 <!-- /nav -->

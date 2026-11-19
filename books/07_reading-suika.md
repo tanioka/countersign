@@ -1,7 +1,7 @@
-# Sign で作る — 大きなゲームを読む
+# 第7巻 大きなゲームを読む
 
 <!-- nav -->
-[← 前: Sign で作る — 標準ライブラリと確かめる道具](06_stdlib-and-checks.md) | [目次](README.md) | [次: Sign で作る — 仕様と実装の違い →](08_spec-vs-impl.md)
+[← 前: 第6巻 標準ライブラリと確かめる道具](06_stdlib-and-checks.md) | [目次](README.md) | [次: 第8巻 仕様と実装の違い →](08_spec-vs-impl.md)
 <!-- /nav -->
 
 Nov 3, 2026 · @たににゃん
@@ -396,5 +396,5 @@ done
 ---
 
 <!-- nav -->
-[← 前: Sign で作る — 標準ライブラリと確かめる道具](06_stdlib-and-checks.md) | [目次](README.md) | [次: Sign で作る — 仕様と実装の違い →](08_spec-vs-impl.md)
+[← 前: 第6巻 標準ライブラリと確かめる道具](06_stdlib-and-checks.md) | [目次](README.md) | [次: 第8巻 仕様と実装の違い →](08_spec-vs-impl.md)
 <!-- /nav -->

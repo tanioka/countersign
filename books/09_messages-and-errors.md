@@ -1,7 +1,7 @@
-# Sign で作る — 知らせとエラーの読み方
+# 第9巻 知らせとエラーの読み方
 
 <!-- nav -->
-[← 前: Sign で作る — 仕様と実装の違い](08_spec-vs-impl.md) | [目次](README.md) | [次: Sign レシピ集 第10巻 資源の上限と、止まり方 →](10_resource-limits.md)
+[← 前: 第8巻 仕様と実装の違い](08_spec-vs-impl.md) | [目次](README.md) | [次: 第10巻 資源の上限と、止まり方 →](10_resource-limits.md)
 <!-- /nav -->
 
 2026-11-05
@@ -439,5 +439,5 @@ p1.sn: 断り 0 件 / 注意 0 件 / 参考 0 件  → 整合しています
 ---
 
 <!-- nav -->
-[← 前: Sign で作る — 仕様と実装の違い](08_spec-vs-impl.md) | [目次](README.md) | [次: Sign レシピ集 第10巻 資源の上限と、止まり方 →](10_resource-limits.md)
+[← 前: 第8巻 仕様と実装の違い](08_spec-vs-impl.md) | [目次](README.md) | [次: 第10巻 資源の上限と、止まり方 →](10_resource-limits.md)
 <!-- /nav -->

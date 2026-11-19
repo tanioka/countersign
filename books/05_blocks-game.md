@@ -1,7 +1,7 @@
-# Sign で作る — ブロックでゲーム
+# 第5巻 ブロックでゲーム
 
 <!-- nav -->
-[← 前: Sign で作る — 音・部品・ファイル](04_sound-parts-files.md) | [目次](README.md) | [次: Sign で作る — 標準ライブラリと確かめる道具 →](06_stdlib-and-checks.md)
+[← 前: 第4巻 音・部品・ファイル](04_sound-parts-files.md) | [目次](README.md) | [次: 第6巻 標準ライブラリと確かめる道具 →](06_stdlib-and-checks.md)
 <!-- /nav -->
 
 Nov 3, 2026 · @たににゃん
@@ -253,5 +253,5 @@ python3 sign_console.py star_rain_ui.sn --display=png:sr{n}.png:96x96 --timer=vi
 ---
 
 <!-- nav -->
-[← 前: Sign で作る — 音・部品・ファイル](04_sound-parts-files.md) | [目次](README.md) | [次: Sign で作る — 標準ライブラリと確かめる道具 →](06_stdlib-and-checks.md)
+[← 前: 第4巻 音・部品・ファイル](04_sound-parts-files.md) | [目次](README.md) | [次: 第6巻 標準ライブラリと確かめる道具 →](06_stdlib-and-checks.md)
 <!-- /nav -->

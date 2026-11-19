@@ -1,7 +1,7 @@
-# Sign で作る — 音・部品・ファイル
+# 第4巻 音・部品・ファイル
 
 <!-- nav -->
-[← 前: Sign で作る — 描画とゲーム](03_draw-and-game.md) | [目次](README.md) | [次: Sign で作る — ブロックでゲーム →](05_blocks-game.md)
+[← 前: 第3巻 描画とゲーム](03_draw-and-game.md) | [目次](README.md) | [次: 第5巻 ブロックでゲーム →](05_blocks-game.md)
 <!-- /nav -->
 
 Nov 3, 2026 · @たににゃん
@@ -443,5 +443,5 @@ python3 sign_interp.py keys.sn --display=png:ky{n}.png:64x32 --timer=virtual --i
 ---
 
 <!-- nav -->
-[← 前: Sign で作る — 描画とゲーム](03_draw-and-game.md) | [目次](README.md) | [次: Sign で作る — ブロックでゲーム →](05_blocks-game.md)
+[← 前: 第3巻 描画とゲーム](03_draw-and-game.md) | [目次](README.md) | [次: 第5巻 ブロックでゲーム →](05_blocks-game.md)
 <!-- /nav -->

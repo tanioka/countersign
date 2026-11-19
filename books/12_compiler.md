@@ -1,7 +1,7 @@
-# 第12巻『Sign のコンパイラ』
+# 第12巻 Sign のコンパイラ
 
 <!-- nav -->
-[← 前: 第11巻『Raspberry Pi で Sign を動かす』](11_raspberry-pi.md) | [目次](README.md)
+[← 前: 第11巻 Raspberry Pi で Sign を動かす](11_raspberry-pi.md) | [目次](README.md)
 <!-- /nav -->
 
 Sign のプログラムを AArch64 の機械語にする `sign_asm.py` の使い方と中身。
@@ -466,5 +466,5 @@ f 100 1
 ---
 
 <!-- nav -->
-[← 前: 第11巻『Raspberry Pi で Sign を動かす』](11_raspberry-pi.md) | [目次](README.md)
+[← 前: 第11巻 Raspberry Pi で Sign を動かす](11_raspberry-pi.md) | [目次](README.md)
 <!-- /nav -->

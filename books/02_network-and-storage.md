@@ -1,7 +1,7 @@
-# Sign で作る — ネットワークと保存
+# 第2巻 ネットワークと保存
 
 <!-- nav -->
-[← 前: Sign で作る — 動くレシピ集](01_recipes.md) | [目次](README.md) | [次: Sign で作る — 描画とゲーム →](03_draw-and-game.md)
+[← 前: 第1巻 動くレシピ集](01_recipes.md) | [目次](README.md) | [次: 第3巻 描画とゲーム →](03_draw-and-game.md)
 <!-- /nav -->
 
 Nov 3, 2026 · @たににゃん
@@ -491,5 +491,5 @@ T=23.50 C RH=61.00 %
 ---
 
 <!-- nav -->
-[← 前: Sign で作る — 動くレシピ集](01_recipes.md) | [目次](README.md) | [次: Sign で作る — 描画とゲーム →](03_draw-and-game.md)
+[← 前: 第1巻 動くレシピ集](01_recipes.md) | [目次](README.md) | [次: 第3巻 描画とゲーム →](03_draw-and-game.md)
 <!-- /nav -->
