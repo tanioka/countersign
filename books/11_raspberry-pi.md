@@ -218,9 +218,9 @@ python3 sign_console.py star_catch.sn --display=window:4:96x96
 エラー: 窓を開けません(ModuleNotFoundError): No module named 'tkinter'。tkinter(Linux では python3-tk)と画面(DISPLAY)があるか確かめるか、--display=png:ファイル名:幅x高さ か --display=ascii:幅x高さ を使ってください
 ```
 
-**ひとこと** SSH だけでつないでいて画面(DISPLAY)が無いときも、窓を開けず、同じように理由を出して終わるはずです【Pi 側・未確認】。そのときは、第2章の `--display=png:` を使い、取り出して見ます。キー操作は `--input=` で台本にして渡せます(`--timer=virtual` を付ける)。この仕組みは第7巻のレシピ1 で使いました。
+**ひとこと** SSH だけでつないでいて画面(DISPLAY)が無いときも、窓を開けず、同じように理由を出して終わるはずです【Pi 側・未確認】。そのときは、第2章の `--display=png:` を使い、取り出して見ます。キー操作は `--input=` で台本にして渡せます(`--timer=virtual` を付ける)。この仕組みは[第7巻](07_reading-suika.md)のレシピ1 で使いました。
 
-**確かめていないこと** Pi の窓の表示、キー入力、窓の更新の速さ。特に、Pi 3A+ で重いゲーム(第7巻のスイカゲーム)を窓で動かして、コマ送りが追いつくか。
+**確かめていないこと** Pi の窓の表示、キー入力、窓の更新の速さ。特に、Pi 3A+ で重いゲーム([第7巻](07_reading-suika.md)のスイカゲーム)を窓で動かして、コマ送りが追いつくか。
 
 ### レシピ12 音を鳴らす
 
