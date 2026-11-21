@@ -1,0 +1,73 @@
+# 試験の自動実行。試験は 1 本ずつ別の job で走らせる(負荷で遅くなる試験の時間切れが、他の試験に響かないように)。
+# 実機(Raspberry Pi)・clang の AArch64 アセンブラを要る確認は、無ければ飛ばす作りの試験だけで、ここでは実機を使わない。
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: smoke (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: 通常の実行・--version・--check
+        run: |
+          set -e
+          python3 sign_interp.py --version
+          echo '1 + 2' > /tmp/smoke.sn
+          test "$(python3 sign_interp.py /tmp/smoke.sn)" = "3"
+          python3 sign_interp.py suika.sn --check
+      - name: 速い試験(仕様の法則ほか)
+        run: |
+          python3 test_origin.py
+          python3 test_law5253.py
+          python3 test_spec1117.py
+          python3 test_laws.py | tail -20
+
+  list:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tests: ${{ steps.ls.outputs.tests }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: ls
+        run: |
+          echo "tests=$(ls test_*.py | python3 -c 'import sys,json; print(json.dumps(sorted(l.strip() for l in sys.stdin)))')" >> "$GITHUB_OUTPUT"
+
+  each:
+    name: ${{ matrix.test }}
+    needs: [smoke, list]
+    runs-on: ubuntu-latest
+    # 遅い試験(test_pure_nq・test_pure_str・test_pure_ls・test_asm_spec・test_asm_strict は 5〜10 分以上)があるので長めにとる
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.list.outputs.tests) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: ${{ matrix.test }}
+        run: python3 "${{ matrix.test }}"
