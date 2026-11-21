@@ -82,6 +82,7 @@ python3 test_asm.py         # コンパイラ(エミュレータで走らせて�
 
 - 実装済み(`--strict` 側): R21・R128・R139、`' _`(`type_system.md` §6.2)、枚をまたぐ・同じ枚の同名の扱い(`compiler_pipeline.md` §4)、`--emit-st` のデータ部分。
 - 未実装: 型の観測と解決キャッシュ・`.st` の関数署名・`src`/`test` を使う `sign build`(`compiler_pipeline.md` §6)、`asm_volatile`(仕様に綴りの定めが無い)。
+- 【実装】`--strict` の入れ子の深さの上限(value_spec V10)は、仕様の基準 10,000 に対し、実行時の再帰の上限から導いた値(コマンドでは 6237 段)です。上限に届いた呼びは `_` と `resource-depth` の知らせになります。値は仕様が「実装の都合」とする所ですが、深く再帰する(終わりの無い再帰を含む)プログラムの途中の値は、この上限で変わります。
 - 既定の道は、同名の扱いなどで `compiler_pipeline.md` と食い違います(既定は変えない方針)。一覧は `IMPLEMENTATION_NOTES.md` の「compiler_pipeline.md の精査」の表です。
 
 詳しい経緯と、各項目が【仕様】か【実装】かの区別は、`IMPLEMENTATION_NOTES.md` を読んでください。
