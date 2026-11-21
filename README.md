@@ -48,7 +48,7 @@ python3 sign.py --emit-st mod.sn         # 公開(#)の名前から mod.st を�
 | `sign.py` / `sign_interp.py` | 起動口 / インタープリタ本体 |
 | `sign_asm.py` と `sign_opt.py`・`sign_peep.py`・`sign_fuse.py`・`sign_inline.py`・`sign_neon.py`・`sign_plan.py` ほか | AArch64 コンパイラと最適化 |
 | `sign_st.py` | `--emit-st`(`.st` の書き出し) |
-| `std.sn` | 標準の定義(実装側で決めたもの) |
+| `std.sn` | 標準の定義(実装側で決めたもの)。置き場所は番地で渡します(`0x500000` と書く)。`--strict` では素の数を渡せません(仕様 R62: 番地と素の数は混ぜられず、数から番地を作る射がありません) |
 | `test_*.py` | 試験。`test_laws.py` は仕様の法則、`test_origin.py`・`test_law5253.py`・`test_xfile.py`・`test_st.py` ほかは個別の仕様項目 |
 | `*.sn` | サンプルと実行例(既定のモードで動かす) |
 | `IMPLEMENTATION_NOTES.md` | 実装ノート。日付ごとの変更・精査表・設計メモ |
