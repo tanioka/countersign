@@ -206,6 +206,15 @@ def check(case):
                             _tk = dict(kw, only="strict", **({"pre": _tw(kw["pre"])} if "pre" in kw else {}))
                             if check1((kind, _ta, _tb, _tk))[0]: R138_TWIN.append(CUR_LAW[0])
                         except Exception: pass
+                    if kind == "static" and kw.get("only") != "default":
+                        try:        # 静的の形: 旧綴りを σ で今の綴りへ写して strict で診断を比べる(前置きの `i : !_` など)
+                            _tk = dict(kw, only="strict", pre=sigma(kw.get("pre", "")))
+                            _tk.pop("only"); S.STRICT_GATES = True
+                            import sign_types as _st
+                            _chk = _st.infer(_fixblank(_tk["pre"] + sigma(a)), ".", None, False)
+                            _kinds = {k_ for k_, _, _ in _chk.diags}
+                            if ((b not in _kinds) if kw.get("no") else (b in _kinds)): R138_TWIN.append(CUR_LAW[0])
+                        except Exception: pass
                     if kind in ("val", "err", "same"):          # strict の側だけを省き、既定のモードの側は実際に比べる
                         ok_, why_ = check1((kind, a, b, dict(kw, only="default")))
                         (R138_DEFAULT_CHECKED if ok_ else R138_DEFAULT_FAIL).append((CUR_LAW[0], why_))      # 食い違いは失敗にせず数える(期待が strict の綴りで書かれた物が混じる)
@@ -1319,7 +1328,7 @@ def main(argv):
     if R138_SKIPPED:
         _n = len(R138_SKIPPED); _ok = len(R138_DEFAULT_CHECKED); _ng = len(R138_DEFAULT_FAIL)
         print(f"\n(R138 により strict で断られる旧綴りの手書きを含み、strict の比べを省いた試験: {_n} 件。そのうち既定のモードの側を比べられる形(val・err・same)は {_ok + _ng} 件で、一致 {_ok} 件・食い違い {_ng} 件。残りは strict でだけ意味がある形で、どちらのモードも比べていない)")
-        print(f"(そのうち `[]` を `(1 < 0)` に写して strict でも旧い期待どおりに通った物: {len(R138_TWIN)} 件)")
+        print(f"(そのうち `[]` を `(1 < 0)` に、また静的の形は旧綴りを σ で写して strict でも旧い期待どおりに通った物: {len(R138_TWIN)} 件)")
         if verbose:
             import collections as _c
             _l=_c.Counter(l for l,_,_g in R138_SKIPPED); _t=_c.Counter(R138_TWIN)
