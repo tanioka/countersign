@@ -84,7 +84,7 @@ def main():
     v = S.show(S.run("bd : n acc ?\n\t\tn = 0 : acc\n\t\tbd (n - 1) (acc~ n)\nsx : [x ~xs] acc ?\n\t\t||xs|| = 0 : acc + x\n\t\tsx xs (acc + x)\nsx (bd 30000 [0]) 0")[-1]); ok = v == "450015000" and time.time() - t0 < 3
     if not ok: bad += 1
     print(("ok  " if ok else "NG  ") + f"残りの輪の速さ(30000 項) {time.time() - t0:.2f}s")
-    src = "c : n a ?\n\t\tn <= 0 : a\n\t\tc (n - 1) (a + n)\nc 200000 0"
+    src = "c : n a ?\n\t\tn <= 0 : a\n\t\tc (n - 1) (a + n)\n\nc 200000 0"
     for strict in (False, True):
         S.STRICT_GATES = strict; S.LOOP_PLANS.clear(); t = time.time(); v = S.show(S.run(src)[-1])
         ok = v == "20000100000" and time.time() - t < 3
