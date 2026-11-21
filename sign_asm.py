@@ -50,6 +50,10 @@ PEEP = [True]       # ピープホール最適化(sign_peep.py)。--no-peephole 
 class AsmError(Exception):
     """出せない形(名指しで断る)。"""
 
+class StrictRefusal(AsmError):
+    """--strict: コンパイラ(既定の読み)と strict の読みの答えが分かれうる形を、出さずに断る(strict_divergences の続き。コード生成の終わりで、証明器・解析を使って精密に調べた断り)"""
+
+
 
 _REGLIKE = r"(?i)[xwbhsdqvz][0-9]{1,2}|sp|wsp|lr|fp|xzr|wzr|pc|nzcv|p[0-9]{1,2}"
 def symbol_of(name):
@@ -5598,6 +5602,91 @@ class Program:
         self.nodes = [n if n[0] == "def" and n[1] in self.consts else walk(n) for n in self.nodes]
         for f in list(self.bodies): self.bodies[f] = walk(self.bodies[f])
 
+    def tail_nonvoid(self, n):
+        """n が末尾の切り出し `p ' a~`(p は仮引数)で、そこへ来る経路の条件から ||p|| > a と言えるなら True(a 個以下しか無いと `__` になるので、それが無いと言える)。"""
+        n = self.strip(n)
+        if not (isinstance(n, tuple) and n and n[0] == "bin" and n[1] == "'"): return False
+        t = self.tail_of(n)
+        if t is None: return False
+        l = self.strip(t[0])
+        if l[0] != "id": return False
+        if getattr(self, "_lbmap", None) is None: self._lbmap = self.build_lbmap()
+        lb = max(1, self._lbmap.get(id(n), {}).get(l[1], 0))
+        return t[1] < lb
+
+    def strict_call_check(self):
+        """--strict(STRICT[0])のとき、規則 6 の続き: 実引数に添字 `p ' e` を含む関数の呼びで、その実引数が必ず値になるとは言えない(self.maybe)ものを断る。
+        範囲内と証明できた添字(idx_ok)は値になるので、strict も asm も同じ答え。単独の呼びで引数がちょうど足りるなら、strict も asm も呼び全体が `!_`(R83・R84)なので断らない。"""
+        if not STRICT[0]: return
+        def unwrap(n):
+            while isinstance(n, tuple) and n and n[0] == "block": n = n[1]
+            return n
+        def has_idx(n):
+            stack = [n]
+            while stack:
+                x = stack.pop()
+                if not isinstance(x, tuple) or not x or x[0] == "lam": continue
+                if x[0] == "bin" and len(x) == 4 and x[1] == "'": return True
+                for y in x[1:]:
+                    if isinstance(y, tuple): stack.append(y)
+                    elif isinstance(y, list): stack.extend(z for z in y if isinstance(z, tuple))
+            return False
+        heads = set()
+        def mark(n):
+            if not isinstance(n, tuple) or not n: return
+            if n[0] == "seq" and len(n[1]) >= 2:
+                h = n[1][0]
+                if isinstance(h, tuple) and h and h[0] == "block":
+                    u = unwrap(h)
+                    if isinstance(u, tuple) and u and u[0] == "seq": heads.add(id(u))
+            for y in n[1:]:
+                if isinstance(y, tuple): mark(y)
+                elif isinstance(y, list):
+                    for z in y:
+                        if isinstance(z, tuple): mark(z)
+        for n in self.nodes: mark(n)
+        def walk(n, params):
+            if not isinstance(n, tuple) or not n: return
+            if n[0] == "lam":
+                ps = set(params) | {q[1] for q in n[1] if isinstance(q, tuple) and len(q) > 1 and isinstance(q[1], str)}
+                walk(n[2], ps); return
+            if n[0] == "seq" and len(n[1]) >= 2 and isinstance(n[1][0], tuple) and n[1][0][0] == "id" and n[1][0][1] in self.fns and n[1][0][1] not in params:
+                f = n[1][0][1]; args = n[1][1:]
+                for j, m in enumerate(args):
+                    mm = unwrap(m)
+                    if isinstance(mm, tuple) and has_idx(mm):
+                        try:
+                            mv = self.maybe(mm) and not self.tail_nonvoid(mm)
+                            if not mv:                                  # 入れ子の中の添字(`acc~ ((m ' i) ' 0)` の `(m ' i) ' 0` など)も、範囲内と言えなければ void の要素が出うる
+                                stack = [mm]
+                                while stack and not mv:
+                                    x = stack.pop()
+                                    if not isinstance(x, tuple) or not x or x[0] == "lam": continue
+                                    if x == ("id", "__"): mv = True                    # 書いた `__`(strict が名前の鍵を `__` に直した所も)
+                                    if x[0] == "bin" and len(x) == 4 and x[1] == "'":
+                                        lx = self.strip(x[2])
+                                        if (isinstance(lx, tuple) and lx and lx[0] == "bin" and len(lx) == 4 and lx[1] == "'") or (self.maybe(x) and not self.tail_nonvoid(x)): mv = True       # 入れ子の要素の添字 `(m ' i) ' 0` は、内側の器が空なら void(解析が言い切れない形)なので断る
+                                    for y in x[1:]:
+                                        if isinstance(y, tuple): stack.append(y)
+                                        elif isinstance(y, list): stack.extend(z for z in y if isinstance(z, tuple))
+                        except Exception: mv = True
+                        if not mv: continue
+                        if j == len(args) - 1 and len(self.fns[f]) == len(args) and id(n) not in heads and mm[0] == "bin" and mm[1] == "'": continue      # 実引数が丸ごと `!_` の単独の呼びだけ(`acc~ (… ' 0)` のように、void が要素として入る形は流れが変わるので断る)
+                        import sign_interp as SI
+                        try: sp = SI.node_src(n)
+                        except Exception: sp = repr(n)[:60]
+                        raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が範囲内と言えない添字を含む呼び `%s …`(範囲外なら strict はその実引数が消えて関数が余る。asm は呼び全体が `!_`。R83・R84)\n      %s" % (f, sp[:70]))
+            for y in n[1:]:
+                if isinstance(y, tuple): walk(y, params)
+                elif isinstance(y, list):
+                    for z in y:
+                        if isinstance(z, tuple):
+                            if len(z) == 2 and n[0] == "cases": walk(z[0], params); walk(z[1], params)
+                            else: walk(z, params)
+        for n in self.nodes:
+            if n[0] == "def": walk(n[2], set())
+            else: walk(n, set())
+
     def generate(self, target="bare", source=None):
         self.target = target
         self.collect()
@@ -5616,6 +5705,7 @@ class Program:
         self.solve_widths()
         self.solve_slots()
         self.solve_maybe()
+        self.strict_call_check()
         self.check_dyn()
         self.sp = self.single_possible()
         ex0 = [n for n in self.nodes if n[0] not in ("def", "dyn")]
@@ -6265,7 +6355,7 @@ def strict_divergences(tree):
          静的に見えるのは `/`・`%`(割る数が 0 でない字面のときを除く)・比べ・`&`・`|`・`;`・書いた `__` を値に含む形だけ(呼び出しの答えまでは見ない)
       4. 本体の行の左が名前だけの `y : 2`(strict は条件の行、既定は局所の定義。R128)
       5. 順序の比べの畳み `[>]`・`[<]`・`[>=]`・`[<=]`(strict は偽でも右の数を返す)。実引数が 2 つ以上で字面の整数・名前だけの形は strict_rewrite が最大・最小に書き直すので断らない(`_fold_minmax`)。器 1 個の畳み `[>] xs`・計算を含む実引数・名前に束ねた `[>]` は断る
-      6. 計算で `!_` になりうる実引数を持つ、関数の呼び(strict は実引数が消えて関数が余る。asm は呼び全体が `!_`)
+      6. 計算で `!_` になりうる実引数を持つ、関数の呼び(strict は実引数が消えて関数が余る。asm は呼び全体が `!_`)。字面の形で言えるもの(比べ・`& | ;`・`/ %`・書いた `__`)はここで、添字を含む実引数は、コード生成の終わり(`Program.strict_call_check`)で、範囲内の証明(`idx_ok`・末尾の切り出しは `tail_nonvoid`)を使って調べ、言えないものだけ断る(`StrictRefusal`)
     戻り値: [(番号, 説明, 式の綴り)]"""
     import sign_interp as SI
     found = []; handled = set()
@@ -6332,7 +6422,7 @@ def strict_divergences(tree):
             ar = arity.get(n[1][0][1]); args = n[1][1:]; in_head = id(n) in head_ids
             for j, m in enumerate(args):                         # 6. 計算で `!_` になりうる実引数(R83・R84: 計算の `!_` はその口の単位で、流れから消える。strict は関数が余り、続く実引数を取る。既定・asm は `!_` を受けた呼びを `!_` にする)
                 mm = unwrap(m)
-                if isinstance(mm, tuple) and (maybe_void(mm) or has_index(mm)):
+                if isinstance(mm, tuple) and maybe_void(mm):
                     if j == len(args) - 1 and ar == len(args) and not in_head:   # 取り戻し: 単独の呼びで引数がちょうど足りる → strict も asm も `!_`(R83・R84)
                         continue
                     found.append((6, "実引数が計算で `!_` になりうる呼び `%s …`(strict はその実引数が消えて関数が余る。asm は呼び全体が `!_`。R83・R84)" % n[1][0][1], src(n))); break

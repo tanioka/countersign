@@ -5,6 +5,7 @@ src = open(os.path.join(HERE, "test_asm.py"), encoding="utf-8").read()
 ns = {"__file__": os.path.join(HERE, "test_asm.py"), "__name__": "emu"}
 exec(compile(src[:src.index("# ---------------- 処理系の答え")], "emu", "exec"), ns)
 import sign_asm, sign_interp as S
+sign_asm.STRICT[0] = True                 # コード生成の終わりの断り(strict_call_check)は --strict のときだけ働く
 def strict_val(t):
     S.STRICT_GATES = True
     try:
@@ -30,6 +31,7 @@ for t, want in CASES:
     sv = strict_val(t)
     tree, rest = sign_asm.strict_rewrite(S.parse_source(t))
     try: got = ns["run_asm"](sign_asm.generate(tree)) if not rest else ("断り", rest[0][0])
+    except sign_asm.StrictRefusal: got = ("断り", 6)
     except Exception as e: got = ("例外", str(e)[:50])
     if sv != want or got != want: bad += 1; print("NG", repr(t), "strict", sv, "asm", got, "のはず", want)
 
@@ -45,6 +47,7 @@ for name, t in ns["CASES"]:
     except Exception: tally["strict が断る"] += 1; continue
     tree, rest = sign_asm.strict_rewrite(S.parse_source(t2))
     try: got = ns["run_asm"](sign_asm.generate(tree)) if not rest else ("断り", rest[0][0])
+    except sign_asm.StrictRefusal: got = ("断り", 6)
     except Exception as e: got = ("例外", str(e)[:50])
     if got == sv: tally["一致"] += 1
     elif got[0] == "断り": tally["断る"] += 1                      # 断りは合っていない答えより良い
