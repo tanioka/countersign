@@ -178,11 +178,12 @@ R138_GATES = {"void-written", "empty-written", "name-undefined", "G22"}
 R138_UNMAPPED = []                      # σ で写した源の strict が旧い期待と合わない試験(-v で一覧)
 R138_DEFAULT_CHECKED = []                # strict の比べを省いたうえで、既定のモードの側は比べた試験
 R138_DEFAULT_FAIL = []
-R138_TWIN = []; R138_TWIN_SRC = set()                          # 省いた試験のうち、`[]` を `(1 < 0)` に写した strict の側で旧い期待どおりになった物
+R138_RAWOK = []; R138_TWIN = []; R138_TWIN_SRC = set()                          # 省いた試験のうち、`[]` を `(1 < 0)` に写した strict の側で旧い期待どおりになった物
 R138_SKIPPED = []                       # 旧綴りの手書き(`!_`・`[]`・未定義の名前)が strict で R138 により断られ、旧い期待を比べられなかった試験
 CUR_LAW = [""]
 
 def check(case):
+    global NOSIGMA
     kind, a, b, kw = case
     if not CUR_LAW[0].startswith("R138") and kind in ("val", "err", "same", "gate", "gate_not", "warns", "agree", "static") and kw.get("only") != "default" and not (kind == "gate" and b in R138_GATES):
         srcs = a if kind == "agree" else [a] + ([b] if kind == "same" else [])
@@ -224,6 +225,11 @@ def check(case):
     if not ok and not NOSIGMA and not CUR_LAW[0].startswith("R138") and kind in ("val", "err", "same", "gate", "gate_not", "warns", "agree", "static"):
         srcs = a if kind == "agree" else [a] + ([b] if kind == "same" and isinstance(b, str) else [])
         if any(sigma(s_) != s_ for s_ in srcs if isinstance(s_, str)):
+            _sv = NOSIGMA; NOSIGMA = True
+            try: _raw_ok = check1(case)[0]       # σ を使わず、源の綴りのまま strict で比べる(旧い `_` が今の綴りでもそのまま意味を持つ形)
+            except Exception: _raw_ok = False
+            finally: NOSIGMA = _sv
+            if _raw_ok: R138_RAWOK.append(CUR_LAW[0]); return True, ""
             R138_UNMAPPED.append((CUR_LAW[0], why)); return True, ""      # 旧綴りの `_`/`!_` を写した源で、旧い期待と合わない(写しで意味が変わる・既知の限界)。GAP_R137_R138.md に一覧
     return ok, why
 
@@ -1322,6 +1328,12 @@ val(c, "sq : z ? z * z\ntt : x ?\n\tx > 0 : 1\n\tsq x\ntt 5", "1", only="strict"
 gate(c, "tt : x ?\n\tsq : z ? z * z\n\tsq x\ntt 5", "G22", only="strict")
 gate(c, "tt : a ?\n\tyy : 5\n\ta\ntt 1", "G22", only="strict")
 
+
+c = law("R138/旧い期待の strict 版", "旧い `!_`(穴)は今の綴りの `_`(恒等射)。口の穴の期待は、今の綴りの `_` のままで旧い期待どおりになる(σ は旧い `_` を void に写すので外れていた)")
+_pre = "sub : x y ? x - y\nthree : a b c ? a * 100 + b * 10 + c\n"
+for a_, w_ in (("(sub _ 2) 10", "8"), ("(three _ 2 3) 1", "123"), ("(three 1 _ 3) 2", "123"), ("(three _ _ 3) 1 2", "123"), ("(f4 _ 2 _ 3) 1 4", "10"), ("_ + 1", "1"), ("_ , 1", "1"), ("q : 5\nq , _", "5")):
+    val(c, _pre + a_, w_, only="strict")
+
 def main(argv):
     verbose = "-v" in argv
     pick = [a for a in argv if not a.startswith("-")]
@@ -1354,7 +1366,7 @@ def main(argv):
         print(f"(旧綴りの源を σ で写した strict の側が旧い期待と合わず、数えなかった試験: {len(R138_UNMAPPED)} 件。-v で一覧)")
         if verbose:
             for l_, w_ in R138_UNMAPPED: print("   ~", l_, w_[:200])
-    _sk = len(R138_SKIPPED); _um = len(R138_UNMAPPED)
+    _sk = len(R138_SKIPPED); _um = len(R138_UNMAPPED); _rw = len(R138_RAWOK)
     print(f"\n内訳: 全 {total} 件 = 両モードを比べた {total - bad - _sk - _um} 件 + strict を省いた {_sk} 件 + strict が旧い期待と合わず数えなかった {_um} 件(省いた件と数えなかった件は『通った』に含む)" if (_sk or _um) else "")
     print(f"\n{total - bad}/{total} 通った" + ("" if not bad else f"、{bad} 件 食い違い"))
     return 1 if bad else 0
