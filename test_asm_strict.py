@@ -45,5 +45,54 @@ for name, t in ns["CASES"]:
     else: bad += 1; print("NG", name, repr(t), "strict", sv, "asm", got)
 print("整数の表:", tally)
 if tally["一致"] < 150: bad += 1; print("NG 一致が少なすぎる", tally)
+
+# ---- test_asm.py の文字列・リストの表(STR_CASES、667 件)を strict の読みと突き合わせる ----
+# 全件は遅い(約 25 分)ので、strict と既定で値が違う物は全部、それ以外は 10 件に 1 件を走らせる。全件は /tmp/q の探索用の走らせ方で確かめた(IMPLEMENTATION_NOTES)。
+# 期待は strict の値(void は `__`)。asm が答えを出すなら、それと同じでなければならない。断るのは許す(断りは合っていない答えより良い)。
+import ast, io, signal
+_tree = ast.parse(src)
+def _upper(n):
+    t = n.targets[0] if isinstance(n, ast.Assign) else n.target
+    return isinstance(t, ast.Name) and t.id.isupper() or (isinstance(t, ast.Tuple) and all(isinstance(e, ast.Name) and e.id.isupper() for e in t.elts))
+_keep = [n for n in _tree.body if (isinstance(n, (ast.Assign, ast.AugAssign)) and _upper(n) and not any(isinstance(x, ast.Call) for x in ast.walk(n.value))) or (isinstance(n, ast.FunctionDef) and n.name == "interp_out")]
+exec(compile(ast.Module(body=_keep, type_ignores=[]), "t", "exec"), ns)
+class _TO(BaseException): pass
+def _h(sig, fr): raise _TO()
+signal.signal(signal.SIGALRM, _h)
+def _val(t, strict):
+    S.STRICT_GATES = strict
+    try:
+        S.MEMORY.clear(); S.WARNINGS.clear()
+        old = sys.stdout; sys.stdout = io.StringIO()
+        try: r = S.run(t)
+        finally: sys.stdout = old
+        return S.show(r[-1]) if r else "!_"
+    finally: S.STRICT_GATES = False
+KNOWN = {   # 出す答えが strict と違う、既知の物(strict の値が実装の深さの上限で決まる形・器の中の void)
+    "食う 文字列 逆順": "strict は `~` の付いた計算の void を空の流れにしないので、終わりの無い再帰が深さの上限で止まる(R83・R84)。asm は終わりで止まる",
+    "段54: 入れ子の要素の先頭 (m ' i) ' 0": "器の要素が void の積み上げ。strict は消え、asm は `__` の印を残す",
+}
+tally2 = {"一致": 0, "断る": 0, "strict が断る": 0, "既知の違い": 0}
+for idx, (name, t) in enumerate(ns["STR_CASES"]):
+    signal.alarm(40)
+    try:
+        t2 = fix(t)
+        try: vs = _val(t2, True)
+        except BaseException: tally2["strict が断る"] += 1; continue
+        try: vd = _val(t, False)
+        except BaseException: vd = None
+        nv = lambda v: "!_" if v in ("__", "!_") else v
+        if nv(vs) == nv(vd) and idx % 10: continue                      # 値が同じ物は 10 件に 1 件
+        tree, rest = sign_asm.strict_rewrite(S.parse_source(t2))
+        if rest: tally2["断る"] += 1; continue
+        try: got = ns["run_asm"](sign_asm.generate(tree, "linux"), linux=True)
+        except sign_asm.AsmError: tally2["断る"] += 1; continue
+        want = ("exit", ("__" if nv(vs) == "!_" else vs) + "\n")
+        if (got[0], got[1]) == want: tally2["一致"] += 1
+        elif name in KNOWN: tally2["既知の違い"] += 1
+        else: bad += 1; print("NG", name, repr(t)[:100], "strict", want[1][:40], "asm", repr(got[1])[:40])
+    except _TO: bad += 1; print("NG 時間切れ", name)
+    finally: signal.alarm(0)
+print("文字列・リストの表:", tally2)
 print("全部 ok" if not bad else "NG %d 件" % bad)
 sys.exit(1 if bad else 0)

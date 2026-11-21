@@ -6241,12 +6241,13 @@ USAGE = """使い方: python3 sign.py --asm 〈プログラム.sn〉 [--target=b
 
 STRICT = [False]
 def strict_divergences(tree):
-    """--strict --asm(2026-11-18): コンパイラは既定の読みで解く。--strict(仕様の読み)と答えが分かれる次の4つの形に当たったら、出さずに名指しで断る。
+    """--strict --asm(2026-11-18): コンパイラは既定の読みで解く。--strict(仕様の読み)と答えが分かれる次の5つの形に当たったら、出さずに名指しで断る。
       1. `x ' k` の鍵 k が名前(strict は欄の名前で `!_`、既定は名前の値で引く。仕様 R64)
       2. 逆適用 `c f`(値の後ろに関数を置く。strict は値のままで関数は余り、既定は f c)
       3. 最後でない行の値が `!_` になりうる形(strict は消えて次の行へ進み、既定はその `!_` を返して止まる。R128)。
          静的に見えるのは `/`・`%`(割る数が 0 でない字面のときを除く)・比べ・`&`・`|`・`;`・書いた `__` を値に含む形だけ(呼び出しの答えまでは見ない)
       4. 本体の行の左が名前だけの `y : 2`(strict は条件の行、既定は局所の定義。R128)
+      5. 順序の比べの畳み `[>]`・`[<]`・`[>=]`・`[<=]`(strict は偽でも右の数を返す)
     戻り値: [(番号, 説明, 式の綴り)]"""
     import sign_interp as SI
     found = []
@@ -6283,6 +6284,8 @@ def strict_divergences(tree):
             key = unwrap(n[3] if n[1] == "'" else n[2])
             if isinstance(key, tuple) and key and key[0] == "post" and key[1] == "~": key = unwrap(key[2])
             if isinstance(key, tuple) and key and key[0] == "id": found.append((1, "`' ` の鍵が名前 `%s`(strict は欄の名前で `!_`、既定は名前の値で引く。仕様 R64)" % key[1], src(n)))
+        if k == "sec" and len(n) >= 3 and n[1] == "fold" and n[2] in (">", "<", ">=", "<="):
+            found.append((5, "順序の比べの畳み `[%s]`(strict は偽でも右の数を返す `[>] 3 5` が 5。既定は `!_`)" % n[2], src(n)))
         if k == "seq" and len(n[1]) >= 2:
             h = n[1][0]
             if isinstance(h, tuple) and (h[0] == "lit" or (h[0] == "id" and (h[1] in params or h[1] in vals) and h[1] not in funcs)):
