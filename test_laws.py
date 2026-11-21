@@ -1342,6 +1342,14 @@ _pre = "sub : x y ? x - y\nthree : a b c ? a * 100 + b * 10 + c\n"
 for a_, w_ in (("(sub _ 2) 10", "8"), ("(three _ 2 3) 1", "123"), ("(three 1 _ 3) 2", "123"), ("(three _ _ 3) 1 2", "123"), ("(f4 _ 2 _ 3) 1 4", "10"), ("_ + 1", "1"), ("_ , 1", "1"), ("q : 5\nq , _", "5")):
     val(c, _pre + a_, w_, only="strict")
 
+c = law("R138/旧い期待の strict 版(定義・`$`)", "未検証 45 件のうち、今の綴り(V9・R99・R100・R133)で書き直すと仕様の文どおりに確かめられる物。`x : _` は恒等射の名前なので、`x : 5` の2つ目は name-duplicate(V9)。`$` の先が関数でなければ `!_` と dollar-non-function(R99・R100)")
+warns(c, "x : _\nx : 5\n\nx", "name-duplicate", only="strict")
+warns(c, "x : _\n\ng : x ?\n\tx + 1\n\ng 2", "name-shadow", only="strict")
+warns(c, "$5", "dollar-non-function", only="strict")
+warns(c, "$[5 _]", "dollar-non-function", only="strict")
+warns(c, "ob :\n\taa : 1\n\n$ob", "dollar-non-function", only="strict")
+val(c, "q : 5\n\nq , _", "5", only="strict")
+
 def main(argv):
     verbose = "-v" in argv
     pick = [a for a in argv if not a.startswith("-")]
