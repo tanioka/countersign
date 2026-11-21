@@ -12,11 +12,11 @@ def check(name, got, want):
     ok = got == want; bad += not ok
     print(("ok  " if ok else "NG  ") + name + ("" if ok else f"\n    得た: {got!r}\n    期待: {want!r}"))
 
-def run(body, data="", sys_dev=False, cwd=None):
+def run(body, data="", sys_dev=False, cwd=None, strict=False):
     d = cwd or WORK
     p = os.path.join(d, "t.sn")
     open(p, "w", encoding="utf-8").write(f"`{STD}`@~\n" + body + "\n")
-    args = [sys.executable, os.path.join(HERE, "sign.py"), p] + (["--sys"] if sys_dev else [])
+    args = [sys.executable, os.path.join(HERE, "sign.py"), p] + (["--sys"] if sys_dev else []) + (["--strict"] if strict else [])
     r = subprocess.run(args, input=data.encode(), capture_output=True, cwd=d, timeout=120)
     return r.stdout.decode().strip(), r.stderr.decode().strip()
 def val(body, **kw):                                    # 値(最後の式)。エラーがあれば " ! エラー" をつける
@@ -138,4 +138,10 @@ check("出力: println_int_list", run("seq3 (println_int_list [2 1]) (println_in
 check("出力: print_int_list は改行なし", run("seq2 (print_int_list [1 2 3]) (print_int_list [4])")[0].startswith("[1 2 3][4]"), True)
 check("出力: println_int_list に小数・入れ子が混ざると何も出さず __", run("seq3 (println_int_list [1 2.5]) (println_int_list [[1 2] 3]) (println_int 9)")[0], "9\n__")
 check("出力: println_int に小数を渡すと何も出さない", run("seq2 (println_int 2.5) (println_int 3)")[0], "3\n__")
+# --- --strict(仕様 R62: 番地と素の数は混ぜられない。STD_W4 の `(0x4 * 1) | 4` が両モードで番地の幅になる)。strict ではファイルの値は捨てるので、出力だけを比べる ---
+for body, w in [("println_int 42", "42"), ("println_int (0 - 305)", "-305"), (f"seq2 (str_put {A} `hello`) (println_mem {A})", "hello"), (f"seq2 (str_hex {A} 255) (println_mem {A})", "ff"),
+                (f"seq4 (arr_set {B} 0 5) (arr_set {B} 1 2) (arr_sort {B} 2) (println_int (arr_get {B} 0))", "2"), ("println_int_list [3 1 2]", "[3 1 2]"),
+                (f"seq4 (str_put {A} `ab`) (str_put {B} `cd`) (str_cat {A} {B}) (println_mem {A})", "abcd")]:
+    out_d, _ = run(body); out_s, _ = run(body, strict=True)
+    check(f"strict: {body[:40]}", (out_s, out_d.split("\n")[0]), (w, w))
 print("\n" + ("全部通った" if not bad else f"{bad} 件 食い違い")); sys.exit(1 if bad else 0)
