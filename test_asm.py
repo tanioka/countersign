@@ -598,6 +598,8 @@ def interp_out(src):
 
 STR_CASES = [
     ("文字列を印字", "s : `hello`\ns\n"),
+    ("食う 底の行が字面だけ(置き場の外の像を返す)", "a : xs ?\n\t||xs|| < 2 : 7 8\n\t(xs ' 0) 7 (a (xs ' 1~))~\n\na (9 4 5)\n"),
+    ("食う 底の行が字面だけ・前に値", "a : xs ?\n\t||xs|| < 2 : 7 8\n\t1 (a (xs ' 1~))~\n\na (9 4)\n"),
     ("別名", "s : `hello`\nt : s\nt\n"),
     ("空白を含む", "s : `hello world`\ns\n"),
     ("長さ", "s : `hello`\n||s||\n"),

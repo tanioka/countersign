@@ -1946,8 +1946,15 @@ class FnGen:
                 self.lines.append("%s:" % sk)
             elif i == inpl:
                 self.gen_call(self.strip(x), False, (self.scur, cap))
+                ski, dni = self.prog.label(), self.prog.label()
+                self.emit("ldr x9, [x29, #%d]" % self.off(self.scur)); self.emit("cbz x1, %s" % ski, "`__`(0 個)は進めない")
+                self.emit("cmp x0, x9"); self.emit("b.eq %s" % ski, "置き場に直に書いてきた")
+                self.emit("mov x11, x0"); self.emit("mov x12, x1", "字面の像など、置き場の外の器を返した(底の行が字面だけの関数): 書き先へ写す")
+                self.copy_words(self.scur); self.emit("b %s" % dni)
+                self.lines.append("%s:" % ski)
                 self.emit("ldr x9, [x29, #%d]" % self.off(self.scur)); self.emit("add x9, x9, x1, lsl #3", "返ってきた個数ぶん位置を進める(`__` なら 0)")
                 self.emit("str x9, [x29, #%d]" % self.off(self.scur))
+                self.lines.append("%s:" % dni)
             elif i in cells:
                 self.emit("ldr x11, [x29, #%d]" % self.off(cells[i][0])); self.emit("ldr x12, [x29, #%d]" % self.off(cells[i][1]))
                 if self.prog.kind(x, self.kinds) == "N": self.flat_copy_regs(self.scur)
