@@ -687,7 +687,10 @@ class Checker:
                     items = n[1]
                     for i, m in enumerate(items):
                         if is_in(m, P) and i == 0 and any(x[0] == "post" and x[1] == "~" for x in items[1:]):
-                            self.where = nm; self.note("unknown-input", f"G19: {nm} の定義の行で、仮引数 {m[1][1]} の前置 @ に流れ(x~)を当てています。印の無い読みでは先の種類が分かりません(R81・Q45)")
+                            if self.only_plain_calls(nm, [sp[1] for sp in rhs[1]].index(m[1][1])):
+                                self.where = nm; self.note("unknown-input-called", f"G19: {nm} の定義の行で、仮引数 {m[1][1]} の前置 @ に流れ(x~)を当てていますが、{nm} の呼び出しは {m[1][1]} に関数でない字面(数・文字列)だけを渡すので、--strict の実行は断りません")
+                            else:
+                                self.where = nm; self.note("unknown-input", f"G19: {nm} の定義の行で、仮引数 {m[1][1]} の前置 @ に流れ(x~)を当てています。印の無い読みでは先の種類が分かりません(R81・Q45)")
                         # R126: G6 は廃止(先の分からない `y @p` は種類の未知な項として値の段が畳む)。ここでは知らせない
                         elif m[0] == "sec" and m[1] == "mapf" and m[3] is not None and m[3][0] == "block" and is_in(m[3][1], P) and i + 1 < len(items):
                             pn = m[3][1][1][1]

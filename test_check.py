@@ -107,6 +107,12 @@ for nm_, call_, want_ in [("字面だけ", "g 5 [1 2 3]\n", (["note"], ["note"],
     src_ = G7_BASE + call_
     sv_ = lambda *fl: [r["severity"] for r in js(src_, *fl)[1]["reports"] if r["kind"].startswith("unknown-input")]
     check(f"G7 の重さ(呼び出しを見る): {nm_}", (sv_(), sv_("--strict"), "G7" in strict_run(src_)), want_)
+# G19(`@p xs~`)も同じ: p に字面だけを渡す呼び出しなら note(実行は断らない)、関数(口が 3 つ以上)を渡せば error
+G19_BASE = "add3 : a b c ? a + b + c\n\ng : p xs ?\n\t@p xs~\n\n"
+for nm_, call_, want_ in [("字面", "g 5 [1 2 3]\n", (["note"], ["note"], False)), ("関数(口 3 つ)", "g $add3 [1 2 3]\n", (["note"], ["error"], True)), ("呼び出しが無い", "", (["note"], ["error"], False))]:
+    src_ = G19_BASE + call_
+    sv_ = lambda *fl: [r["severity"] for r in js(src_, *fl)[1]["reports"] if r["kind"].startswith("unknown-input")]
+    check(f"G19 の重さ(呼び出しを見る): {nm_}", (sv_(), sv_("--strict"), "G19" in strict_run(src_)), want_)
 # unknown-input の G6・G19・G7: 既定の実行は断らず、--strict の実行は断る(本物の実行で確かめた)。検査は既定で note・--strict で error
 UI = [("G19", "add3 : a b c ?\n\ta + b + c\ng : p xs ?\n\t@p xs~\ng $add3 [1 2 3]\n"),
       ("G7", "add2 : a b ?\n\ta + b\ng : p xs ?\n\t[@p,] xs\ng $add2 [1 2 3]\n"),
