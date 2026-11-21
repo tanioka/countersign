@@ -195,7 +195,7 @@ def check(case):
                     if o_[0] == "gate" and o_[1] in R138_GATES: raise S.Gate(o_[1])
             except S.Gate as e:
                 if str(e).split(":")[0] in R138_GATES or str(e) in R138_GATES:
-                    R138_SKIPPED.append((CUR_LAW[0], s_))
+                    R138_SKIPPED.append((CUR_LAW[0], s_, str(e).split(":")[0]))
                     if kind in ("val", "err", "same"):          # strict の側だけを省き、既定のモードの側は実際に比べる
                         ok_, why_ = check1((kind, a, b, dict(kw, only="default")))
                         (R138_DEFAULT_CHECKED if ok_ else R138_DEFAULT_FAIL).append((CUR_LAW[0], why_))      # 食い違いは失敗にせず数える(期待が strict の綴りで書かれた物が混じる)
