@@ -6,7 +6,7 @@ documents(type_system.md §6・compiler_pipeline.md §4)の `.st` は、`#` で 
 - 関数の署名(`Int -> Int`)は、観測(compiler_pipeline.md §6)が要るので、まだ書かない。コメントの行で「ここは書いていません」と言う。
 - 器(`List(T)`)の中身は、documents も載せ方が未決なので、型で止める。
 - `0x` の字面が生む値は `Address`(Int と統合しない。type_system.md §3.6)。値は `0x…` で書く。
-- `##`・`###` はこの実装の構文がまだ読まないので、`#` だけ。
+- `##`・`###` も読み、書かれた印を名前の前にそのまま付ける(実行の違いは無い)。
 """
 import os, sys, io, math
 
@@ -69,12 +69,13 @@ def render(path, SI):
     lines = ["` SignType (st) — 公開(#)の定義のうち、データだけを書き写したもの(sign_st.py)", "` source: %s" % os.path.basename(path), ""]
     skipped = []
     for name, v in env.exports.items():
+        mk = SI.EXPORT_MARK.get(name, "#")                          # 書かれた印(#・##・###)を名前の前にそのまま付ける(type_system.md §6)
         if isinstance(v, SI.Closure):
-            lines.append("` #%s : 関数。署名は観測(compiler_pipeline.md §6)が要るので、まだ書きません" % name); skipped.append(name); continue
+            lines.append("` %s%s : 関数。署名は観測(compiler_pipeline.md §6)が要るので、まだ書きません" % (mk, name)); skipped.append(name); continue
         s, why = leaf(v, SI)
         if s is None:
-            lines.append("` #%s : 書けません(%s)" % (name, why)); skipped.append(name); continue
-        lines.append("#%s : %s" % (name, s))
+            lines.append("` %s%s : 書けません(%s)" % (mk, name, why)); skipped.append(name); continue
+        lines.append("%s%s : %s" % (mk, name, s))
     return "\n".join(lines) + "\n", skipped
 
 def main(argv):

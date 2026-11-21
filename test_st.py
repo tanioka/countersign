@@ -25,4 +25,11 @@ open(os.path.join(d, "b.sn"), "w", encoding="utf-8").write("#s : `a\nb`\n#t : 1\
 open(os.path.join(d, "c.sn"), "w", encoding="utf-8").write("#u : 5\nu 1 2 +\n")
 r4 = run(["--emit-st", "c.sn"])
 if "Traceback" in r4.stderr: bad += 1; print("NG 落ちた")
+open(os.path.join(d, "m.sn"), "w", encoding="utf-8").write("#x : 1\n\n##y : 2\n\n###z : 3\n\n##f : a ? a\n\nx + y + z\n")
+r5 = run(["--emit-st", "m.sn"]); st5 = open(os.path.join(d, "m.st"), encoding="utf-8").read() if os.path.exists(os.path.join(d, "m.st")) else ""
+for w in ("#x : Int=1", "##y : Int=2", "###z : Int=3"):
+    if w not in st5.splitlines(): bad += 1; print("NG ##・### の印を保って書けていない:", w)
+for mode in ([], ["--strict"]):
+    r6 = run(mode + ["m.sn"])
+    if r6.returncode != 0 or r6.stderr or (not mode and r6.stdout.strip().splitlines()[-1:] != ["6"]): bad += 1;     # --strict はファイルの値を表示しない(V9) print("NG ##・### の定義が読めない", mode, r6.stdout[-40:], r6.stderr[:80])
 print("全部 ok" if not bad else "NG %d 件" % bad); sys.exit(1 if bad else 0)

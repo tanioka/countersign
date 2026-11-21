@@ -81,7 +81,7 @@ python3 test_asm.py         # コンパイラ(エミュレータで走らせて�
 ## 状態と既知の限界
 
 - 実装済み(`--strict` 側): R21・R128・R139、`' _`(`type_system.md` §6.2)、枚をまたぐ・同じ枚の同名の扱い(`compiler_pipeline.md` §4)、`--emit-st` のデータ部分。
-- 未実装: 型の観測と解決キャッシュ・`.st` の関数署名・`src`/`test` を使う `sign build`(`compiler_pipeline.md` §6)、`asm_volatile`、`.st` の `##`・`###`。
+- 未実装: 型の観測と解決キャッシュ・`.st` の関数署名・`src`/`test` を使う `sign build`(`compiler_pipeline.md` §6)、`asm_volatile`(仕様に綴りの定めが無い)。
 - 既定の道は、同名の扱いなどで `compiler_pipeline.md` と食い違います(既定は変えない方針)。一覧は `IMPLEMENTATION_NOTES.md` の「compiler_pipeline.md の精査」の表です。
 
 詳しい経緯と、各項目が【仕様】か【実装】かの区別は、`IMPLEMENTATION_NOTES.md` を読んでください。

@@ -3633,8 +3633,11 @@ def no_hole(node):                             # 書いた _ はいつも印(値
     return node                                # --strict: 中置の被演算子の `_` 1つは `i : _` の i と同じ恒等射(R29。知らせは R48)
 
 def leftover_tok_msg(t):
-    if t.kind == "OP" and t.text == "#": return "export-mark-position: 使う所に前置 `#` は書けません。`#` は定義の行の頭で、定義する名前に付ける公開の印です(§4 R119)。使う所では `#` を外して名前だけを書きます"
+    if t.kind == "OP" and t.text in ("#", "##", "###"): return "export-mark-position: 使う所に前置 `#`(`##`・`###` も)は書けません。`#` は定義の行の頭で、定義する名前に付ける公開の印です(§4 R119)。使う所では `#` を外して名前だけを書きます"
     return f"解釈できないトークン: {t.text!r}"
+
+EXPORT_MARKS = ("#", "##", "###")                      # 定義の頭の公開の印(type_system.md §6・operator_table.md)
+EXPORT_MARK = {}                                       # 名前 → 書かれた印(`.st` が名前の前にそのまま付ける)
 
 class Parser:
     def __init__(self, toks, block=None): self.t, self.i, self.block = toks, 0, block
@@ -3644,9 +3647,10 @@ class Parser:
     def is_op(self, t, g): return t is not None and t.kind == "OP" and t.text == g
 
     def parse_top(self):
-        if self.is_op(self.peek(), "#") and self.peek().pos == "prefix" and not (STRICT_GATES and self.lambda_ahead()):     # 前置 # : export(`#x ? x` は仮引数の param-not-name)
-            self.next()
+        if self.peek() is not None and self.peek().kind == "OP" and self.peek().text in EXPORT_MARKS and self.peek().pos == "prefix" and not (STRICT_GATES and self.lambda_ahead()):     # 前置 # ・## ・### : export(`#x ? x` は仮引数の param-not-name)。## は外へ(ARC)・### は外へ(Pin)で、実行の違いは無い(operator_table.md)
+            mark_ = self.next().text
             node = self.parse_top()
+            if node[0] == "def": EXPORT_MARK[node[1]] = mark_
             if node[0] != "def": raise SyntaxError("export-mark-position: # は定義(名前 : 値)の前に置きます。使う所に書いた `#zq` は文法に無い形なので、読む段で止めます(§4 R119)。使う所では `#` を外して `zq` と書きます")
             return ("export", node)
         if (self.peek() and self.peek().kind == "OPEN" and self.at(self.i + 1) and self.at(self.i + 1).kind == "OP"
@@ -5522,10 +5526,11 @@ def parse_param_line(row):
 
 def define_head(text):                         # (名前, export か)
     head = tokenize(text)
-    exported = len(head) == 3 and head[0].kind == "OP" and head[0].text == "#"
-    if exported: head = head[1:]
+    exported = len(head) == 3 and head[0].kind == "OP" and head[0].text in EXPORT_MARKS
+    if exported: mark_ = head[0].text; head = head[1:]
     if not (len(head) == 2 and head[0].kind == "ID" and head[1].kind == "OP" and head[1].text == ":"):
         raise NotImplementedError("字下げブロックを持てる定義は `名前 :` の形だけ実装")
+    if exported: EXPORT_MARK[head[0].text] = mark_
     return head[0].text, exported
 
 def wrap_export(node, exported): return ("export", node) if exported else node
