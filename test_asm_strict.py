@@ -32,7 +32,7 @@ for t, want in CASES:
 i_ = src.index("MAX, MIN1 = "); j_ = src.index("\n]\n", src.index("CASES = [")) + 3
 exec(src[i_:j_], ns)
 from fixblank import fix
-tally = {"一致": 0, "溢れ(仕様どうしの食い違い)": 0, "strict が断る": 0}
+tally = {"一致": 0, "溢れ(仕様どうしの食い違い)": 0, "strict が断る": 0, "断る": 0}
 for name, t in ns["CASES"]:
     t2 = fix(t)
     try: sv = strict_val(t2)
@@ -41,6 +41,7 @@ for name, t in ns["CASES"]:
     try: got = ns["run_asm"](sign_asm.generate(tree)) if not rest else ("断り", rest[0][0])
     except Exception as e: got = ("例外", str(e)[:50])
     if got == sv: tally["一致"] += 1
+    elif got[0] == "断り": tally["断る"] += 1                      # 断りは合っていない答えより良い
     elif got == ("trap", None) and sv[0] == "ok" and ("溢" in name or "罠" in name): tally["溢れ(仕様どうしの食い違い)"] += 1
     else: bad += 1; print("NG", name, repr(t), "strict", sv, "asm", got)
 print("整数の表:", tally)
@@ -68,7 +69,7 @@ def _val(t, strict):
         finally: sys.stdout = old
         return S.show(r[-1]) if r else "!_"
     finally: S.STRICT_GATES = False
-KNOWN = {   # 出す答えが strict と違う、既知の物(strict の値が実装の深さの上限で決まる形・器の中の void)
+KNOWN = {   # 出す答えが strict と違う、既知の物。規則 6(計算で `!_` になりうる実引数の呼びを断る)を足してから、どちらも断られるので今は空振り
     "食う 文字列 逆順": "strict は `~` の付いた計算の void を空の流れにしないので、終わりの無い再帰が深さの上限で止まる(R83・R84)。asm は終わりで止まる",
     "段54: 入れ子の要素の先頭 (m ' i) ' 0": "器の要素が void の積み上げ。strict は消え、asm は `__` の印を残す",
 }

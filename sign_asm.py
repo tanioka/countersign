@@ -6241,13 +6241,14 @@ USAGE = """使い方: python3 sign.py --asm 〈プログラム.sn〉 [--target=b
 
 STRICT = [False]
 def strict_divergences(tree):
-    """--strict --asm(2026-11-18): コンパイラは既定の読みで解く。--strict(仕様の読み)と答えが分かれる次の5つの形に当たったら、出さずに名指しで断る。
+    """--strict --asm(2026-11-18): コンパイラは既定の読みで解く。--strict(仕様の読み)と答えが分かれる次の6つの形に当たったら、出さずに名指しで断る。
       1. `x ' k` の鍵 k が名前(strict は欄の名前で `!_`、既定は名前の値で引く。仕様 R64)
       2. 逆適用 `c f`(値の後ろに関数を置く。strict は値のままで関数は余り、既定は f c)
       3. 最後でない行の値が `!_` になりうる形(strict は消えて次の行へ進み、既定はその `!_` を返して止まる。R128)。
          静的に見えるのは `/`・`%`(割る数が 0 でない字面のときを除く)・比べ・`&`・`|`・`;`・書いた `__` を値に含む形だけ(呼び出しの答えまでは見ない)
       4. 本体の行の左が名前だけの `y : 2`(strict は条件の行、既定は局所の定義。R128)
       5. 順序の比べの畳み `[>]`・`[<]`・`[>=]`・`[<=]`(strict は偽でも右の数を返す)
+      6. 計算で `!_` になりうる実引数を持つ、関数の呼び(strict は実引数が消えて関数が余る。asm は呼び全体が `!_`)
     戻り値: [(番号, 説明, 式の綴り)]"""
     import sign_interp as SI
     found = []
@@ -6274,6 +6275,17 @@ def strict_divergences(tree):
                 if isinstance(y, tuple): stack.append(y)
                 elif isinstance(y, list): stack.extend(z for z in y if isinstance(z, tuple))
         return False
+    def has_index(n):
+        stack = [n]
+        while stack:
+            x = stack.pop()
+            if not isinstance(x, tuple) or not x: continue
+            if x[0] == "lam": continue
+            if x[0] == "bin" and len(x) == 4 and x[1] == "'": return True
+            for y in x[1:]:
+                if isinstance(y, tuple): stack.append(y)
+                elif isinstance(y, list): stack.extend(z for z in y if isinstance(z, tuple))
+        return False
     def walk(n, params):
         if not isinstance(n, tuple) or not n: return
         k = n[0]
@@ -6284,6 +6296,11 @@ def strict_divergences(tree):
             key = unwrap(n[3] if n[1] == "'" else n[2])
             if isinstance(key, tuple) and key and key[0] == "post" and key[1] == "~": key = unwrap(key[2])
             if isinstance(key, tuple) and key and key[0] == "id": found.append((1, "`' ` の鍵が名前 `%s`(strict は欄の名前で `!_`、既定は名前の値で引く。仕様 R64)" % key[1], src(n)))
+        if k == "seq" and len(n[1]) >= 2 and isinstance(n[1][0], tuple) and n[1][0][0] == "id" and n[1][0][1] in funcs and n[1][0][1] not in params:
+            for m in n[1][1:]:                                   # 6. 計算で `!_` になりうる実引数(R83・R84: 計算の `!_` はその口の単位で、流れから消える。strict は関数が余り、続く実引数を取る。既定・asm は `!_` を受けた呼びを `!_` にする)
+                mm = unwrap(m)
+                if isinstance(mm, tuple) and (maybe_void(mm) or has_index(mm)):
+                    found.append((6, "実引数が計算で `!_` になりうる呼び `%s …`(strict はその実引数が消えて関数が余る。asm は呼び全体が `!_`。R83・R84)" % n[1][0][1], src(n))); break
         if k == "sec" and len(n) >= 3 and n[1] == "fold" and n[2] in (">", "<", ">=", "<="):
             found.append((5, "順序の比べの畳み `[%s]`(strict は偽でも右の数を返す `[>] 3 5` が 5。既定は `!_`)" % n[2], src(n)))
         if k == "seq" and len(n[1]) >= 2:
