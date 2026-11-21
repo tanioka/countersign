@@ -664,7 +664,7 @@ class Checker:
             if a[0] == "lit": return isinstance(a[1], (int, float, str)) and not isinstance(a[1], bool)
             if max_arity and a[0] == "addr" and isinstance(a[1], tuple) and a[1][:1] == ("id",):          # `$f`: 口の数が max_arity 以下の素の関数なら、実行は断らない
                 f = defs1.get(a[1][1])
-                return bool(f) and f[0] == "lam" and 1 <= len(f[1]) <= max_arity and all(sp[0] == "name" and (len(sp) < 3 or sp[2] is None) for sp in f[1])
+                return bool(f) and f[0] == "lam" and 1 <= len(f[1]) <= max_arity and all((sp[0] == "name" and (len(sp) < 3 or sp[2] is None)) or (sp[0] == "destr" and not sp[3] and not sp[4]) for sp in f[1])      # 括りの仮引数・可変長 `[~l]` も 1 口(既定値の無い物)
             return False
         for args, enc in calls:
             if idx >= len(args): return False
