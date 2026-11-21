@@ -10,7 +10,7 @@ def check(name, got, want):
     ok = got == want; bad += not ok
     print(("ok  " if ok else "NG  ") + name + ("" if ok else f"\n    得た: {got!r}\n    期待: {want!r}"))
 
-root = tempfile.mkdtemp(); os.makedirs(os.path.join(root, "sub"))
+_parent = tempfile.mkdtemp(); root = os.path.join(_parent, "work"); os.makedirs(os.path.join(root, "sub"))          # 親は空の新しい物(共有の /tmp に昔の x.txt があっても「外へ書けていない」の確かめが狂わない)
 outside = tempfile.mkdtemp(); open(os.path.join(outside, "secret.txt"), "w").write("secret")
 open(os.path.join(root, "a.txt"), "wb").write(b"abcdef")
 try: os.symlink(outside, os.path.join(root, "link")); HAVE_LINK = True

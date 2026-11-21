@@ -182,7 +182,10 @@ cancel : tm + 0x14
 seq2 : a b ? b
 seq3 : a b c ? c
 log : i ? seq2 ((0x3200 + ((@0x3200) * 4) + 4) # i) ((0x3200) # ((@0x3200) + 1))
-on_timer : id ? seq2 (log id) (id = 9 : 0 - 1 | 0)
+stop : id ?
+	id = 9 : 0 - 1
+	0
+on_timer : id ? seq2 (log id) (stop id)
 init : z ? seq3 (0x3200 # 0) ((id_ # 1) | 0) ((after # 50) | 0)
 tick : z ? 0
 """

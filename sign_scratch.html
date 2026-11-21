@@ -300,7 +300,17 @@ ovl : a aw b bw ?
   const lit = v => { let n = Math.trunc(Number(v)); if (!Number.isFinite(n)) n = 0; return n < 0 ? `(0 - ${-n})` : String(n); };
   const col = v => { const m = /^#([0-9a-fA-F]{6})$/.exec(String(v || "")); return m ? "0x" + m[1].toUpperCase() : "0x000000"; };
 
-  function generate(proj) {
+  function generate(proj) { return fixBlank(generateRaw(proj)); }
+  // --strict: いちばん外の定義が字下げのブロックで終わったら、次の行の前に空行を1行置く(alpha1/README「定義の終わりの空行」)
+  function fixBlank(code) {
+    const ls = code.split("\n"), out = [];
+    for (let i = 0; i < ls.length; i++) {
+      out.push(ls[i]);
+      if (/^[\t ]/.test(ls[i]) && i + 1 < ls.length && ls[i + 1] !== "" && !/^[\t ]/.test(ls[i + 1])) out.push("");
+    }
+    return out.join("\n");
+  }
+  function generateRaw(proj) {
     const vars = [...(proj.vars || [])];
     const helpers = [];
     let nh = 0;

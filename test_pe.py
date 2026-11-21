@@ -11,7 +11,7 @@ import sign_interp as S, sign_pe as P
 
 def snap(src, strict, opt):
     S.STRICT_GATES, S.OPT, S.OVERRIDES = strict, opt, False
-    S.MEMORY.clear(); S.WARNINGS.clear(); S.LEFTOVERS[0] = 0; S.POS.clear()
+    S.MEMORY.clear(); S.WARNINGS.clear(); S.LEFTOVERS[0] = 0; S.POS.clear(); S.STORE_ROWS.clear()        # 行ごとに1度の知らせの記録も空にする(前の実行の分が残ると、次の実行で知らせが出ない)
     try:
         res = S.run(src)
         out = ("val", [S.show(r) for r in res])
