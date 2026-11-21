@@ -51,11 +51,14 @@ class AsmError(Exception):
     """出せない形(名指しで断る)。"""
 
 
+_REGLIKE = r"(?i)[xwbhsdqvz][0-9]{1,2}|sp|wsp|lr|fp|xzr|wzr|pc|nzcv|p[0-9]{1,2}"
 def symbol_of(name):
-    """アセンブラの名前に使える綴りにする。Sign の識別子は日本語なども書けるので、読めない字は 16 進にする。"""
-    # レジスタの名前(x0・w1・q4・s8・v2・sp など)と同じ綴りは、アセンブラが名前でなくレジスタと読む(`bl q4` が組めない)
-    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) and not re.fullmatch(r"(?i)[xwbhsdqvz][0-9]{1,2}|sp|wsp|lr|fp|xzr|wzr|pc|nzcv|p[0-9]{1,2}", name): return name
-    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name): return "sn_" + name
+    """アセンブラの名前に使える綴りにする。Sign の識別子は日本語なども書けるので、読めない字は 16 進にする。
+    一対一(単射): ふつうの名前はそのまま。レジスタと同じ綴り・`sn_` や `_u` で始まる名前・`__sp`(投機の複製の印)で終わる名前は `sn_` を前に付け、
+    読めない字を含む名前は `_u…`(字は 16 進。`_` も `_5f_` と書くので読み戻せる)。どれも像の始まりが違う(そのまま = `sn_`・`_u` 以外、`sn_` = 付けた物、`_u` = 符号化)ので、別の名前は別の綴りになる。"""
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+        if re.fullmatch(_REGLIKE, name) or name.startswith(("sn_", "_u")) or name.endswith("__sp"): return "sn_" + name
+        return name
     return "_u" + "".join(c if re.fullmatch(r"[A-Za-z0-9]", c) else "_%x_" % ord(c) for c in name)
 
 
