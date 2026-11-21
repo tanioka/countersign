@@ -1,8 +1,10 @@
+import os as _os
+HERE_ = _os.path.dirname(_os.path.abspath(__file__))
 # 作業領域の余裕の目安: 入口の sp からの最大の沈み(バイト)と、答えの要素数×8 の比。沈みにはフレームも含むので上限の目安。
 import sys, re, subprocess
-sys.path.insert(0,'/mnt/user-data/outputs')
-src=open('/mnt/user-data/outputs/test_asm.py',encoding='utf-8').read()
-ns={'__file__':'/mnt/user-data/outputs/test_asm.py','__name__':'emu'}
+sys.path.insert(0,HERE_)
+src=open(_os.path.join(HERE_,'test_asm.py'),encoding='utf-8').read()
+ns={'__file__':_os.path.join(HERE_,'test_asm.py'),'__name__':'emu'}
 exec(compile(src[:src.index('# ---------------- 処理系の答え')],'emu','exec'),ns)
 import sign_asm, sign_interp
 class R(dict):

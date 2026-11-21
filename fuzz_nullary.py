@@ -1,5 +1,7 @@
+import os as _os
+HERE_ = _os.path.dirname(_os.path.abspath(__file__))
 import os,sys,random
-os.chdir("/mnt/user-data/outputs"); sys.path.insert(0,".")
+os.chdir(HERE_); sys.path.insert(0,HERE_)
 src_t=open("test_asm.py",encoding="utf-8").read().split("MAX, MIN1 =")[0]
 exec(compile(src_t.replace("__file__",repr(os.path.abspath("test_asm.py"))),"h","exec"))
 rnd=random.Random(int(sys.argv[1]) if len(sys.argv)>1 else 1)

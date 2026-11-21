@@ -1,8 +1,10 @@
+import os as _os
+HERE_ = _os.path.dirname(_os.path.abspath(__file__))
 """fuzz_neon_mixed.py — Int の関数の値を Float / Vector の関数へ渡す混在の乱数試験(処理系と --target=linux の通しを比べる)。使い方: python3 fuzz_neon_mixed.py 種 本数"""
 import os,sys,random
-os.chdir("/mnt/user-data/outputs"); sys.path.insert(0,".")
+os.chdir(HERE_); sys.path.insert(0,HERE_)
 seed=int(sys.argv[1]); N=int(sys.argv[2]); sys.argv=["x"]
-src=open("test_neon.py",encoding="utf-8").read().split("V1, V2 =")[0].replace("HERE = os.path.dirname(os.path.abspath(__file__))","HERE = \"/mnt/user-data/outputs\"")
+src=open("test_neon.py",encoding="utf-8").read().split("V1, V2 =")[0].replace("HERE = os.path.dirname(os.path.abspath(__file__))","HERE = %r" % HERE_)
 exec(compile(src,"tn","exec"))
 import sign_asm
 def run_linux(prog):
