@@ -178,13 +178,13 @@ R138_GATES = {"void-written", "empty-written", "name-undefined", "G22"}
 R138_UNMAPPED = []                      # σ で写した源の strict が旧い期待と合わない試験(-v で一覧)
 R138_DEFAULT_CHECKED = []                # strict の比べを省いたうえで、既定のモードの側は比べた試験
 R138_DEFAULT_FAIL = []
-R138_TWIN = []                          # 省いた試験のうち、`[]` を `(1 < 0)` に写した strict の側で旧い期待どおりになった物
+R138_TWIN = []; R138_TWIN_SRC = set()                          # 省いた試験のうち、`[]` を `(1 < 0)` に写した strict の側で旧い期待どおりになった物
 R138_SKIPPED = []                       # 旧綴りの手書き(`!_`・`[]`・未定義の名前)が strict で R138 により断られ、旧い期待を比べられなかった試験
 CUR_LAW = [""]
 
 def check(case):
     kind, a, b, kw = case
-    if not CUR_LAW[0].startswith("R138") and kind in ("val", "err", "same", "gate", "gate_not", "warns", "agree", "static") and kw.get("only") != "default":
+    if not CUR_LAW[0].startswith("R138") and kind in ("val", "err", "same", "gate", "gate_not", "warns", "agree", "static") and kw.get("only") != "default" and not (kind == "gate" and b in R138_GATES):
         srcs = a if kind == "agree" else [a] + ([b] if kind == "same" else [])
         for s_ in srcs:
             try:
@@ -204,7 +204,7 @@ def check(case):
                             _ta = [_tw(x) for x in a] if kind == "agree" else _tw(a)
                             _tb = _tw(b) if kind == "same" else b
                             _tk = dict(kw, only="strict", **({"pre": _tw(kw["pre"])} if "pre" in kw else {}))
-                            if check1((kind, _ta, _tb, _tk))[0]: R138_TWIN.append(CUR_LAW[0])
+                            if check1((kind, _ta, _tb, _tk))[0]: R138_TWIN.append(CUR_LAW[0]); R138_TWIN_SRC.add((CUR_LAW[0], s_))
                         except Exception: pass
                     if kind == "static" and kw.get("only") != "default":
                         try:        # 静的の形: 旧綴りを σ で今の綴りへ写して strict で診断を比べる(前置きの `i : !_` など)
@@ -213,7 +213,7 @@ def check(case):
                             import sign_types as _st
                             _chk = _st.infer(_fixblank(_tk["pre"] + sigma(a)), ".", None, False)
                             _kinds = {k_ for k_, _, _ in _chk.diags}
-                            if ((b not in _kinds) if kw.get("no") else (b in _kinds)): R138_TWIN.append(CUR_LAW[0])
+                            if ((b not in _kinds) if kw.get("no") else (b in _kinds)): R138_TWIN.append(CUR_LAW[0]); R138_TWIN_SRC.add((CUR_LAW[0], s_))
                         except Exception: pass
                     if kind in ("val", "err", "same"):          # strict の側だけを省き、既定のモードの側は実際に比べる
                         ok_, why_ = check1((kind, a, b, dict(kw, only="default")))
@@ -1310,6 +1310,18 @@ val(c, "add : a b ? a + b\np : $add\n(@p _ 2) 5", "7", only="strict")      # R16
 c = law("R126/2026-11-13", "途中の恒等射は消してから畳む(`inc i inc vs~` は `inc inc vs~` と同じ)")
 same(c, "i : _\ninc : [x] ? x + 1\nvs : 1 , 2 , 3\ninc i inc vs~", "i : _\ninc : [x] ? x + 1\nvs : 1 , 2 , 3\ninc inc vs~", only="strict")
 
+
+c = law("R138/局所定義(strict の綴り)", "関数の本の中の `名 : 値` の行は条件の行(R128)。局所定義は無いので、strict では上の階へ出して書く(旧い形は G22)")
+val(c, "ng : y ? y + 1\nnf : x ? ng x\nnf 3", "4", only="strict")
+val(c, "nc : z ? z + 1\nnb : y ? nc y\nna : x ? nb x\nna 1", "2", only="strict")
+val(c, "nb : [p q] ? p + q\nna : x ? nb [x 2]\nna 1", "3", only="strict")
+val(c, "sq : z ? z * z\ntt : x ? sq x\ntt 5", "25", only="strict")
+val(c, "k : z a ? z + a\ntt : a ? k 5 a\ntt 1", "6", only="strict")
+val(c, "yy : 5\ntt : a ? a\ntt 1", "1", only="strict")
+val(c, "sq : z ? z * z\ntt : x ?\n\tx > 0 : 1\n\tsq x\ntt 5", "1", only="strict")
+gate(c, "tt : x ?\n\tsq : z ? z * z\n\tsq x\ntt 5", "G22", only="strict")
+gate(c, "tt : a ?\n\tyy : 5\n\ta\ntt 1", "G22", only="strict")
+
 def main(argv):
     verbose = "-v" in argv
     pick = [a for a in argv if not a.startswith("-")]
@@ -1333,6 +1345,9 @@ def main(argv):
             import collections as _c
             _l=_c.Counter(l for l,_,_g in R138_SKIPPED); _t=_c.Counter(R138_TWIN)
             print("  (未検証の内訳: 法則 = 省いた件 - strict で確かめた件) " + ", ".join(f"{k}={_l[k]-_t[k]}" for k in _l if _l[k]-_t[k] > 0))
+    if verbose:
+        for l_, s_, g_ in R138_SKIPPED:
+            if (l_, s_) not in R138_TWIN_SRC: print("   ? 未検証", l_, g_, repr(s_)[:110])
     if verbose and R138_DEFAULT_FAIL:
         for l_, w_ in R138_DEFAULT_FAIL: print("   ≠", l_, w_[:300])
     if R138_UNMAPPED:
