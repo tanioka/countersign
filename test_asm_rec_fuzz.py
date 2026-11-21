@@ -37,7 +37,7 @@ def gen():
 G2="g : x ? x + 1\nk : x y ? x * 2 + y\n"
 def item2():
     c=random.randint(0,8)
-    return random.choice(["(xs ' 0)",lit(),"(g ((xs ' 0) > %d))"%c,"(k ((xs ' 0) < %d) %s)"%(c,lit()),"(k %s ((xs ' 0) > %d))"%(lit(),c)])
+    return random.choice(["(xs ' 0)",lit(),"(g ((xs ' 0) > %d))"%c,"(k ((xs ' 0) < %d) %s)"%(c,lit()),"(k %s ((xs ' 0) > %d))"%(lit(),c),"(g ((xs ' 0) / %d))"%random.randint(0,3),"(g ((xs ' 0) %% %d))"%random.randint(0,3),"(g ((xs ' 1) > %d))"%c,"(k ((xs ' 0) / %d) %s)"%(random.randint(0,3),lit())])
 def gen_mixed():
     """部分適用の書き換え(`!_` になりうる実引数の呼びの後ろに値)と再帰が、同じ関数に重なる形"""
     mutual=random.random()<0.4
