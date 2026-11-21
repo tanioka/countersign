@@ -178,6 +178,7 @@ R138_GATES = {"void-written", "empty-written", "name-undefined", "G22"}
 R138_UNMAPPED = []                      # σ で写した源の strict が旧い期待と合わない試験(-v で一覧)
 R138_DEFAULT_CHECKED = []                # strict の比べを省いたうえで、既定のモードの側は比べた試験
 R138_DEFAULT_FAIL = []
+R138_TWIN = []                          # 省いた試験のうち、`[]` を `(1 < 0)` に写した strict の側で旧い期待どおりになった物
 R138_SKIPPED = []                       # 旧綴りの手書き(`!_`・`[]`・未定義の名前)が strict で R138 により断られ、旧い期待を比べられなかった試験
 CUR_LAW = [""]
 
@@ -196,6 +197,13 @@ def check(case):
             except S.Gate as e:
                 if str(e).split(":")[0] in R138_GATES or str(e) in R138_GATES:
                     R138_SKIPPED.append((CUR_LAW[0], s_, str(e).split(":")[0]))
+                    if kind in ("val", "same") and kw.get("only") != "default" and "[]" in "".join(x for x in ([a] + ([b] if kind == "same" else [])) if isinstance(x, str)):
+                        try:        # 空の List の手書き `[]` は計算で生まれる void `(1 < 0)` に写して strict の側も比べる(R138 の綴り)
+                            _tw = lambda t_: _re.sub(r"(?<![\w\]\)])\[\]", "(1 < 0)", t_)
+                            o1_ = outcome(_tw(a), True, kw.get("prelude", True))
+                            o2_ = outcome(_tw(b), True, kw.get("prelude", True)) if kind == "same" else ("val", b)
+                            if o1_[0] == "val" and (o1_ == o2_ or o1_[1] == sigma_want(b) if kind == "val" else o1_ == o2_): R138_TWIN.append(CUR_LAW[0])
+                        except Exception: pass
                     if kind in ("val", "err", "same"):          # strict の側だけを省き、既定のモードの側は実際に比べる
                         ok_, why_ = check1((kind, a, b, dict(kw, only="default")))
                         (R138_DEFAULT_CHECKED if ok_ else R138_DEFAULT_FAIL).append((CUR_LAW[0], why_))      # 食い違いは失敗にせず数える(期待が strict の綴りで書かれた物が混じる)
@@ -1293,6 +1301,9 @@ def main(argv):
     if R138_SKIPPED:
         _n = len(R138_SKIPPED); _ok = len(R138_DEFAULT_CHECKED); _ng = len(R138_DEFAULT_FAIL)
         print(f"\n(R138 により strict で断られる旧綴りの手書きを含み、strict の比べを省いた試験: {_n} 件。そのうち既定のモードの側を比べられる形(val・err・same)は {_ok + _ng} 件で、一致 {_ok} 件・食い違い {_ng} 件。残りは strict でだけ意味がある形で、どちらのモードも比べていない)")
+        print(f"(そのうち `[]` を `(1 < 0)` に写して strict でも旧い期待どおりに通った物: {len(R138_TWIN)} 件)")
+    if verbose and R138_DEFAULT_FAIL:
+        for l_, w_ in R138_DEFAULT_FAIL: print("   ≠", l_, w_[:300])
     if R138_UNMAPPED:
         print(f"(旧綴りの源を σ で写した strict の側が旧い期待と合わず、数えなかった試験: {len(R138_UNMAPPED)} 件。-v で一覧)")
         if verbose:
