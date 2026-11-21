@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """静的検査 sign_check.py の試験。python test_check.py"""
 import json, os, subprocess, sys, tempfile
+from fixblank import fix as _fixblank          # --strict は定義のブロックの後に空行を要る(alpha1/README.md)ので、strict の源は空行を補う
 HERE = os.path.dirname(os.path.abspath(__file__))
 TMP = tempfile.mkdtemp()
 bad = 0
@@ -9,7 +10,7 @@ def check(name, got, want):
     ok = got == want; bad += not ok
     print(("ok  " if ok else "NG  ") + name + ("" if ok else f"\n    得た: {got!r}\n    期待: {want!r}"))
 def run(src, *flags):
-    p = os.path.join(TMP, "t.sn"); open(p, "w", encoding="utf-8").write(src)
+    p = os.path.join(TMP, "t.sn"); open(p, "w", encoding="utf-8").write(_fixblank(src) if "--strict" in flags else src)
     r = subprocess.run([sys.executable, os.path.join(HERE, "sign_check.py"), p, *flags], capture_output=True, text=True, cwd=HERE, timeout=120)
     return r.returncode, r.stdout
 def js(src, *flags):
@@ -62,7 +63,7 @@ rc, out = run("f : x ?\n\tx\nf 1\n")
 check("整合の知らせ", "整合しています" in out, True)
 # --strict の断りのうち静的に決まる物: 検査の結果と、本物の --strict 実行の断りが一致する(順・自分の名前・入れ子の違いも)
 def strict_run(src):
-    pth = os.path.join(TMP, "s.sn"); open(pth, "w", encoding="utf-8").write(src)
+    pth = os.path.join(TMP, "s.sn"); open(pth, "w", encoding="utf-8").write(_fixblank(src))
     r = subprocess.run([sys.executable, os.path.join(HERE, "sign.py"), pth, "--strict"], capture_output=True, text=True, cwd=HERE, timeout=120)
     return r.stderr
 # Q87(寄せ5 で R135 に決まった。2026-11-06): --strict では、複数行の括りに仮引数のブロックを書いた4つの形は、場所(行・桁)つきで前処理が止め、reason は param-block-bracket。ふつうの字下げの誤りは案内なし
@@ -97,15 +98,15 @@ check("--strict なしでは strict の断りは出ない", [r["kind"] for r in 
 # unknown-input の G6・G19・G7: 既定の実行は断らず、--strict の実行は断る(本物の実行で確かめた)。検査は既定で note・--strict で error
 UI = [("G19", "add3 : a b c ?\n\ta + b + c\ng : p xs ?\n\t@p xs~\ng $add3 [1 2 3]\n"),
       ("G7", "add2 : a b ?\n\ta + b\ng : p xs ?\n\t[@p,] xs\ng $add2 [1 2 3]\n"),
-      ("G7", "g : p xs ?\n\t[@p,] xs\ng 5 [1 2 3]\n"),
+      ("G7", "g : p xs ?\n\t[@p,] xs\ng 5 [1 2 3]\n", False),      # p が素の数 5: 実行は断らず `!_`(R50「ほかは未知」)。検査は定義の行だけを見て p を知らないので、error は保守的な知らせ
       ]                                                                       # G6 は R126 で廃止(先の分からない `y @p` は断らず、検査も知らせない)
-for key, src_ in UI:
+for key, src_, *run_strict_refuses in UI:
     pth = os.path.join(TMP, "u.sn"); open(pth, "w", encoding="utf-8").write(src_)
     d = subprocess.run([sys.executable, os.path.join(HERE, "sign.py"), pth], capture_output=True, text=True, cwd=HERE, timeout=120)
     st = strict_run(src_)
     sv0 = [r["severity"] for r in js(src_)[1]["reports"] if r["kind"] == "unknown-input"]
     sv1 = [r["severity"] for r in js(src_, "--strict")[1]["reports"] if r["kind"] == "unknown-input"]
-    check(f"unknown-input {key}: 既定の実行は断らず・--strict の実行は断る・検査は note/error", (key in d.stderr, key in st, sv0, sv1), (False, True, ["note"], ["error"]))
+    check(f"unknown-input {key}: 既定の実行は断らず・--strict の実行は断る・検査は note/error", (key in d.stderr, key in st, sv0, sv1), (False, run_strict_refuses[0] if run_strict_refuses else True, ["note"], ["error"]))
 # G19(口が 3 つ以上と分かる最上位の関数に撒く形): 検査と本物の --strict の実行が一致する
 A3 = "add3 : a b c ?\n\ta + b + c\nadd4 : a b c d ?\n\ta + b + c + d\nadd2 : a b ?\n\ta + b\n"
 G19 = [
