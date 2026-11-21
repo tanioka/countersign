@@ -751,6 +751,12 @@ for F in ("inc", "add", "f2", "f3", "k1", "mul", "go", "gd", "gd3", "adder", "do
     for sh in ("{F} {X}", "{F} {X} 5", "{F} 5 {X}", "{F} {X} 5 6", "{F} 1 {X} 2", "({F} {X}) 5", "{F} 1 2 {X}", "{X} {F}", "{X} 5", "5 {X}", "{F} {X} _"):
         for cx in ("{}", "w : {}\nw", "t : y ? {}\nt 1"):
             agree(c, [_pre31 + cx.format(sh.format(F=F, X=X)) for X in ("_", "[]~", "e0~", "[[]]~", "_~", "un~")], warn=True)
+c = law("R138/法則31(strict の綴り)", "計算で生まれる void は、同じ位置ならどの綴り・どの文脈でも同じ答え(位置 × 文脈)。手書きの void と空の流れは strict では書けないので、計算の void だけで法則31 の strict 版を比べる(R83)")
+_pre31s = "un : (1 < 0)\n"
+for F in ("inc", "add", "f2", "f3", "k1", "mul", "go", "gd", "gd3", "adder", "double"):
+    for sh in ("{F} {X}", "{F} {X} 5", "{F} 5 {X}", "{F} {X} 5 6", "{F} 1 {X} 2", "({F} {X}) 5", "{F} 1 2 {X}", "{X} {F}", "{X} 5", "5 {X}", "{F} {X} _"):
+        for cx in ("{}", "w : {}\nw", "t : y ? {}\nt 1"):
+            agree(c, [_pre31s + cx.format(sh.format(F=F, X=X)) for X in ("(1 < 0)", "(2 < 1)", "(1 == 2)", "un")], only="strict")
 c = law("法則32", "値の演算子の被演算子の丸ごとの関数は `_` と同じ答え(恒等射も)")
 for F in ("inc", "double", "(add 1)", "(f3 1)", "k1", "go", "[+ 1]", "gd", "i"):
     for op in ("+", "-", "*", "<", "==", "<=", ">"):
