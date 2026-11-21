@@ -622,7 +622,8 @@ for e in ("$[v , 1]", "$[inc , double]", "$(five , 99)", "$[(five , 1)]", "$[fiv
 for e in ("$[inc , !_]", "$[_ , 5]", "$[_ , !_]", "$[inc , i]", "[$five , 1]", "[$inc , $double]"): gate_not(c, PD + e, only="strict")
 c = law("R102", "`$x ' 0` は x を下ろした物(`@[$x]`)、`' k≠0` は領域の外で `_`")
 same(c, PD + "$vs ' 0", PD + "@[$vs]", only="strict"); same(c, PD + "[$five] ' 0", PD + "@[$five]", only="strict")
-val(c, PD + "($inc ' 0) 5", "6", only="strict"); val(c, PD + "$vs ' 1", "__", only="strict")
+val(c, "inc : x ? x + 1\n($inc ' 0) 5", "[$inc, 5]")   # 仕様(`$x ' k` の段): `$inc ' 0` は `$inc` のまま(下ろさない)なので、5 に当てると [$inc, 5]。前の期待 6 は古い読みだった
+val(c, PD + "$vs ' 1", "__", only="strict")
 c = law("R104", "長さ 0 と分かる流れの `$` は `$_`(零射の番地。知らせない)。ほかの後置の印は G20")
 for e in ("$[]~", "$_~", "$[_]~", "$e0~"): same(c, PD + e, PD + "$_", only="strict"); warns(c, PD + e, "dollar-non-function", no=True, only="strict")
 for e in ("$vs~", "$inc~"): gate(c, PD + e, "G20", only="strict")
