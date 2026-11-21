@@ -3221,53 +3221,6 @@ def write_addr(addr, data):                    # アドレスにデータを入�
     else: MEMORY[addr] = data
     return ret
 
-def r93_apply(m, n, i, env):
-    """R93: `F … x , R` は `F … (x , R)` を、`,` のすぐ左の項の並び x(最後の括りに入る項。前の裸の口を埋めた後ろの2項以上も、書いた `_` も)に広げる。
-    最後の括りに入る形は、書いた形のまま実引数(`fp 1 2 , 3` は `fp (1 2 , 3)` の `[[1 2] 3]`)。"""
-    items = m[1]
-    vals = {}
-    j = None
-    for idx, x in enumerate(items):
-        if x in (MARK, HOLE): 
-            if j is None: return None
-            continue
-        v = ev(x, env); vals[idx] = v
-        if isinstance(v, (Closure, Stream)) and j is None: j = idx
-        elif j is None and (is_unit(v)): return None
-    if j is None: return None
-    f = vals[j]
-    if not (isinstance(f, Closure) and not f.variadic and f.native is None and f.params is not None and not f.dead and not has_defaults(f)): return None
-    rem = len(f.params) - len(f.args)
-    if rem < 1 or f.params[-1][0] != "destr" or any(sp[0] != "name" for sp in f.params[len(f.args):-1]): return None
-    b = rem - 1
-    tail = list(range(j + 1, len(items)))
-    nm = [t for t in tail if items[t] not in (MARK, HOLE)]
-    if len(nm) < b: return None
-    if any(isinstance(vals[t], (Closure, Stream)) or is_unit(vals[t]) or vals[t] is ID for t in nm): return None       # 恒等射は関数(compose)
-    first_x = nm[b] if len(nm) > b else ((nm[b - 1] if b else j) + 1)
-    # 裸の口を埋める部分に書いた _ は混ぜない
-    if any(items[t] in (MARK, HOLE) for t in tail if t < first_x): return None
-    x_items = items[first_x:]
-    if not x_items: return None
-    xn = x_items[0] if len(x_items) == 1 else ("seq", x_items)
-    xv = ev(("prod", [xn] + list(n[1][i + 1:])), env)
-    res = finalize(run_with(f, [vals[t] for t in nm[:b]] + [xv]))
-    if j:
-        acc = vals[0]
-        for v in [vals[t] for t in range(1, j) if t in vals] + [res]: acc = join(acc, v)
-        res = acc
-    return res
-def r66_ok(vs):
-    j = 0
-    while j < len(vs) and not isinstance(vs[j], (Closure, Stream)): j += 1       # 値の後ろに積まれた F(`5 f 1 , 2` は `5 (f (1 , 2))`)
-    if j >= len(vs) or any(is_unit(v) for v in vs[:j]): return False
-    return r66_head(vs[j:])
-def r66_head(vs):
-    f = vs[0]
-    if not (isinstance(f, Closure) and not f.variadic and f.native is None and f.params is not None and not f.dead): return False
-    rem = len(f.params) - len(f.args)
-    return rem >= 1 and f.params[-1][0] == "destr" and len(vs) - 1 == rem \
-        and not any(isinstance(v, (Closure, Stream)) or is_unit(v) or v is ID for v in vs[1:])      # 恒等射は関数(`fp i , 1 , 2` は compose fp i)
 def dop_mark(c):
     """R59: `$` を通して `@` で開いた括りの関数(仮引数を持つ物)に印を付ける。呼んだ実体の本体に余りがあれば G20。"""
     if STRICT_GATES and isinstance(c, Closure) and not c.dop and not c.native and c.params is not None and not c.variadic:
@@ -4821,36 +4774,8 @@ def _ev(n, env):
         for i, m in enumerate(n[1]):
             if holes and m == ("hole",): continue
             if pre_ids and m == ("not", ("hole",)): continue
-            if STRICT_GATES and m[0] == "seq" and len(m[1]) >= 2 and i + 1 < len(n[1]):
-                r = r93_apply(m, n, i, env)
-                if r is not None:
-                    if not out: return r
-                    out.append(r); break
-            if STRICT_GATES and m[0] == "seq" and len(m[1]) >= 2 and m[1][-1] == MARK and i + 1 < len(n[1]) \
-                    and any(isinstance(ev(x, env), Closure) for x in m[1][:-1] if x not in (MARK, HOLE)):
-                strict_gate("G3: `,` のすぐ左が書いた `_` の形は、積の頭の `_`(R61)と並びの中で消える `_`(R15)で読みが割れます(`fp _ , 1 , 2`。R66)", n)
-            if STRICT_GATES and m[0] == "seq" and len(m[1]) >= 2 and m[1][-1] == HOLE and i + 1 < len(n[1]) \
-                    and not any(x in (MARK, HOLE) for x in m[1][:-1]) and not out:
-                _vs = [ev(x, env) for x in m[1][:-1]]                        # R66: `pb 1 _ , 2` は `pb 1 (_ , 2)`。最後の口に書いた `_` は `(x , R)` の中で積の単位として消える
-                _j = next((t for t, v in enumerate(_vs) if isinstance(v, (Closure, Stream))), None)
-                if _j is not None and r66_ok(_vs + [0]) and not any(q[0] == "seq" and len(q[1]) >= 2 for q in n[1][i + 1:]):
-                    _rest = [ev(q, env) for q in n[1][i + 1:] if q != ("hole",)]
-                    return finalize(run_with(_vs[_j], _vs[_j + 1:] + [product(_rest)]))
             if m[0] == "seq" and len(m[1]) >= 2 and not any(x in (MARK, HOLE) for x in m[1]):
                 vs = [ev(x, env) for x in m[1]]
-                if STRICT_GATES and r66_ok(vs) and i + 1 < len(n[1]):          # R66: 最後の口が参照の口なら `f x , …` は `f (x , …)`
-                    if any(q[0] == "seq" and len(q[1]) >= 2 for q in n[1][i + 1:]):
-                        strict_gate("G3: `,` の右の要素に2項以上の並びがあります。参照の口では構造を保つ読み(`[1 [2 3]]`)と平らな読み(`[1 2 3]`)が割れるので、括ります(`fab 1 , (2 3)`。R66)", n)
-                    rest = [ev(q, env) for q in n[1][i + 1:] if q != ("hole",)]
-                    j = next(t for t, v in enumerate(vs) if isinstance(v, (Closure, Stream)))
-                    res = finalize(run_with(vs[j], vs[j + 1:-1] + [product([vs[-1]] + rest)]))
-                    if j:
-                        acc = vs[0]
-                        for v in vs[1:j] + [res]: acc = join(acc, v)
-                        res = acc
-                    if not out: return res
-                    out.append(res)
-                    break
                 if STRICT_GATES and any(isinstance(v, Closure) for v in vs):
                     _nf_ = NOFILL[0]; NOFILL[0] = True                         # R124: `,` の辺は、2つ以上残るまで既定値を埋めない
                     try: _fc = fold_couple(vs)

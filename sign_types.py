@@ -757,8 +757,6 @@ class Checker:
             elif isinstance(n, tuple) and n:
                 if n[0] == "def" and len(n) == 3 and isinstance(n[1], str): where = n[1]
                 if n[0] == "seq": check(n[1], [], where)
-                elif n[0] == "prod" and n[1] and n[1][0][0] == "seq":
-                    check(n[1][0][1], n[1][1:], where)                  # R66: f 1 , 2 , 3 , 4
                 for c in n[1:]: walk(c, where)
         walk(self.nodes, "")
         return self.empty_pass().addr_pass().width_pass().g2_pass()

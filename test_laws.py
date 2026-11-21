@@ -397,7 +397,7 @@ c = law("R27/M30", "||f|| は f の後にノルムを当てる合成。||!_|| �
 val(c, "||_||", "0"); val(c, "||$_||", "1"); val(c, "||$!_||", "1")
 val(c, "||inc|| 3", "1", only="default"); same(c, "||inc|| 3", "||inc 3||", only="default"); val(c, "||!_|| 1 2 3", "3")
 val(c, "||inc|| 3", "3", only="strict"); val(c, "||inc|| 1 2", "[1, 2]", only="strict"); warns(c, "||inc|| 1 2", "leftover-lambda")      # R27(2026-11-13): `||f||` も囲みごと `!_`、並びは残る
-val(c, "pb : [a] [b] ? b\npb 1 _ , 2", "2", only="strict"); val(c, "pb : [a] [b] ? a\npb 1 _ , 2", "1", only="strict")      # R66(2026-11-13): 最後の口に書いた `_` は `(x , R)` の中で積の単位
+gate(c, "pb : [a] [b] ? b\npb 1 _ , 2", "G5", only="strict")      # R121(R66 は廃止): `pb 1 _` の穴は括りの関数の口の穴(R46)
 val(c, "||[1 2 3]||", "3")
 
 # ============================================================ 名前・順序・輪(P2)
@@ -528,7 +528,7 @@ for src, want in (("fl 1 2 3", "[1, 2, 3]"), ("fl 1 2 3 4", "[1, 2, 3]"), ("fl [
                   ("fl 1 _ 2", "[1, 2]"), ("fl 1 2 _", "[1, 2]"), ("fl [1 2]", "[1, 2]"), ("fl []", "__"), ("fx []", "__"), ("fe []", "7"),
                   ("sum [1 2 3]", "6"), ("sum []", "__"), ("fl vs", "[1, 2, 3]")):
     val(c, B + src, want, only="strict")
-for src in ("fl 1 2 3 4", "fl [1 2 3 4]", "fl 1 , 2 , 3 , 4"): warns(c, B + src, "bracket-excess")
+for src in ("fl 1 2 3 4", "fl [1 2 3 4]", "fl [1 , 2 , 3 , 4]"): warns(c, B + src, "bracket-excess")      # R121: `fl 1 , 2 , 3 , 4` は `[fl 1] , 2 , 3 , 4` で余りは出ない。積は括って渡す(R64)
 for src in ("fabx 1 2 3 4", "fl 1 2 3", "fl 1 2"): warns(c, B + src, "bracket-excess", no=True)
 c = law("R65", "実行時に来た _: 値の口では並びの単位として消える(口は開いたまま)、参照の口では空の器で入る。口を開けたまま値の演算子に残れば _")
 B = "fx : [x ~xs] y ? [x xs y]\nno : 3 < 2\n"
@@ -536,20 +536,14 @@ for src, want in (("add (3 < 2) 5 6", "11"), ("add no 5 6", "11"), ("add 5 no 6"
                   ("(inc no) + 1", "1"), ("(add no) + 1", "1"), ("inc no", "__")):
     val(c, B + src, want, only="strict")
 warns(c, B + "inc no", "leftover-lambda"); warns(c, B + "add no 5", "leftover-lambda")
-c = law("R66", "最後の口が参照の口なら `f x , …` は `f (x , …)`。値の口だけの関数・x が最後の括りに最初に入らない形は今のまま G3")
-B = "fl : [a b c] ? [a b c]\npb : [a] [b] ? [a b]\nfv : [x ~xs] ? x\n"
-for src, want in (("fl 1 , 2 , 3", "[1, 2, 3]"), ("fl 1 , 2", "[1, 2]"), ("fl 1 , 2 , 3 , 4", "[1, 2, 3]"), ("1 , fl 2 , 3", "[1, [2, 3]]"),
-                  ("fv 7 , 8 , 9", "7")):
+c = law("R66→R121", "R66・R93 は廃止(R121)。`,` は口の種類に依らず適用の外で、`F … x , R` は `[F … x] , R`。coproduct_spec R121 の例")
+B = "inc : x ? x + 1\nf3 : a b c ? a\nfp : [a b c] ? a\npb : [a] [b] ? a\nfl : [a b c] ? [a b c]\n"
+for src, want in (("inc 1 , 2", "[2, 2]"), ("f3 1 , 2 , 3", "[2, 3]"), ("fp 1 , 2 , 3", "[1, 2, 3]"), ("fp [1 , 2 , 3]", "1"),
+                  ("fp 1 2 , 3", "[1, 3]"), ("pb 1 , 2", "2")):
     val(c, B + src, want, only="strict")
-val(c, B + "inc 1 , 2", "[2, 2]", only="strict")                             # R121: 口が足りた呼び出しは `,` と空白で同じ(G3 は廃止)
-for src in ("f2 1 , 2", "pb 1 , 2"):                                          # 辺の終わりに余った関数は _ で、`,` の単位で消える(warning leftover-lambda)
-    val(c, B + src, "2", only="strict"); warns(c, B + src, "leftover-lambda", only="strict")
-val(c, B + "fl 1 2 , 3", "[[1, 2], 3]", only="strict")                     # R93: 書いた形のまま最後の括りへ
-B2 = B + "fab : [a b] ? [a b]\nfp : [a] ? a\n"
-for src, want in (("5 fl 1 , 2 , 3", "[5, [1, 2, 3]]"), ("5 6 fl 1 , 2 , 3", "[5, 6, [1, 2, 3]]"), ("fab 1 , (2 3)", "[1, [2, 3]]"), ("fab 1 , [2 3]", "[1, [2, 3]]"),
-                  ("[[a b c] ? [a b c]] 1 , 2 , 3", "[1, 2, 3]"), ("p : fl\np 1 , 2 , 3", "[1, 2, 3]")): val(c, B2 + src, want, only="strict")
-val(c, B2 + "fl vs~ , 4", "[[1, 2, 3], 4]", only="strict")                 # R121: G3 は廃止、左から畳む
-val(c, B2 + "fab 1 , 2 3", "[1, [2, 3]]", only="strict"); val(c, B2 + "fp _ , 1 , 2", "1", only="strict")      # R93
+for src in ("f3 1 , 2 , 3", "pb 1 , 2"): warns(c, B + src, "leftover-lambda", only="strict")
+for src in ("fp _ , 1 , 2", "fp 1 _ , 2"): gate(c, B + src, "G5", only="strict")                 # R121・R46: 括りの関数の `_` の穴
+val(c, B + "fl [1 , 2 , 3]", "[1, 2, 3]", only="strict")                                     # R64: 積は括って参照の口へ渡す
 c = law("R67", "仮引数の裸の ~xs は G22(括りの外の前置 ~、残りへの既定値も)。括りの中の [x ~xs] は残りを受ける綴りで当たらない")
 for src in ("gx : a ~y ? a", "gz : ~y ? y", "gv : [a] ~y ? a"): gate(c, src + "\n1", "G22", always=True)
 val(c, "g : [a ~y] ? a\ng 1 2 3", "1", only="strict")
@@ -690,9 +684,10 @@ for src, want in (("[0 ~+ 2 ~ 6] $[i ? i * 2]", "[0, 4, 8, 12]"), ("f : i ? i * 
 openloop(c, "[0 ~+ 1] $f", [0, 1, 2, 3]); openloop(c, "[5 ~+ 0] $f", [5, 5, 5]); openloop(c, "[1 ~* 2] $f", [1, 2, 4, 8]); openloop(c, "[10 ~- 3] $f", [10, 7, 4, 1])
 gate(c, "fe : [a b c] ? $c == $c\nfe 1 2", "G7"); gate_not(c, "fe : [a b c] ? $c == $c\nfe 1 2 3")
 F91 = "fe : [a b c] ? $c == $c\n"                                  # R91 実体の鍵: 長さが書いた時点で分かる物だけ足りない名前が _
-for src in ("fe 1", "fe [2 3]", "fe 1 2 , 3", "vs3 : 1 2\nfe vs3"): gate(c, F91 + src, "G7")
+for src in ("fe 1", "fe [2 3]", "vs3 : 1 2\nfe vs3"): gate(c, F91 + src, "G7")
+val(c, F91 + "fe 1 2 , 3", "3", only="strict")                    # R121: `[fe 1 2] , 3`。`,` の辺の `!_` は消えて 3(R137)。旧 R93 の `fe (1 2 , 3)` の G7 ではない
 for src in ("g1 : [x ~xs] ? fe xs\ng1 [1 2]", "g2 : [~t] ? fe t~\ng2 [1 2]", "g2 : [~t] ? fe t~\ng2 [1 2 3]"): gate_not(c, F91 + src)
-for src in ("fe 1", "fe 1 2", "fe [2 3]", "fe 1 2 , 3", "vs3 : 1 2\nfe vs3"): static(c, F91 + src, "bracket-short")          # 静的側(R91)
+for src in ("fe 1", "fe 1 2", "fe [2 3]", "vs3 : 1 2\nfe vs3"): static(c, F91 + src, "bracket-short")          # 静的側(R91)
 for src in ("fe 1 2 3", "g1 : [x ~xs] ? fe xs\ng1 [1 2]", "g2 : [~t] ? fe t~\ng2 [1 2]"): static(c, F91 + src, "bracket-short", no=True)
 static(c, "fc : [a b c] ? c\nfc 1 2", "bracket-short", no=True)                                                       # `$` で取らない名前は黙る
 P85 = "inc : x ? x + 1\nadd : x y ? x + y\n"
@@ -765,7 +760,7 @@ static(c, IN + "tt : y ? inc 5 !_ 6\ntt 1", "bare-function-return", no=True); st
 static(c, IN + "tt : y ? inc !_\ntt 1", "bare-function-return"); static(c, IN + "tt : y ? add 1 !_ 2\ntt 1", "bare-function-return")
 FB = "fab : [a b] ? [a b]\n"
 static(c, FB + "fab 1 2 , 3", "bracket-excess", no=True); static(c, FB + "fab 1 , 2 3", "bracket-excess", no=True)
-static(c, FB + "fab 1 , 2 , 3", "bracket-excess"); static(c, FB + "fab 1 2 , 3 , 4", "bracket-excess")
+static(c, FB + "fab 1 , 2 , 3", "bracket-excess", no=True); static(c, FB + "fab 1 2 , 3 , 4", "bracket-excess", no=True)      # R121: R66 は廃止。`,` の右は最後の括りへ入らない
 for src in ("inc ~_", "inc [_]", "add _ 3", "(add _ 3) 4", "inc _ 5", "e0 : []\nadd e0~ 3", "add 1 _ 2"): static(c, IN + src, "completeness-axiom", no=True)
 static(c, IN + "inc ~_", "arith-type-mismatch", no=True)
 c = law("R89/積まれた頭", "値の後ろに積まれた頭も、閉じた後ろの口の外の !_ と _ は並びの単位(5 inc 7 !_ 3 は 5 inc 7 3)")
@@ -897,9 +892,9 @@ for e, k in (("tg : g9 ? @g9 vs~", "unknown-input"), ("tb : f ? [@f,] vs", "unkn
 for e, k in (("use : f x ? @f x", "unknown-input"), ("a1 : f ? a2 $f\na2 : h ? 5", "instance-nest-limit"), ("m2 : f x ? m2 f (x - 1)", "instance-nest-limit")): static(c, e, k, no=True)
 c = law("R64/書き込み時の余り", "書いた時点で数が名前より多いと分かる形は information の bracket-excess。~rest・足りる数・構造体は知らせない")
 F = "f : [a b c] ? a\n"; PB = "pb : [a] [b] ? a\n"; I1 = "inc : x ? x + 1\n"
-for e in (F + "f 1 2 3 4", F + "f 1 , 2 , 3 , 4", F + "f [1 2 3 4]", F + "ws : 1 , 2 , 3 , 4\nf ws", F + "f [1 2 3 4]~", F + "f `abcd`", F + "st : `abcd`\nf st",
+for e in (F + "f 1 2 3 4", F + "f [1 , 2 , 3 , 4]", F + "f [1 2 3 4]", F + "ws : 1 , 2 , 3 , 4\nf ws", F + "f [1 2 3 4]~", F + "f `abcd`", F + "st : `abcd`\nf st",
           PB + "pb [1 2 3] [4]", PB + "(pb [1 2 3]) [4]", PB + "pa : pb [1 2 3]\npa [4]", PB + "pb [1] [4 5]", I1 + F + "inc f 1 2 3 4"): static(c, e, "bracket-excess")
-for e in (F + "f 1 2 3", F + "f 1 2", "fabc : [a b ~c] ? a\nfabc 1 2 3 4", PB + "pb [1] [4]"): static(c, e, "bracket-excess", no=True)
+for e in (F + "f 1 2 3", F + "f 1 2", F + "f 1 , 2 , 3 , 4", "fabc : [a b ~c] ? a\nfabc 1 2 3 4", PB + "pb [1] [4]"): static(c, e, "bracket-excess", no=True)
 c = law("既定値の括り", "1行の括りの中の既定値 `[x : 1]`(§3.4・§6.3 の gf・gb)。欠けた要素・書いた `_`・実行時の `_` で既定値が入る")
 for src, want in (("gf : [x : 1] y ? [x y]\ngf [5] 3", "[5, 3]"), ("gf : [x : 1] y ? [x y]\ngf _ 3", "[1, 3]"), ("gb : [x : 1] [y : 2] ? [x y]\ngb [7] [8]", "[7, 8]"),
                   ("gb : [x : 1] [y : 2] ? [x y]\ngb [7] _", "[7, 2]"), ("gb : [x : 1] [y : 2] ? [x y]\ngb _ _", "[1, 2]"), ("gb2 : [x : 1 y : 2] ? [x y]\ngb2 [5]", "[5, 2]"),
