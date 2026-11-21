@@ -6315,6 +6315,7 @@ def strict_rewrite(tree):
       1. `x ' k`・`k @ x` の鍵 k が名前 → `__`(strict は欄の名前で `!_`。R64)
       2. 逆適用 `c f`(値の後ろに関数の名前1つだけ) → `c`(関数は余りで落ちる)
       3. 最後でない行 `c : v` の値 v が `!_` になりうる(呼び出し・比べ・`/` `%` など) → その行から後ろを `(c & v) | (次の行以降)` に(strict は `!_` なら次の行へ進む。R128)
+      5. `a != b`・`a !== b` → `(a == a) & (b == b) & (a != b)`(どちらかが `!_` なら `!_`。既定の道の `!=` は void を「違う」と読む)
       4. 行の左が名前だけ `y : …`(y は仮引数かファイルの値) → 左を `(y | y)` に(条件の行と読ませる。R128)。仮引数でもファイルの定義でもない名前は直せない
     戻り値: (書き換えた木, 直せなかった形の [(番号, 説明, 式の綴り)])"""
     import sign_interp as SI
@@ -6368,6 +6369,16 @@ def strict_rewrite(tree):
             key = unwrap(n[3] if n[1] == "'" else n[2])
             if isinstance(key, tuple) and key and key[0] == "post" and key[1] == "~": key = unwrap(key[2])
             if isinstance(key, tuple) and key and key[0] == "id": return ("id", "__")
+        if k == "bin" and len(n) == 4 and n[1] in ("!=", "!=="):                  # 5. strict: `!_` を含む比べは `!_`(完全性公理)。既定の道では `!=` は void を「違う」と読むので、両辺が値のときだけ比べに進ませる
+            l_, r_ = tr(n[2], params), tr(n[3], params)
+            if not (isinstance(l_, tuple) and l_[0] == "lit" and isinstance(r_, tuple) and r_[0] == "lit"):
+                return ("bin", "&", ("bin", "==", l_, l_), ("bin", "&", ("bin", "==", r_, r_), ("bin", n[1], l_, r_)))
+            return ("bin", n[1], l_, r_)
+        if k == "cmp" and len(n) == 3 and n[2] == ["!="] and len(n[1]) == 2:       # `a != b` は cmp の形で来る
+            l_, r_ = tr(n[1][0], params), tr(n[1][1], params)
+            if not (isinstance(l_, tuple) and l_[0] == "lit" and isinstance(r_, tuple) and r_[0] == "lit"):
+                return ("bin", "&", ("bin", "==", l_, l_), ("bin", "&", ("bin", "==", r_, r_), ("cmp", [l_, r_], ["!="])))
+            return ("cmp", [l_, r_], ["!="])
         if k == "seq" and len(n[1]) == 2:
             h, m = n[1]
             if isinstance(h, tuple) and (h[0] == "lit" or (h[0] == "id" and (h[1] in params or h[1] in vals) and h[1] not in funcs)) \

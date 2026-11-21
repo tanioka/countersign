@@ -26,5 +26,24 @@ for t, want in CASES:
     try: got = ns["run_asm"](sign_asm.generate(tree)) if not rest else ("断り", rest[0][0])
     except Exception as e: got = ("例外", str(e)[:50])
     if sv != want or got != want: bad += 1; print("NG", repr(t), "strict", sv, "asm", got, "のはず", want)
+
+# ---- test_asm.py の整数の表(CASES)を全部、strict の読みと突き合わせる ----
+# 溢れだけは、strict の読み(value_spec V5)が `!_`、asm は documents(integer_overflow.md)どおり罠(wfi)で、仕様どうしの食い違い(OPEN_QUESTIONS)。それ以外は一致する。
+i_ = src.index("MAX, MIN1 = "); j_ = src.index("\n]\n", src.index("CASES = [")) + 3
+exec(src[i_:j_], ns)
+from fixblank import fix
+tally = {"一致": 0, "溢れ(仕様どうしの食い違い)": 0, "strict が断る": 0}
+for name, t in ns["CASES"]:
+    t2 = fix(t)
+    try: sv = strict_val(t2)
+    except Exception: tally["strict が断る"] += 1; continue
+    tree, rest = sign_asm.strict_rewrite(S.parse_source(t2))
+    try: got = ns["run_asm"](sign_asm.generate(tree)) if not rest else ("断り", rest[0][0])
+    except Exception as e: got = ("例外", str(e)[:50])
+    if got == sv: tally["一致"] += 1
+    elif got == ("trap", None) and sv[0] == "ok" and ("溢" in name or "罠" in name): tally["溢れ(仕様どうしの食い違い)"] += 1
+    else: bad += 1; print("NG", name, repr(t), "strict", sv, "asm", got)
+print("整数の表:", tally)
+if tally["一致"] < 150: bad += 1; print("NG 一致が少なすぎる", tally)
 print("全部 ok" if not bad else "NG %d 件" % bad)
 sys.exit(1 if bad else 0)
