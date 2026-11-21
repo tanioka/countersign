@@ -103,13 +103,16 @@ for nm_, call_, want_ in [("字面だけ", "g 5 [1 2 3]\n", (["note"], ["note"],
                           ("名前を渡す(先は字面)", "h : q ?\n\tg q [1]\n\nh 5\n", (["note"], ["note"], False)), ("字面を束ねた名前", "v : 5\n\ng v [1 2]\n", (["note"], ["note"], False)),
                           ("関数を束ねた名前", "add2 : a b ? a + b\n\nv : $add2\n\ng v [1 2 3]\n", (["note"], ["error"], True)), ("2 段の仮引数(先は字面)", "h : q ?\n\tg q [1]\n\nk : r ?\n\th r\n\nk 5\n", (["note"], ["note"], False)),
                           ("2 段の仮引数(先は関数)", "add2 : a b ? a + b\n\nh : q ?\n\tg q [1]\n\nk : r ?\n\th r\n\nk $add2\n", (["note"], ["error"], True)), ("輪の中で仮引数を回す", "h : q n ?\n\tn = 0 : g q [1]\n\th q (n - 1)\n\nh 5 3\n", (["note"], ["note"], False)),
-                          ("途中の定義が呼ばれない", "h : q ?\n\tg q [1]\n", (["note"], ["error"], False))]:
+                          ("途中の定義が呼ばれない", "h : q ?\n\tg q [1]\n", (["note"], ["error"], False)),
+                          ("口が 1 つの関数を渡す", "inc : x ? x + 1\n\ng $inc [1 2 3]\n", (["note"], ["note"], False)), ("口が 1 つの関数を束ねた名前", "inc : x ? x + 1\n\nv : $inc\n\ng v [1 2 3]\n", (["note"], ["note"], False)),
+                          ("口が 1 つの関数と口が 2 つの関数", "inc : x ? x + 1\nadd2 : a b ? a + b\n\ng $inc [1]\ng $add2 [1 2 3]\n", (["note"], ["error"], True))]:
     src_ = G7_BASE + call_
     sv_ = lambda *fl: [r["severity"] for r in js(src_, *fl)[1]["reports"] if r["kind"].startswith("unknown-input")]
     check(f"G7 の重さ(呼び出しを見る): {nm_}", (sv_(), sv_("--strict"), "G7" in strict_run(src_)), want_)
 # G19(`@p xs~`)も同じ: p に字面だけを渡す呼び出しなら note(実行は断らない)、関数(口が 3 つ以上)を渡せば error
 G19_BASE = "add3 : a b c ? a + b + c\n\ng : p xs ?\n\t@p xs~\n\n"
-for nm_, call_, want_ in [("字面", "g 5 [1 2 3]\n", (["note"], ["note"], False)), ("関数(口 3 つ)", "g $add3 [1 2 3]\n", (["note"], ["error"], True)), ("呼び出しが無い", "", (["note"], ["error"], False))]:
+for nm_, call_, want_ in [("字面", "g 5 [1 2 3]\n", (["note"], ["note"], False)), ("関数(口 3 つ)", "g $add3 [1 2 3]\n", (["note"], ["error"], True)), ("呼び出しが無い", "", (["note"], ["error"], False)),
+                          ("関数(口 1 つ)", "inc : x ? x + 1\n\ng $inc [1 2 3]\n", (["note"], ["note"], False)), ("関数(口 2 つ)", "add2 : a b ? a + b\n\ng $add2 [1 2 3]\n", (["note"], ["note"], False))]:
     src_ = G19_BASE + call_
     sv_ = lambda *fl: [r["severity"] for r in js(src_, *fl)[1]["reports"] if r["kind"].startswith("unknown-input")]
     check(f"G19 の重さ(呼び出しを見る): {nm_}", (sv_(), sv_("--strict"), "G19" in strict_run(src_)), want_)

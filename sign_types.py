@@ -637,7 +637,7 @@ class Checker:
         for nm, rhs in self.defs.items():
             if rhs[0] == "lam" and all(sp[0] == "name" for sp in rhs[1]): yield nm, rhs, {sp[1] for sp in rhs[1]}
 
-    def only_plain_calls(self, nm, idx, visiting=frozenset()):
+    def only_plain_calls(self, nm, idx, visiting=frozenset(), max_arity=0):
         """名前 nm の呼び出しが 1 つ以上あり、どの出方も `nm 実引数…` の頭で、idx 番目の実引数が関数でない字面(数・文字列)だけなら True(呼び出しを見るまで知らせを重くしない)。
         実引数が名前のときは先を追う: 字面を束ねたトップレベルの名前なら字面、呼び出しを含む定義 h の仮引数なら、h の呼び出しがその位置に字面だけを渡すかを同じに調べる(輪は新しい物が無いので真)。"""
         key = (nm, idx)
@@ -659,14 +659,20 @@ class Checker:
             for c in n[1:]: walk(c, enc)
         walk(self.nodes, None)
         if not calls or total[0] != len(calls): return False
-        def plain_lit(a): return a[0] == "lit" and isinstance(a[1], (int, float, str)) and not isinstance(a[1], bool)
+        defs1 = {d[1]: d[2] for d in self.nodes if isinstance(d, tuple) and d and d[0] == "def"}
+        def plain_lit(a):
+            if a[0] == "lit": return isinstance(a[1], (int, float, str)) and not isinstance(a[1], bool)
+            if max_arity and a[0] == "addr" and isinstance(a[1], tuple) and a[1][:1] == ("id",):          # `$f`: 口の数が max_arity 以下の素の関数なら、実行は断らない
+                f = defs1.get(a[1][1])
+                return bool(f) and f[0] == "lam" and 1 <= len(f[1]) <= max_arity and all(sp[0] == "name" and (len(sp) < 3 or sp[2] is None) for sp in f[1])
+            return False
         for args, enc in calls:
             if idx >= len(args): return False
             a = args[idx]
             if plain_lit(a): continue
             if a[0] == "id":
                 if enc is not None and a[1] in lamps[enc]:
-                    if not self.only_plain_calls(enc, lamps[enc].index(a[1]), visiting): return False
+                    if not self.only_plain_calls(enc, lamps[enc].index(a[1]), visiting, max_arity): return False
                     continue
                 if enc is None or a[1] not in lamps.get(enc, []):
                     v = vals.get(a[1])
@@ -687,15 +693,15 @@ class Checker:
                     items = n[1]
                     for i, m in enumerate(items):
                         if is_in(m, P) and i == 0 and any(x[0] == "post" and x[1] == "~" for x in items[1:]):
-                            if self.only_plain_calls(nm, [sp[1] for sp in rhs[1]].index(m[1][1])):
-                                self.where = nm; self.note("unknown-input-called", f"G19: {nm} の定義の行で、仮引数 {m[1][1]} の前置 @ に流れ(x~)を当てていますが、{nm} の呼び出しは {m[1][1]} に関数でない字面(数・文字列)だけを渡すので、--strict の実行は断りません")
+                            if self.only_plain_calls(nm, [sp[1] for sp in rhs[1]].index(m[1][1]), max_arity=2):
+                                self.where = nm; self.note("unknown-input-called", f"G19: {nm} の定義の行で、仮引数 {m[1][1]} の前置 @ に流れ(x~)を当てていますが、{nm} の呼び出しは {m[1][1]} に関数でない字面(数・文字列)か口が 2 つ以下の関数だけを渡すので、--strict の実行は断りません")
                             else:
                                 self.where = nm; self.note("unknown-input", f"G19: {nm} の定義の行で、仮引数 {m[1][1]} の前置 @ に流れ(x~)を当てています。印の無い読みでは先の種類が分かりません(R81・Q45)")
                         # R126: G6 は廃止(先の分からない `y @p` は種類の未知な項として値の段が畳む)。ここでは知らせない
                         elif m[0] == "sec" and m[1] == "mapf" and m[3] is not None and m[3][0] == "block" and is_in(m[3][1], P) and i + 1 < len(items):
                             pn = m[3][1][1][1]
-                            if self.only_plain_calls(nm, [sp[1] for sp in rhs[1]].index(pn)):
-                                self.where = nm; self.note("unknown-input-called", f"G7: {nm} の定義の行で、`[@{pn},]` の写像の先は分かりませんが、{nm} の呼び出しは仮引数 {pn} に関数でない字面(数・文字列)だけを渡すので、--strict の実行は断りません(R50「ほかは未知」)")
+                            if self.only_plain_calls(nm, [sp[1] for sp in rhs[1]].index(pn), max_arity=1):
+                                self.where = nm; self.note("unknown-input-called", f"G7: {nm} の定義の行で、`[@{pn},]` の写像の先は分かりませんが、{nm} の呼び出しは仮引数 {pn} に関数でない字面(数・文字列)か口が 1 つの関数だけを渡すので、--strict の実行は断りません(R50)")
                             else:
                                 self.where = nm; self.note("unknown-input", f"G7: {nm} の定義の行で、`[@{pn},]` の写像の先が分かりません(R81)")
                 for c in n[1:]: walk(c)
