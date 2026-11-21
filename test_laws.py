@@ -176,6 +176,8 @@ def open_loop_seen(src, n):
 
 R138_GATES = {"void-written", "empty-written", "name-undefined", "G22"}
 R138_UNMAPPED = []                      # σ で写した源の strict が旧い期待と合わない試験(-v で一覧)
+R138_DEFAULT_CHECKED = []                # strict の比べを省いたうえで、既定のモードの側は比べた試験
+R138_DEFAULT_FAIL = []
 R138_SKIPPED = []                       # 旧綴りの手書き(`!_`・`[]`・未定義の名前)が strict で R138 により断られ、旧い期待を比べられなかった試験
 CUR_LAW = [""]
 
@@ -193,7 +195,11 @@ def check(case):
                     if o_[0] == "gate" and o_[1] in R138_GATES: raise S.Gate(o_[1])
             except S.Gate as e:
                 if str(e).split(":")[0] in R138_GATES or str(e) in R138_GATES:
-                    R138_SKIPPED.append((CUR_LAW[0], s_)); return True, ""
+                    R138_SKIPPED.append((CUR_LAW[0], s_))
+                    if kind in ("val", "err", "same"):          # strict の側だけを省き、既定のモードの側は実際に比べる
+                        ok_, why_ = check1((kind, a, b, dict(kw, only="default")))
+                        (R138_DEFAULT_CHECKED if ok_ else R138_DEFAULT_FAIL).append((CUR_LAW[0], why_))      # 食い違いは失敗にせず数える(期待が strict の綴りで書かれた物が混じる)
+                    return True, ""
             except Exception: pass
     ok, why = check1(case)
     if not ok and not NOSIGMA and not CUR_LAW[0].startswith("R138") and kind in ("val", "err", "same", "gate", "gate_not", "warns", "agree", "static"):
@@ -1284,11 +1290,15 @@ def main(argv):
             elif verbose: print(f"    ok  {case[1]!r}")
         print(f"{'NG' if fails else 'ok'}  {lid:14} {title}  ({len(cases) - len(fails)}/{len(cases)})")
         for w in fails: print("      -", w)
-    if R138_SKIPPED: print(f"\n(R138 により strict で断られる旧綴りの手書きを含み、strict の比べを省いた試験: {len(R138_SKIPPED)} 件。既定のモードの側は比べている)")
+    if R138_SKIPPED:
+        _n = len(R138_SKIPPED); _ok = len(R138_DEFAULT_CHECKED); _ng = len(R138_DEFAULT_FAIL)
+        print(f"\n(R138 により strict で断られる旧綴りの手書きを含み、strict の比べを省いた試験: {_n} 件。そのうち既定のモードの側を比べられる形(val・err・same)は {_ok + _ng} 件で、一致 {_ok} 件・食い違い {_ng} 件。残りは strict でだけ意味がある形で、どちらのモードも比べていない)")
     if R138_UNMAPPED:
         print(f"(旧綴りの源を σ で写した strict の側が旧い期待と合わず、数えなかった試験: {len(R138_UNMAPPED)} 件。-v で一覧)")
         if verbose:
             for l_, w_ in R138_UNMAPPED: print("   ~", l_, w_[:200])
+    _sk = len(R138_SKIPPED); _um = len(R138_UNMAPPED)
+    print(f"\n内訳: 全 {total} 件 = 両モードを比べた {total - bad - _sk - _um} 件 + strict を省いた {_sk} 件 + strict が旧い期待と合わず数えなかった {_um} 件(省いた件と数えなかった件は『通った』に含む)" if (_sk or _um) else "")
     print(f"\n{total - bad}/{total} 通った" + ("" if not bad else f"、{bad} 件 食い違い"))
     return 1 if bad else 0
 
