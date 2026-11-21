@@ -69,5 +69,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: AArch64 のリンカ(ld.lld。ELF を作る試験が使う。clang は runner に入っている)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lld
       - name: ${{ matrix.test }}
         run: python3 "${{ matrix.test }}"

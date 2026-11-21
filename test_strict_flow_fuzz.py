@@ -1,7 +1,7 @@
 """--asm --strict の部分適用(R83・R84)の乱数試験: `!_` になりうる実引数の呼びの前後に値を並べた小さな関数を作り、strict の値と asm の値を突き合わせる。
 断るのは許す(断りは違う答えより良い)。使い方: python3 test_strict_flow_fuzz.py [種 [件数]]"""
-import sys, random, io
-HERE="/home/claude/countersign"; sys.path.insert(0,HERE); sys.setrecursionlimit(20000)
+import sys, os, random, io
+HERE=os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0,HERE); sys.setrecursionlimit(20000)
 src=open(HERE+"/test_asm.py",encoding="utf-8").read()
 ns={"__file__":HERE+"/test_asm.py","__name__":"emu"}
 exec(compile(src[:src.index("# ---------------- 処理系の答え")],"emu","exec"),ns)

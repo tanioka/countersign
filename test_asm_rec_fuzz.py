@@ -1,7 +1,7 @@
 """--asm と --asm --strict の再帰(自分・輪)の乱数試験: `xs ' 1~` を `~` で撒きながら食う関数(底の行・前後に字面や要素)を作り、処理系(strict)の値と asm の値を突き合わせる。
 断るのは許す(断りは違う答えより良い)。使い方: python3 test_asm_rec_fuzz.py [種 [件数]]"""
-import sys, random, io
-HERE="/home/claude/countersign"; sys.path.insert(0,HERE); sys.setrecursionlimit(20000)
+import sys, os, random, io
+HERE=os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0,HERE); sys.setrecursionlimit(20000)
 src=open(HERE+"/test_asm.py",encoding="utf-8").read()
 ns={"__file__":HERE+"/test_asm.py","__name__":"emu"}
 exec(compile(src[:src.index("# ---------------- 処理系の答え")],"emu","exec"),ns)

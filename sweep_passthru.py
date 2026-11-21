@@ -1,7 +1,7 @@
 import sys, random, subprocess, tempfile, os, re
-sys.path.insert(0,'/mnt/user-data/outputs')
-src=open('/mnt/user-data/outputs/test_asm.py',encoding='utf-8').read()
-ns={'__file__':'/mnt/user-data/outputs/test_asm.py','__name__':'emu'}
+HERE=os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0,HERE)
+src=open(os.path.join(HERE,'test_asm.py'),encoding='utf-8').read()
+ns={'__file__':os.path.join(HERE,'test_asm.py'),'__name__':'emu'}
 exec(compile(src[:src.index('# ---------------- 処理系の答え')],'emu','exec'),ns)
 import sign_asm, sign_interp
 T=[
@@ -21,7 +21,7 @@ for t in T:
         k=" ".join(str(random.randint(1,9)) for _ in range(random.randint(1,3)))
         txt=t.format(xs="("+xs+" 7)",ys=ys,acc=acc,k=k,c="x"*random.randint(1,2),t="z"*random.randint(0,8),**{}) if "{t}" in t or "{c}" in t else t.format(xs="("+xs+" 7)",ys=ys,acc=acc,k=k)
         d=tempfile.mkdtemp(); p=os.path.join(d,'t.sn'); open(p,'w').write(txt)
-        want=subprocess.run([sys.executable,'/mnt/user-data/outputs/sign.py',p],capture_output=True,text=True).stdout
+        want=subprocess.run([sys.executable,os.path.join(HERE,'sign.py'),p],capture_output=True,text=True).stdout
         try: asm=sign_asm.generate(sign_interp.parse_source(txt),'linux')
         except sign_asm.AsmError as e: refused+=1; continue
         try: got=ns['run_asm'](asm,linux=True)[1]
