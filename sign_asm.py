@@ -5615,8 +5615,13 @@ class Program:
         return t[1] < lb
 
     def strict_call_check(self):
-        """--strict(STRICT[0])のとき、規則 6 の続き: 実引数に添字 `p ' e` を含む関数の呼びで、その実引数が必ず値になるとは言えない(self.maybe)ものを断る。
-        範囲内と証明できた添字(idx_ok)は値になるので、strict も asm も同じ答え。単独の呼びで引数がちょうど足りるなら、strict も asm も呼び全体が `!_`(R83・R84)なので断らない。"""
+        """--strict(STRICT[0])のとき、規則 6: 実引数が計算で `!_` になりうる関数の呼びを調べる。strict は `!_` の実引数が流れから消えて関数が余る(部分適用の値。R83・R84)。
+        asm(既定の読み)は呼び全体が `!_`。両者が分かれるのは、余った関数が後ろの値を受け取るとき(`(g v) 7`・`x (g v) y`・他の関数の実引数・`,` の辺)だけで、
+        その呼びが『何も続かない末尾』にあれば、余った関数は消えて `!_` になるので同じ答え(引数がちょうど足りる呼びの場合)。
+        1. 実引数が `!_` になりうる(syntactic: 比べ・`& | ;`・`/ %`・書いた `__`。添字は範囲内の証明 idx_ok・末尾の切り出しは tail_nonvoid で言えなければ)呼びを「漏らす呼び」とする。
+           引数の数が仮引数の数と違う呼びは断る(strict は引数がずれて別の関数の読みになる)。
+        2. 関数 D の本体の末尾に漏らす呼びがあれば、D も余った関数を返しうる(D の呼びも漏らす呼び)。不動点まで。
+        3. 漏らす呼びが末尾(定義の本体の末尾・最上位の式の末尾。`&` `|` の右・括り・並びの最後・枝の値は引き継ぐ)にないものは断る(StrictRefusal)。"""
         if not STRICT[0]: return
         def unwrap(n):
             while isinstance(n, tuple) and n and n[0] == "block": n = n[1]
@@ -5631,61 +5636,109 @@ class Program:
                     if isinstance(y, tuple): stack.append(y)
                     elif isinstance(y, list): stack.extend(z for z in y if isinstance(z, tuple))
             return False
-        heads = set()
-        def mark(n):
+        def syn_void(n):
+            stack = [n]
+            while stack:
+                x = stack.pop()
+                if not isinstance(x, tuple) or not x or x[0] == "lam": continue
+                if x[0] == "hole" or (x[0] == "not" and x[1] == ("hole",)) or x == ("id", "__"): return True
+                if x[0] == "cmp": return True
+                if x[0] == "bin" and len(x) == 4:
+                    if x[1] in ("&", "|", ";"): return True
+                    if x[1] in ("/", "%") and not (x[3][0] == "lit" and x[3][1] != 0): return True
+                for y in x[1:]:
+                    if isinstance(y, tuple): stack.append(y)
+                    elif isinstance(y, list): stack.extend(z for z in y if isinstance(z, tuple))
+            return False
+        def idx_void(mm):
+            """添字を含む実引数が `!_` になりうるか(範囲内と言えない添字・入れ子の要素の添字を含むなら True)"""
+            try:
+                if self.maybe(mm) and not self.tail_nonvoid(mm): return True
+                stack = [mm]
+                while stack:
+                    x = stack.pop()
+                    if not isinstance(x, tuple) or not x or x[0] == "lam": continue
+                    if x[0] == "bin" and len(x) == 4 and x[1] == "'":
+                        lx = self.strip(x[2])
+                        if (isinstance(lx, tuple) and lx and lx[0] == "bin" and len(lx) == 4 and lx[1] == "'") or (self.maybe(x) and not self.tail_nonvoid(x)): return True
+                    for y in x[1:]:
+                        if isinstance(y, tuple): stack.append(y)
+                        elif isinstance(y, list): stack.extend(z for z in y if isinstance(z, tuple))
+                return False
+            except Exception: return True
+        def arg_void(m):
+            mm = unwrap(m)
+            if not (isinstance(mm, tuple) and mm): return False
+            if mm[0] == "seq" and len(mm[1]) >= 2 and not is_call(mm, ()): return False      # 流れ(`acc~ x`)は丸ごとは `!_` でない。要素の `!_` は elem_void が見る
+            return syn_void(mm) or (has_idx(mm) and idx_void(mm))
+        import sign_interp as SI
+        def src(n):
+            try: return SI.node_src(n)[:70]
+            except Exception: return repr(n)[:70]
+        def elem_void(n, params):
+            stack = [n]
+            while stack:
+                x = stack.pop()
+                if not isinstance(x, tuple) or not x or x[0] == "lam": continue
+                if x[0] == "seq" and len(x[1]) >= 2 and not (isinstance(x[1][0], tuple) and x[1][0][0] == "id" and x[1][0][1] in self.fns and x[1][0][1] not in params):
+                    if any(arg_void(it) for it in x[1]): return True
+                for y in x[1:]:
+                    if isinstance(y, tuple): stack.append(y)
+                    elif isinstance(y, list): stack.extend(z for z in y if isinstance(z, tuple))
+            return False
+        calls = []                        # (呼びの節, 末尾か, 属する定義の名前か None, 漏らすか(実引数が void になりうる), 数が合うか)
+        def is_call(n, params):
+            return n[0] == "seq" and len(n[1]) >= 2 and isinstance(n[1][0], tuple) and n[1][0][0] == "id" and n[1][0][1] in self.fns and n[1][0][1] not in params
+        def walk(n, params, tail, owner):
             if not isinstance(n, tuple) or not n: return
-            if n[0] == "seq" and len(n[1]) >= 2:
-                h = n[1][0]
-                if isinstance(h, tuple) and h and h[0] == "block":
-                    u = unwrap(h)
-                    if isinstance(u, tuple) and u and u[0] == "seq": heads.add(id(u))
-            for y in n[1:]:
-                if isinstance(y, tuple): mark(y)
-                elif isinstance(y, list):
-                    for z in y:
-                        if isinstance(z, tuple): mark(z)
-        for n in self.nodes: mark(n)
-        def walk(n, params):
-            if not isinstance(n, tuple) or not n: return
-            if n[0] == "lam":
+            k = n[0]
+            if k == "lam":
                 ps = set(params) | {q[1] for q in n[1] if isinstance(q, tuple) and len(q) > 1 and isinstance(q[1], str)}
-                walk(n[2], ps); return
-            if n[0] == "seq" and len(n[1]) >= 2 and isinstance(n[1][0], tuple) and n[1][0][0] == "id" and n[1][0][1] in self.fns and n[1][0][1] not in params:
-                f = n[1][0][1]; args = n[1][1:]
-                for j, m in enumerate(args):
-                    mm = unwrap(m)
-                    if isinstance(mm, tuple) and has_idx(mm):
-                        try:
-                            mv = self.maybe(mm) and not self.tail_nonvoid(mm)
-                            if not mv:                                  # 入れ子の中の添字(`acc~ ((m ' i) ' 0)` の `(m ' i) ' 0` など)も、範囲内と言えなければ void の要素が出うる
-                                stack = [mm]
-                                while stack and not mv:
-                                    x = stack.pop()
-                                    if not isinstance(x, tuple) or not x or x[0] == "lam": continue
-                                    if x == ("id", "__"): mv = True                    # 書いた `__`(strict が名前の鍵を `__` に直した所も)
-                                    if x[0] == "bin" and len(x) == 4 and x[1] == "'":
-                                        lx = self.strip(x[2])
-                                        if (isinstance(lx, tuple) and lx and lx[0] == "bin" and len(lx) == 4 and lx[1] == "'") or (self.maybe(x) and not self.tail_nonvoid(x)): mv = True       # 入れ子の要素の添字 `(m ' i) ' 0` は、内側の器が空なら void(解析が言い切れない形)なので断る
-                                    for y in x[1:]:
-                                        if isinstance(y, tuple): stack.append(y)
-                                        elif isinstance(y, list): stack.extend(z for z in y if isinstance(z, tuple))
-                        except Exception: mv = True
-                        if not mv: continue
-                        if j == len(args) - 1 and len(self.fns[f]) == len(args) and id(n) not in heads and mm[0] == "bin" and mm[1] == "'": continue      # 実引数が丸ごと `!_` の単独の呼びだけ(`acc~ (… ' 0)` のように、void が要素として入る形は流れが変わるので断る)
-                        import sign_interp as SI
-                        try: sp = SI.node_src(n)
-                        except Exception: sp = repr(n)[:60]
-                        raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が範囲内と言えない添字を含む呼び `%s …`(範囲外なら strict はその実引数が消えて関数が余る。asm は呼び全体が `!_`。R83・R84)\n      %s" % (f, sp[:70]))
+                walk(n[2], ps, True, owner); return
+            if k == "block": walk(n[1], params, tail, owner); return
+            if k == "seq":
+                if is_call(n, params):
+                    f = n[1][0][1]; args = n[1][1:]
+                    voids = [j for j, m in enumerate(args) if arg_void(m)]
+                    for j, m in enumerate(args):                 # 実引数の流れの要素が `!_` になりうる(`acc~ (… ' 0)`)。strict は積まれずに消え、asm は印を要素に残す(質問書 A6)
+                        if j not in voids and elem_void(unwrap(m), params):
+                            raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数の並びの要素が `!_` になりうる呼び `%s …`(strict はその要素が消える。asm は `!_` の印を要素に残す。質問書 A6)\n      %s" % (f, src(n)))
+                    calls.append((n, tail, owner, f, bool(voids), len(args) == len(self.fns[f])))
+                    for m in args: walk(m, params, False, owner)
+                    return
+                its = n[1]
+                for j, x in enumerate(its): walk(x, params, tail and j == len(its) - 1, owner)
+                return
+            if k == "cases":
+                for c, e in n[1]:
+                    if c is not None: walk(c, params, False, owner)
+                    walk(e, params, tail, owner)
+                return
+            if k == "bin" and len(n) == 4 and n[1] in ("&", "|"):
+                walk(n[2], params, False, owner); walk(n[3], params, tail, owner); return
+            if k == "post" and n[1] == "~": walk(n[2], params, tail, owner); return          # `(g …)~`: 展開しても、余った関数の後ろには何も続かない
             for y in n[1:]:
-                if isinstance(y, tuple): walk(y, params)
+                if isinstance(y, tuple): walk(y, params, False, owner)
                 elif isinstance(y, list):
                     for z in y:
                         if isinstance(z, tuple):
-                            if len(z) == 2 and n[0] == "cases": walk(z[0], params); walk(z[1], params)
-                            else: walk(z, params)
+                            if len(z) == 2 and k == "cases": walk(z[0], params, False, owner); walk(z[1], params, tail, owner)
+                            else: walk(z, params, False, owner)
         for n in self.nodes:
-            if n[0] == "def": walk(n[2], set())
-            else: walk(n, set())
+            if n[0] == "def" and isinstance(n[2], tuple) and n[2][0] == "lam": walk(n[2], set(), True, n[1])
+            elif n[0] == "def": walk(n[2], set(), False, None)
+            else: walk(n, set(), True, None)
+        leaky = set()                     # 余った関数を返しうる関数
+        changed = True
+        while changed:
+            changed = False
+            for (n, tail, owner, f, voidarg, fit) in calls:
+                if tail and owner is not None and owner not in leaky and ((voidarg and fit) or f in leaky): leaky.add(owner); changed = True
+        for (n, tail, owner, f, voidarg, fit) in calls:
+            if voidarg and not fit:
+                raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が `!_` になりうる呼び `%s …` で、引数の数が仮引数の数と違う(strict は `!_` の実引数が消えて引数がずれる。R83・R84)\n      %s" % (f, src(n)))
+            if (voidarg or f in leaky) and not tail:
+                raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が `!_` になりうる呼び `%s …`(か、そうなりうる関数の呼び)が、末尾でない所にある(strict は余った関数が後ろの値を受け取る。asm は呼び全体が `!_`。R83・R84)\n      %s" % (f, src(n)))
 
     def generate(self, target="bare", source=None):
         self.target = target
@@ -6355,7 +6408,7 @@ def strict_divergences(tree):
          静的に見えるのは `/`・`%`(割る数が 0 でない字面のときを除く)・比べ・`&`・`|`・`;`・書いた `__` を値に含む形だけ(呼び出しの答えまでは見ない)
       4. 本体の行の左が名前だけの `y : 2`(strict は条件の行、既定は局所の定義。R128)
       5. 順序の比べの畳み `[>]`・`[<]`・`[>=]`・`[<=]`(strict は偽でも右の数を返す)。実引数が 2 つ以上で字面の整数・名前だけの形は strict_rewrite が最大・最小に書き直すので断らない(`_fold_minmax`)。器 1 個の畳み `[>] xs`・計算を含む実引数・名前に束ねた `[>]` は断る
-      6. 計算で `!_` になりうる実引数を持つ、関数の呼び(strict は実引数が消えて関数が余る。asm は呼び全体が `!_`)。字面の形で言えるもの(比べ・`& | ;`・`/ %`・書いた `__`)はここで、添字を含む実引数は、コード生成の終わり(`Program.strict_call_check`)で、範囲内の証明(`idx_ok`・末尾の切り出しは `tail_nonvoid`)を使って調べ、言えないものだけ断る(`StrictRefusal`)
+      6. 計算で `!_` になりうる実引数を持つ、関数の呼び(strict は実引数が消えて関数が余る。asm は呼び全体が `!_`)。木の段ではなく、コード生成の終わり(`Program.strict_call_check`)で、末尾の位置・余った関数を返しうる関数の不動点・範囲内の証明を使って調べる(`StrictRefusal`)
     戻り値: [(番号, 説明, 式の綴り)]"""
     import sign_interp as SI
     found = []; handled = set()
@@ -6418,14 +6471,6 @@ def strict_divergences(tree):
             key = unwrap(n[3] if n[1] == "'" else n[2])
             if isinstance(key, tuple) and key and key[0] == "post" and key[1] == "~": key = unwrap(key[2])
             if isinstance(key, tuple) and key and key[0] == "id": found.append((1, "`' ` の鍵が名前 `%s`(strict は欄の名前で `!_`、既定は名前の値で引く。仕様 R64)" % key[1], src(n)))
-        if k == "seq" and len(n[1]) >= 2 and isinstance(n[1][0], tuple) and n[1][0][0] == "id" and n[1][0][1] in funcs and n[1][0][1] not in params:
-            ar = arity.get(n[1][0][1]); args = n[1][1:]; in_head = id(n) in head_ids
-            for j, m in enumerate(args):                         # 6. 計算で `!_` になりうる実引数(R83・R84: 計算の `!_` はその口の単位で、流れから消える。strict は関数が余り、続く実引数を取る。既定・asm は `!_` を受けた呼びを `!_` にする)
-                mm = unwrap(m)
-                if isinstance(mm, tuple) and maybe_void(mm):
-                    if j == len(args) - 1 and ar == len(args) and not in_head:   # 取り戻し: 単独の呼びで引数がちょうど足りる → strict も asm も `!_`(R83・R84)
-                        continue
-                    found.append((6, "実引数が計算で `!_` になりうる呼び `%s …`(strict はその実引数が消えて関数が余る。asm は呼び全体が `!_`。R83・R84)" % n[1][0][1], src(n))); break
         if k == "seq" and _fold_minmax(n) is not None: handled.add(id(n[1][0]))      # 5. strict_rewrite が最大・最小に書き直す形
         if k == "sec" and len(n) >= 3 and n[1] == "fold" and n[2] in (">", "<", ">=", "<=") and id(n) not in handled:
             found.append((5, "順序の比べの畳み `[%s]`(strict は偽でも右の数を返す `[>] 3 5` が 5。既定は `!_`)" % n[2], src(n)))
