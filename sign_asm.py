@@ -6240,6 +6240,23 @@ USAGE = """使い方: python3 sign.py --asm 〈プログラム.sn〉 [--target=b
 
 
 STRICT = [False]
+def _fold_minmax(n):
+    """--strict --asm: 順序の比べの畳み `[>] a b …`(`[>=]` は max、`[<]`・`[<=]` は min。sign_interp.fold_cmp)を、
+    `((a op b) | b) op c) | c …` に書き直す(`a op b` は成り立てば a、外れれば `!_`。`|` は `!_` なら右)。
+    実引数が 2 つ以上で、全部が字面の整数・名前(2 度書くので、計算を含む形は対象外)のときだけ。当たらなければ None"""
+    if not (isinstance(n, tuple) and n and n[0] == "seq" and len(n[1]) >= 3): return None
+    h = n[1][0]
+    if not (isinstance(h, tuple) and h[0] == "sec" and len(h) >= 4 and h[1] == "fold" and h[2] in (">", "<", ">=", "<=") and h[3] is None and not (len(h) > 4 and h[4])): return None
+    def simple(a):
+        while isinstance(a, tuple) and a and a[0] == "block": a = a[1]
+        if isinstance(a, tuple) and a and a[0] == "neg": a = a[1]
+        return isinstance(a, tuple) and a and (a[0] == "id" or (a[0] == "lit" and isinstance(a[1], int) and not isinstance(a[1], bool)))
+    args = n[1][1:]
+    if not all(simple(a) for a in args): return None
+    e = args[0]
+    for x in args[1:]: e = ("bin", "|", ("cmp", [e, x], [h[2]]), x)
+    return ("block", e)
+
 def strict_divergences(tree):
     """--strict --asm(2026-11-18): コンパイラは既定の読みで解く。--strict(仕様の読み)と答えが分かれる次の6つの形に当たったら、出さずに名指しで断る。
       1. `x ' k` の鍵 k が名前(strict は欄の名前で `!_`、既定は名前の値で引く。仕様 R64)
@@ -6247,11 +6264,11 @@ def strict_divergences(tree):
       3. 最後でない行の値が `!_` になりうる形(strict は消えて次の行へ進み、既定はその `!_` を返して止まる。R128)。
          静的に見えるのは `/`・`%`(割る数が 0 でない字面のときを除く)・比べ・`&`・`|`・`;`・書いた `__` を値に含む形だけ(呼び出しの答えまでは見ない)
       4. 本体の行の左が名前だけの `y : 2`(strict は条件の行、既定は局所の定義。R128)
-      5. 順序の比べの畳み `[>]`・`[<]`・`[>=]`・`[<=]`(strict は偽でも右の数を返す)
+      5. 順序の比べの畳み `[>]`・`[<]`・`[>=]`・`[<=]`(strict は偽でも右の数を返す)。実引数が 2 つ以上で字面の整数・名前だけの形は strict_rewrite が最大・最小に書き直すので断らない(`_fold_minmax`)。器 1 個の畳み `[>] xs`・計算を含む実引数・名前に束ねた `[>]` は断る
       6. 計算で `!_` になりうる実引数を持つ、関数の呼び(strict は実引数が消えて関数が余る。asm は呼び全体が `!_`)
     戻り値: [(番号, 説明, 式の綴り)]"""
     import sign_interp as SI
-    found = []
+    found = []; handled = set()
     funcs = {n[1] for n in tree if isinstance(n, tuple) and n and n[0] == "def" and isinstance(n[2], tuple) and n[2][0] == "lam"}
     vals = {n[1] for n in tree if isinstance(n, tuple) and n and n[0] == "def" and not (isinstance(n[2], tuple) and n[2][0] == "lam")}
     def src(n):
@@ -6319,7 +6336,8 @@ def strict_divergences(tree):
                     if j == len(args) - 1 and ar == len(args) and not in_head:   # 取り戻し: 単独の呼びで引数がちょうど足りる → strict も asm も `!_`(R83・R84)
                         continue
                     found.append((6, "実引数が計算で `!_` になりうる呼び `%s …`(strict はその実引数が消えて関数が余る。asm は呼び全体が `!_`。R83・R84)" % n[1][0][1], src(n))); break
-        if k == "sec" and len(n) >= 3 and n[1] == "fold" and n[2] in (">", "<", ">=", "<="):
+        if k == "seq" and _fold_minmax(n) is not None: handled.add(id(n[1][0]))      # 5. strict_rewrite が最大・最小に書き直す形
+        if k == "sec" and len(n) >= 3 and n[1] == "fold" and n[2] in (">", "<", ">=", "<=") and id(n) not in handled:
             found.append((5, "順序の比べの畳み `[%s]`(strict は偽でも右の数を返す `[>] 3 5` が 5。既定は `!_`)" % n[2], src(n)))
         if k == "seq" and len(n[1]) >= 2:
             h = n[1][0]
@@ -6353,6 +6371,7 @@ def strict_rewrite(tree):
       1. `x ' k`・`k @ x` の鍵 k が名前 → `__`(strict は欄の名前で `!_`。R64)
       2. 逆適用 `c f`(値の後ろに関数の名前1つだけ) → `c`(関数は余りで落ちる)
       3. 最後でない行 `c : v` の値 v が `!_` になりうる(呼び出し・比べ・`/` `%` など) → その行から後ろを `(c & v) | (次の行以降)` に(strict は `!_` なら次の行へ進む。R128)
+      6. 順序の比べの畳み `[>] a b …`(実引数 2 つ以上、字面の整数か名前だけ)→ `((a op b) | b) op c) | c …`(strict は max/min。`a op b` は成り立てば a、外れれば `!_`)
       5. `a != b`・`a !== b` → `(a == a) & (b == b) & (a != b)`(どちらかが `!_` なら `!_`。既定の道の `!=` は void を「違う」と読む)
       4. 行の左が名前だけ `y : …`(y は仮引数かファイルの値) → 左を `(y | y)` に(条件の行と読ませる。R128)。仮引数でもファイルの定義でもない名前は直せない
     戻り値: (書き換えた木, 直せなかった形の [(番号, 説明, 式の綴り)])"""
@@ -6417,6 +6436,7 @@ def strict_rewrite(tree):
             if not (isinstance(l_, tuple) and l_[0] == "lit" and isinstance(r_, tuple) and r_[0] == "lit"):
                 return ("bin", "&", ("bin", "==", l_, l_), ("bin", "&", ("bin", "==", r_, r_), ("cmp", [l_, r_], ["!="])))
             return ("cmp", [l_, r_], ["!="])
+        if k == "seq" and _fold_minmax(n) is not None: return _fold_minmax(n)    # 6. 順序の比べの畳みは最大・最小(`!_` を返さず、strict の値になる)
         if k == "seq" and len(n[1]) == 2:
             h, m = n[1]
             if isinstance(h, tuple) and (h[0] == "lit" or (h[0] == "id" and (h[1] in params or h[1] in vals) and h[1] not in funcs)) \
