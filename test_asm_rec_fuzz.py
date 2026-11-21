@@ -34,9 +34,23 @@ def gen():
     if mutual: d+="\n"+rec("b","a")
     n=random.randint(1,6)
     return d+"\na (%s)\n"%" ".join(lit() for _ in range(n))
+G2="g : x ? x + 1\nk : x y ? x * 2 + y\n"
+def item2():
+    c=random.randint(0,8)
+    return random.choice(["(xs ' 0)",lit(),"(g ((xs ' 0) > %d))"%c,"(k ((xs ' 0) < %d) %s)"%(c,lit()),"(k %s ((xs ' 0) > %d))"%(lit(),c)])
+def gen_mixed():
+    """部分適用の書き換え(`!_` になりうる実引数の呼びの後ろに値)と再帰が、同じ関数に重なる形"""
+    mutual=random.random()<0.4
+    def fn(name, other):
+        its=[item2() for _ in range(random.randint(2,4))]
+        its.insert(random.randint(0,len(its)), "(%s (xs ' 1~))~"%random.choice([name,other]))
+        return "%s : xs ?\n\t%s : (xs ' 0) 9\n\t%s\n"%(name,random.choice(["||xs|| = 1","||xs|| < 2"])," ".join(its))
+    d=fn("a","b" if mutual else "a")
+    if mutual: d+="\n"+fn("b","a")
+    return G2+"\n"+d+"\na (%s)\n"%" ".join(lit() for _ in range(random.randint(1,6)))
 bad=ok=ref=skip=0
 for i in range(int(sys.argv[2]) if len(sys.argv)>2 else 150):
-    t=gen(); sv=sval(t)
+    t=gen() if random.random()<0.5 else gen_mixed(); sv=sval(t)
     if sv is None: skip+=1; continue
     try:
         tree,rest=sign_asm.strict_rewrite(S.parse_source(t))
