@@ -25,6 +25,7 @@ import sign_interp as S
 import sign_types as T
 
 # 型の静的パスの error のうち、既定の道では error にしない物(--strict を付けたときだけ error)。値は根拠:
+#   (G7 の先の分からない `[@p,]` は、呼び出しが p に関数でない字面(数・文字列)だけを渡すなら unknown-input-called(note。--strict でも断らない)。呼び出しが無い・関数や名前を渡す呼び出しがあれば unknown-input(--strict で error))
 #   "run-strict"  既定の道では動き、--strict の実行では本物が断る(実行で確かめた): name-cycle(R80)・unknown-input(G19・G7 のどちらも、既定では動き --strict の実行で断られる例を作って確かめた)
 #   "static-only" 既定の道でも --strict でも本物は断らない(実行で確かめた: suika.sn・小さな例)が、型の静的パスは断る(コンパイル側の判定):
 #                 bare-function-return(G16)・function-return-without-address(execution_model.md §4)・struct-runtime-index・instance-nest-limit

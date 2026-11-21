@@ -95,18 +95,25 @@ for src in ("inc : x ?\n\tx + 1\ng : inc ?\n\tinc\ng 1\n", "g : inc ?\n\tinc\nin
     check("R133 " + src.replace("\n", "|").replace("\t", "")[:40], (sev, "name-shadow" in err and "エラー" not in err), ([("name-shadow", "note")], True))
 rc, j = js("inc : x ?\n\tx\ng : inc ?\n\tinc\n")
 check("--strict なしでは strict の断りは出ない", [r["kind"] for r in j["reports"]], [])
+# 呼び出しを見るまで知らせを重くしない: `[@p,]` の p に、呼び出しが関数でない字面(数・文字列)だけを渡すなら、--strict でも note(実行も断らない。R50「ほかは未知」)。関数や名前を渡す呼び出しが 1 つでもあれば、従来どおり --strict で error
+G7_BASE = "g : p xs ?\n\t[@p,] xs\n\n"
+for nm_, call_, want_ in [("字面だけ", "g 5 [1 2 3]\n", (["note"], ["note"], False)), ("字面が 2 つ", "g 5 [1 2 3]\ng 7 [4]\n", (["note"], ["note"], False)),
+                          ("関数を渡す呼び出し", "add2 : a b ? a + b\n\ng $add2 [1 2 3]\n", (["note"], ["error"], True)), ("字面と関数", "add2 : a b ? a + b\n\ng 5 [1 2 3]\ng $add2 [1]\n", (["note"], ["error"], True)),
+                          ("名前を渡す呼び出し", "add2 : a b ? a + b\n\nh : q ?\n\tg q [1]\n\nh $add2\n", (["note"], ["error"], True)), ("呼び出しが無い", "", (["note"], ["error"], False))]:
+    src_ = G7_BASE + call_
+    sv_ = lambda *fl: [r["severity"] for r in js(src_, *fl)[1]["reports"] if r["kind"].startswith("unknown-input")]
+    check(f"G7 の重さ(呼び出しを見る): {nm_}", (sv_(), sv_("--strict"), "G7" in strict_run(src_)), want_)
 # unknown-input の G6・G19・G7: 既定の実行は断らず、--strict の実行は断る(本物の実行で確かめた)。検査は既定で note・--strict で error
 UI = [("G19", "add3 : a b c ?\n\ta + b + c\ng : p xs ?\n\t@p xs~\ng $add3 [1 2 3]\n"),
       ("G7", "add2 : a b ?\n\ta + b\ng : p xs ?\n\t[@p,] xs\ng $add2 [1 2 3]\n"),
-      ("G7", "g : p xs ?\n\t[@p,] xs\ng 5 [1 2 3]\n", False),      # p が素の数 5: 実行は断らず `!_`(R50「ほかは未知」)。検査は定義の行だけを見て p を知らないので、error は保守的な知らせ
       ]                                                                       # G6 は R126 で廃止(先の分からない `y @p` は断らず、検査も知らせない)
-for key, src_, *run_strict_refuses in UI:
+for key, src_ in UI:
     pth = os.path.join(TMP, "u.sn"); open(pth, "w", encoding="utf-8").write(src_)
     d = subprocess.run([sys.executable, os.path.join(HERE, "sign.py"), pth], capture_output=True, text=True, cwd=HERE, timeout=120)
     st = strict_run(src_)
     sv0 = [r["severity"] for r in js(src_)[1]["reports"] if r["kind"] == "unknown-input"]
     sv1 = [r["severity"] for r in js(src_, "--strict")[1]["reports"] if r["kind"] == "unknown-input"]
-    check(f"unknown-input {key}: 既定の実行は断らず・--strict の実行は断る・検査は note/error", (key in d.stderr, key in st, sv0, sv1), (False, run_strict_refuses[0] if run_strict_refuses else True, ["note"], ["error"]))
+    check(f"unknown-input {key}: 既定の実行は断らず・--strict の実行は断る・検査は note/error", (key in d.stderr, key in st, sv0, sv1), (False, True, ["note"], ["error"]))
 # G19(口が 3 つ以上と分かる最上位の関数に撒く形): 検査と本物の --strict の実行が一致する
 A3 = "add3 : a b c ?\n\ta + b + c\nadd4 : a b c d ?\n\ta + b + c + d\nadd2 : a b ?\n\ta + b\n"
 G19 = [

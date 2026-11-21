@@ -637,6 +637,24 @@ class Checker:
         for nm, rhs in self.defs.items():
             if rhs[0] == "lam" and all(sp[0] == "name" for sp in rhs[1]): yield nm, rhs, {sp[1] for sp in rhs[1]}
 
+    def only_plain_calls(self, nm, idx):
+        """名前 nm の呼び出しが 1 つ以上あり、どの出方も `nm 実引数…` の頭で、idx 番目の実引数が関数でない字面(数・文字列・文字)だけなら True(呼び出しを見るまで知らせを重くしない)。"""
+        heads, total, ok = [0], [0], [True]
+        def walk(n):
+            if isinstance(n, list):
+                for c in n: walk(c)
+                return
+            if not isinstance(n, tuple) or not n: return
+            if n[0] == "id" and len(n) > 1 and n[1] == nm: total[0] += 1
+            if n[0] == "def" and n[1] == nm: return
+            if n[0] == "seq" and n[1] and n[1][0] == ("id", nm):
+                heads[0] += 1; total[0] += 0
+                args = n[1][1:]
+                if idx >= len(args) or args[idx][0] != "lit" or not isinstance(args[idx][1], (int, float, str)) or isinstance(args[idx][1], bool): ok[0] = False
+            for c in n[1:]: walk(c)
+        walk(self.nodes)
+        return ok[0] and heads[0] >= 1 and total[0] == heads[0]
+
     def plain_pass(self):
         def is_in(m, P): return m[0] == "input" and m[1][0] == "id" and m[1][1] in P
         for nm, rhs, P in self.plain_lams():
@@ -653,7 +671,11 @@ class Checker:
                             self.where = nm; self.note("unknown-input", f"G19: {nm} の定義の行で、仮引数 {m[1][1]} の前置 @ に流れ(x~)を当てています。印の無い読みでは先の種類が分かりません(R81・Q45)")
                         # R126: G6 は廃止(先の分からない `y @p` は種類の未知な項として値の段が畳む)。ここでは知らせない
                         elif m[0] == "sec" and m[1] == "mapf" and m[3] is not None and m[3][0] == "block" and is_in(m[3][1], P) and i + 1 < len(items):
-                            self.where = nm; self.note("unknown-input", f"G7: {nm} の定義の行で、`[@{m[3][1][1][1]},]` の写像の先が分かりません(R81)")
+                            pn = m[3][1][1][1]
+                            if self.only_plain_calls(nm, [sp[1] for sp in rhs[1]].index(pn)):
+                                self.where = nm; self.note("unknown-input-called", f"G7: {nm} の定義の行で、`[@{pn},]` の写像の先は分かりませんが、{nm} の呼び出しは仮引数 {pn} に関数でない字面(数・文字列)だけを渡すので、--strict の実行は断りません(R50「ほかは未知」)")
+                            else:
+                                self.where = nm; self.note("unknown-input", f"G7: {nm} の定義の行で、`[@{pn},]` の写像の先が分かりません(R81)")
                 for c in n[1:]: walk(c)
             walk(rhs[2])
         return self
