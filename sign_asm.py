@@ -6260,6 +6260,21 @@ def strict_divergences(tree):
     def unwrap(n):
         while isinstance(n, tuple) and n and n[0] == "block": n = n[1]
         return n
+    arity = {n[1]: len(n[2][1]) for n in tree if isinstance(n, tuple) and n and n[0] == "def" and isinstance(n[2], tuple) and n[2][0] == "lam"}
+    head_ids = set()                                             # 後ろに実引数が続く式の頭にある、かっこの中の呼び
+    def mark(n):
+        if not isinstance(n, tuple) or not n: return
+        if n[0] == "seq" and len(n[1]) >= 2:
+            h = n[1][0]
+            if isinstance(h, tuple) and h and h[0] == "block":
+                u = unwrap(h)
+                if isinstance(u, tuple) and u and u[0] == "seq": head_ids.add(id(u))
+        for y in n[1:]:
+            if isinstance(y, tuple): mark(y)
+            elif isinstance(y, list):
+                for z in y:
+                    if isinstance(z, tuple): mark(z)
+    for n in tree: mark(n)
     def maybe_void(n):
         stack = [n]
         while stack:
@@ -6297,9 +6312,12 @@ def strict_divergences(tree):
             if isinstance(key, tuple) and key and key[0] == "post" and key[1] == "~": key = unwrap(key[2])
             if isinstance(key, tuple) and key and key[0] == "id": found.append((1, "`' ` の鍵が名前 `%s`(strict は欄の名前で `!_`、既定は名前の値で引く。仕様 R64)" % key[1], src(n)))
         if k == "seq" and len(n[1]) >= 2 and isinstance(n[1][0], tuple) and n[1][0][0] == "id" and n[1][0][1] in funcs and n[1][0][1] not in params:
-            for m in n[1][1:]:                                   # 6. 計算で `!_` になりうる実引数(R83・R84: 計算の `!_` はその口の単位で、流れから消える。strict は関数が余り、続く実引数を取る。既定・asm は `!_` を受けた呼びを `!_` にする)
+            ar = arity.get(n[1][0][1]); args = n[1][1:]; in_head = id(n) in head_ids
+            for j, m in enumerate(args):                         # 6. 計算で `!_` になりうる実引数(R83・R84: 計算の `!_` はその口の単位で、流れから消える。strict は関数が余り、続く実引数を取る。既定・asm は `!_` を受けた呼びを `!_` にする)
                 mm = unwrap(m)
                 if isinstance(mm, tuple) and (maybe_void(mm) or has_index(mm)):
+                    if j == len(args) - 1 and ar == len(args) and not in_head:   # 取り戻し: 単独の呼びで引数がちょうど足りる → strict も asm も `!_`(R83・R84)
+                        continue
                     found.append((6, "実引数が計算で `!_` になりうる呼び `%s …`(strict はその実引数が消えて関数が余る。asm は呼び全体が `!_`。R83・R84)" % n[1][0][1], src(n))); break
         if k == "sec" and len(n) >= 3 and n[1] == "fold" and n[2] in (">", "<", ">=", "<="):
             found.append((5, "順序の比べの畳み `[%s]`(strict は偽でも右の数を返す `[>] 3 5` が 5。既定は `!_`)" % n[2], src(n)))
