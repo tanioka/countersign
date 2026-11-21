@@ -197,12 +197,14 @@ def check(case):
             except S.Gate as e:
                 if str(e).split(":")[0] in R138_GATES or str(e) in R138_GATES:
                     R138_SKIPPED.append((CUR_LAW[0], s_, str(e).split(":")[0]))
-                    if kind in ("val", "same") and kw.get("only") != "default" and "[]" in "".join(x for x in ([a] + ([b] if kind == "same" else [])) if isinstance(x, str)):
-                        try:        # 空の List の手書き `[]` は計算で生まれる void `(1 < 0)` に写して strict の側も比べる(R138 の綴り)
-                            _tw = lambda t_: _re.sub(r"(?<![\w\]\)])\[\]", "(1 < 0)", t_)
-                            o1_ = outcome(_tw(a), True, kw.get("prelude", True))
-                            o2_ = outcome(_tw(b), True, kw.get("prelude", True)) if kind == "same" else ("val", b)
-                            if o1_[0] == "val" and (o1_ == o2_ or o1_[1] == sigma_want(b) if kind == "val" else o1_ == o2_): R138_TWIN.append(CUR_LAW[0])
+                    _txt = "".join(x for x in (srcs + [kw.get("pre", "")]) if isinstance(x, str))
+                    if kw.get("only") != "default" and "[]" in _txt:
+                        try:        # 空の List の手書き `[]` は計算で生まれる void `(1 < 0)` に写して strict の側も比べる(R138 の綴り)。値・同値・一致・知らせ・断り・静的の全部の形で
+                            _tw = lambda t_: _re.sub(r"(?<![\w\]\)])\[\]", "(1 < 0)", t_) if isinstance(t_, str) else t_
+                            _ta = [_tw(x) for x in a] if kind == "agree" else _tw(a)
+                            _tb = _tw(b) if kind == "same" else b
+                            _tk = dict(kw, only="strict", **({"pre": _tw(kw["pre"])} if "pre" in kw else {}))
+                            if check1((kind, _ta, _tb, _tk))[0]: R138_TWIN.append(CUR_LAW[0])
                         except Exception: pass
                     if kind in ("val", "err", "same"):          # strict の側だけを省き、既定のモードの側は実際に比べる
                         ok_, why_ = check1((kind, a, b, dict(kw, only="default")))
@@ -757,6 +759,15 @@ for F in ("inc", "add", "f2", "f3", "k1", "mul", "go", "gd", "gd3", "adder", "do
     for sh in ("{F} {X}", "{F} {X} 5", "{F} 5 {X}", "{F} {X} 5 6", "{F} 1 {X} 2", "({F} {X}) 5", "{F} 1 2 {X}", "{X} {F}", "{X} 5", "5 {X}", "{F} {X} _"):
         for cx in ("{}", "w : {}\nw", "t : y ? {}\nt 1"):
             agree(c, [_pre31s + cx.format(sh.format(F=F, X=X)) for X in ("(1 < 0)", "(2 < 1)", "(1 == 2)", "un")], only="strict")
+c = law("R138/法則45(strict の綴り)", "条件が計算の void `(1 < 0)` の枝の行は、消した本体と同じ値(R128・V9: 値が `!_` の枝は次へ進む)。未定義の名前を条件にした旧い形は strict で G22 に断られるので、計算の void で書く")
+for _b in ("a = 1 : 10\n\t99", "a > 5 : 20\n\ta + 1", "a = 3 : 5\n\ta > 0 : 6\n\t7", "a + 1", "a = 2 : _\n\ta + 4"):
+    for _pos in range(0, _b.count("\n") + 1):
+        _rows = _b.split("\n\t")
+        for _row in ("(1 < 0) : 77", "((1 < 0) > 1) : 77", "((1 < 0)) : 77"):
+            _with = _rows[:_pos] + [_row] + _rows[_pos:]
+            for _a in (0, 1, 2, 3, 7):
+                if _pos == len(_rows): continue
+                same(c, "ff9 : a ?\n\t" + "\n\t".join(_with) + f"\nff9 {_a}", "ff9 : a ?\n\t" + "\n\t".join(_rows) + f"\nff9 {_a}", only="strict")
 c = law("法則32", "値の演算子の被演算子の丸ごとの関数は `_` と同じ答え(恒等射も)")
 for F in ("inc", "double", "(add 1)", "(f3 1)", "k1", "go", "[+ 1]", "gd", "i"):
     for op in ("+", "-", "*", "<", "==", "<=", ">"):
@@ -1309,6 +1320,10 @@ def main(argv):
         _n = len(R138_SKIPPED); _ok = len(R138_DEFAULT_CHECKED); _ng = len(R138_DEFAULT_FAIL)
         print(f"\n(R138 により strict で断られる旧綴りの手書きを含み、strict の比べを省いた試験: {_n} 件。そのうち既定のモードの側を比べられる形(val・err・same)は {_ok + _ng} 件で、一致 {_ok} 件・食い違い {_ng} 件。残りは strict でだけ意味がある形で、どちらのモードも比べていない)")
         print(f"(そのうち `[]` を `(1 < 0)` に写して strict でも旧い期待どおりに通った物: {len(R138_TWIN)} 件)")
+        if verbose:
+            import collections as _c
+            _l=_c.Counter(l for l,_,_g in R138_SKIPPED); _t=_c.Counter(R138_TWIN)
+            print("  (未検証の内訳: 法則 = 省いた件 - strict で確かめた件) " + ", ".join(f"{k}={_l[k]-_t[k]}" for k in _l if _l[k]-_t[k] > 0))
     if verbose and R138_DEFAULT_FAIL:
         for l_, w_ in R138_DEFAULT_FAIL: print("   ≠", l_, w_[:300])
     if R138_UNMAPPED:
