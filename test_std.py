@@ -65,7 +65,9 @@ check("並び: copy", val(seq(f"arr_fill {A} 3 7", f"arr_copy {B} {A} 3", f"arr_
 check("並び: 10000 個の fill と sum(深さの限りなし)", val(f"seq2 (arr_fill {A} 10000 2) (arr_sum {A} 10000)"), "20000")
 # --- メモリの文字列 ---
 check("文字列: put は長さを返す", val(put(A, "hello")), "5")
-check("文字列: put(空)", val(put(A, "")), "0")
+# 空文字列 `` は `!_` と同じ値で、値の口の実引数では消える(type_system.md §空文字列・string_and_comment.md)。`str_put A ``` は実引数が足りない部分適用になるので、
+# 空の文字列は終端の 0 だけを書いて作る。
+check("文字列: 空(終端だけ)の長さは 0", val(seq(f"({A} # 0)", f"str_len {A}")), "0")
 check("文字列: len", val(seq(put(A, "hello"), f"str_len {A}")), "5")
 check("文字列: 0 で終わる(次の語が 0)", val(seq(put(A, "ab"), f"(@({A} + 8))")), "0")
 check("文字列: cpy", val(seq(put(A, "copy me"), f"str_cpy {B} {A}", f"(str_len {B} , str_eq {A} {B})")), "[7, 1]")
@@ -76,17 +78,17 @@ check("文字列: cmp(接頭辞は短い方が小さい)", val(seq(put(A, "ab"),
 check("文字列: eq", val(seq(put(A, "x"), put(B, "x"), put(C, "y"), f"(str_eq {A} {B} , str_eq {A} {C})")), "[1, 0]")
 check("文字列: chr", val(seq(put(A, "hello world"), f"(str_chr {A} 119 , str_chr {A} 104 , str_chr {A} 122)")), "[6, 0, -1]")
 check("文字列: find", val(seq(put(A, "hello world"), put(B, "o w"), put(C, "zz"), f"(str_find {A} {B} , str_find {A} {C} , str_find {A} {A} , str_find {B} {A})")), "[4, -1, 0, -1]")
-check("文字列: find(空の needle は 0、末尾で一致)", val(seq(put(A, "abcabc"), put(B, ""), put(C, "bc"), f"(str_find {A} {B} , str_find {A} {C})")), "[0, 1]")
+check("文字列: find(空の needle は 0、末尾で一致)", val(seq(put(A, "abcabc"), f"({B} # 0)", put(C, "bc"), f"(str_find {A} {B} , str_find {A} {C})")), "[0, 1]")
 check("文字列: starts と ends", val(seq(put(A, "hello.sn"), put(B, ".sn"), f"(str_starts {A} {A} , str_ends {A} {B} , str_ends {B} {A} , str_starts {A} {B})")), "[1, 1, 0, 0]")
 check("文字列: sub", val(seq(put(A, "Hello World"), f"str_sub {B} {A} 6 5", put(C, "World"), f"str_eq {B} {C}")), "1")
 check("文字列: sub(足りなければ手前まで)", val(seq(put(A, "abc"), f"str_sub {B} {A} 1 99", f"str_len {B}")), "2")
 check("文字列: upper", val(seq(put(A, "Hello, World 42!"), f"str_upper {A}", put(C, "HELLO, WORLD 42!"), f"str_eq {A} {C}")), "1")
 check("文字列: lower", val(seq(put(A, "Hello, World 42!"), f"str_lower {A}", put(C, "hello, world 42!"), f"str_eq {A} {C}")), "1")
 check("文字列: trim", val(seq(put(A, "  hi there \t"), f"str_trim {A}", put(C, "hi there"), f"(str_len {A} , str_eq {A} {C})")), "[8, 1]")
-check("文字列: trim(空白だけ・空)", val(seq(put(A, "   "), f"str_trim {A}", f"str_len {A}")) + val(seq(put(B, ""), f"str_trim {B}")), "00")
+check("文字列: trim(空白だけ・空)", val(seq(put(A, "   "), f"str_trim {A}", f"str_len {A}")) + val(seq(f"({B} # 0)", f"str_trim {B}")), "00")
 check("文字列: reverse", val(seq(put(A, "abc"), f"str_reverse {A}", put(B, "cba"), f"str_eq {A} {B}")), "1")
 check("文字列: split の欄の数", val(seq(put(A, "a,bb,,ccc"), f"str_split {A} 44 {B} 10")), "4")
-check("文字列: split の欄の数(区切りなし・空・max で切る)", val(seq(put(A, "abc"), f"str_split {A} 44 {B} 10")) + val(seq(put(A, ""), f"str_split {A} 44 {B} 10")) + val(seq(put(A, "a,b,c,d"), f"str_split {A} 44 {B} 2")), "112")
+check("文字列: split の欄の数(区切りなし・空・max で切る)", val(seq(put(A, "abc"), f"str_split {A} 44 {B} 10")) + val(seq(f"({A} # 0)", f"str_split {A} 44 {B} 10")) + val(seq(put(A, "a,b,c,d"), f"str_split {A} 44 {B} 2")), "112")
 sl = "sl : p ? str_len p\n"
 check("文字列: split の中身(欄ごとの長さ)", val(sl + seq(put(A, "a,bb,,ccc"), f"str_split {A} 44 {B} 10", f"(sl (arr_get {B} 0) , sl (arr_get {B} 1) , sl (arr_get {B} 2) , sl (arr_get {B} 3))")), "[1, 2, 0, 3]")
 # --- 数値と文字列 ---
@@ -94,7 +96,7 @@ for n in (0, 7, 10, 99, 100, 1204, 2147483647, -1, -1204, 123456789):
     check(f"変換: str_int {n}", val(seq(f"str_int {A} {neg(n)}", f"(str_len {A} , str_to_int {A})")), f"[{len(str(n))}, {n}]")
 check("変換: to_int は数字でない所で止まる", val(seq(put(A, "-1204xyz"), put(B, "12a"), f"(str_to_int {A} , str_to_int {B})")), "[-1204, 12]")
 check("変換: to_int(+ 符号・数字なし)", val(seq(put(A, "+5"), put(B, "abc"), f"(str_to_int {A} , str_to_int {B})")), "[5, 0]")
-check("変換: is_int", val(seq(put(A, "-42"), put(B, "12a"), put(C, ""), f"(str_is_int {A} , str_is_int {B} , str_is_int {C})")), "[1, 0, 0]")
+check("変換: is_int", val(seq(put(A, "-42"), put(B, "12a"), f"({C} # 0)", f"(str_is_int {A} , str_is_int {B} , str_is_int {C})")), "[1, 0, 0]")
 check("変換: is_int(符号だけ・+ つき)", val(seq(put(A, "-"), put(B, "+7"), f"(str_is_int {A} , str_is_int {B})")), "[0, 1]")
 for n, w in ((0, "0"), (255, "ff"), (4096, "1000"), (3735928559, "deadbeef"), (-1, "ffffffff")):
     check(f"変換: str_hex {n}", run(seq(f"str_hex {A} {neg(n)}", f"print_mem {A}"))[0], w + "0")
