@@ -637,23 +637,42 @@ class Checker:
         for nm, rhs in self.defs.items():
             if rhs[0] == "lam" and all(sp[0] == "name" for sp in rhs[1]): yield nm, rhs, {sp[1] for sp in rhs[1]}
 
-    def only_plain_calls(self, nm, idx):
-        """名前 nm の呼び出しが 1 つ以上あり、どの出方も `nm 実引数…` の頭で、idx 番目の実引数が関数でない字面(数・文字列・文字)だけなら True(呼び出しを見るまで知らせを重くしない)。"""
-        heads, total, ok = [0], [0], [True]
-        def walk(n):
+    def only_plain_calls(self, nm, idx, visiting=frozenset()):
+        """名前 nm の呼び出しが 1 つ以上あり、どの出方も `nm 実引数…` の頭で、idx 番目の実引数が関数でない字面(数・文字列)だけなら True(呼び出しを見るまで知らせを重くしない)。
+        実引数が名前のときは先を追う: 字面を束ねたトップレベルの名前なら字面、呼び出しを含む定義 h の仮引数なら、h の呼び出しがその位置に字面だけを渡すかを同じに調べる(輪は新しい物が無いので真)。"""
+        key = (nm, idx)
+        if key in visiting: return True
+        visiting = visiting | {key}
+        vals = {d[1]: d[2] for d in self.nodes if isinstance(d, tuple) and d and d[0] == "def"}
+        lamps = {d[1]: [sp[1] for sp in d[2][1]] for d in self.nodes if isinstance(d, tuple) and d and d[0] == "def" and d[2][0] == "lam" and all(sp[0] == "name" for sp in d[2][1])}
+        calls, total = [], [0]
+        def walk(n, enc):
             if isinstance(n, list):
-                for c in n: walk(c)
+                for c in n: walk(c, enc)
                 return
             if not isinstance(n, tuple) or not n: return
             if n[0] == "id" and len(n) > 1 and n[1] == nm: total[0] += 1
-            if n[0] == "def" and n[1] == nm: return
-            if n[0] == "seq" and n[1] and n[1][0] == ("id", nm):
-                heads[0] += 1; total[0] += 0
-                args = n[1][1:]
-                if idx >= len(args) or args[idx][0] != "lit" or not isinstance(args[idx][1], (int, float, str)) or isinstance(args[idx][1], bool): ok[0] = False
-            for c in n[1:]: walk(c)
-        walk(self.nodes)
-        return ok[0] and heads[0] >= 1 and total[0] == heads[0]
+            if n[0] == "def" and len(n) > 2:
+                if n[1] == nm: return
+                enc = n[1] if n[1] in lamps else None
+            if n[0] == "seq" and n[1] and n[1][0] == ("id", nm): calls.append((n[1][1:], enc))
+            for c in n[1:]: walk(c, enc)
+        walk(self.nodes, None)
+        if not calls or total[0] != len(calls): return False
+        def plain_lit(a): return a[0] == "lit" and isinstance(a[1], (int, float, str)) and not isinstance(a[1], bool)
+        for args, enc in calls:
+            if idx >= len(args): return False
+            a = args[idx]
+            if plain_lit(a): continue
+            if a[0] == "id":
+                if enc is not None and a[1] in lamps[enc]:
+                    if not self.only_plain_calls(enc, lamps[enc].index(a[1]), visiting): return False
+                    continue
+                if enc is None or a[1] not in lamps.get(enc, []):
+                    v = vals.get(a[1])
+                    if v is not None and plain_lit(v): continue
+            return False
+        return True
 
     def plain_pass(self):
         def is_in(m, P): return m[0] == "input" and m[1][0] == "id" and m[1][1] in P

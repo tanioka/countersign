@@ -99,7 +99,11 @@ check("--strict なしでは strict の断りは出ない", [r["kind"] for r in 
 G7_BASE = "g : p xs ?\n\t[@p,] xs\n\n"
 for nm_, call_, want_ in [("字面だけ", "g 5 [1 2 3]\n", (["note"], ["note"], False)), ("字面が 2 つ", "g 5 [1 2 3]\ng 7 [4]\n", (["note"], ["note"], False)),
                           ("関数を渡す呼び出し", "add2 : a b ? a + b\n\ng $add2 [1 2 3]\n", (["note"], ["error"], True)), ("字面と関数", "add2 : a b ? a + b\n\ng 5 [1 2 3]\ng $add2 [1]\n", (["note"], ["error"], True)),
-                          ("名前を渡す呼び出し", "add2 : a b ? a + b\n\nh : q ?\n\tg q [1]\n\nh $add2\n", (["note"], ["error"], True)), ("呼び出しが無い", "", (["note"], ["error"], False))]:
+                          ("名前を渡す(先は関数)", "add2 : a b ? a + b\n\nh : q ?\n\tg q [1]\n\nh $add2\n", (["note"], ["error"], True)), ("呼び出しが無い", "", (["note"], ["error"], False)),
+                          ("名前を渡す(先は字面)", "h : q ?\n\tg q [1]\n\nh 5\n", (["note"], ["note"], False)), ("字面を束ねた名前", "v : 5\n\ng v [1 2]\n", (["note"], ["note"], False)),
+                          ("関数を束ねた名前", "add2 : a b ? a + b\n\nv : $add2\n\ng v [1 2 3]\n", (["note"], ["error"], True)), ("2 段の仮引数(先は字面)", "h : q ?\n\tg q [1]\n\nk : r ?\n\th r\n\nk 5\n", (["note"], ["note"], False)),
+                          ("2 段の仮引数(先は関数)", "add2 : a b ? a + b\n\nh : q ?\n\tg q [1]\n\nk : r ?\n\th r\n\nk $add2\n", (["note"], ["error"], True)), ("輪の中で仮引数を回す", "h : q n ?\n\tn = 0 : g q [1]\n\th q (n - 1)\n\nh 5 3\n", (["note"], ["note"], False)),
+                          ("途中の定義が呼ばれない", "h : q ?\n\tg q [1]\n", (["note"], ["error"], False))]:
     src_ = G7_BASE + call_
     sv_ = lambda *fl: [r["severity"] for r in js(src_, *fl)[1]["reports"] if r["kind"].startswith("unknown-input")]
     check(f"G7 の重さ(呼び出しを見る): {nm_}", (sv_(), sv_("--strict"), "G7" in strict_run(src_)), want_)
