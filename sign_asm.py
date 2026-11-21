@@ -548,7 +548,7 @@ class FnGen:
         em("str xzr, [x29, #%d]" % off(sb), "投機: まだ出していない")
         a0 = len(self.lines)
         self.par_put_args(f, al, tmps, first=0)
-        for i in range(a0, len(self.lines)): self.lines[i] = re.sub(r"\.Ltrap\b", go, self.lines[i])
+        for i in range(a0, len(self.lines)): self.lines[i] = re.sub(r"\.Ltrap(_part)?\b", go, self.lines[i])
         em("bl _sign_spec_alloc", "池から入れ物をもらう(投機の中・空きの労働者が無ければ 0)"); em("str x0, [x29, #%d]" % off(sb)); em("cbz x0, %s" % go)
         em("str xzr, [x0]"); em("adr x12, _sign_sw_%s" % symbol_of(f)); em("str x12, [x0, #8]", "投機の包み")
         em("mrs x9, tpidr_el0"); em("ldr x10, [x9, #8]"); em("add x10, x10, #1"); em("str x10, [x0, #24]", "子の段")
@@ -1450,18 +1450,21 @@ class FnGen:
         carg = [i for i, a in enumerate(args) if pk[i] == "C" and not (self.strip(a)[0] == "lit" or self.strip(a)[0] == "id" and self.strip(a)[1] in self.prog.chars)]
         if marg or warg or carg:
             unit_l = self.prog.label()
+            vl = unit_l                                   # 実引数が `__` のときの行き先
+            if id(n) in self.prog.part_trap:              # --strict: 余った関数が生きる呼び。`__` の実引数は罠で止める
+                vl = ".Ltrap_part"; self.prog.part_used = True; self.prog.trap_used = True; self.prog.part_seen.add(id(n))
             for i in carg:
                 self.emit("ldr x9, [x29, #%d]" % self.off(tmps[i][0][0]))
-                self.emit("cbz x9, %s" % unit_l, "文字の実引数が __(U+0000)なら呼び全体が __")
+                self.emit("cbz x9, %s" % vl, "文字の実引数が __(U+0000)なら呼び全体が __")
             if marg: self.niche()
             for i in marg:
                 t0 = tmps[i][0][0]
                 if t0 in late: emit_imm(self.lines, "x9", late[t0], "実引数")
                 else: self.emit("ldr x9, [x29, #%d]" % self.off(t0))
-                self.emit("cmp x9, x13"); self.emit("b.eq %s" % unit_l, "引数が __ なら呼び全体が __")
+                self.emit("cmp x9, x13"); self.emit("b.eq %s" % vl, "引数が __ なら呼び全体が __")
             for i in warg:
                 self.emit("ldr x9, [x29, #%d]" % self.off(tmps[i][0][1]), "器の len")
-                self.emit("cbz x9, %s" % unit_l, "引数が __(len = 0)なら呼び全体が __")
+                self.emit("cbz x9, %s" % vl, "引数が __(len = 0)なら呼び全体が __")
         if gws:                                          # 作業領域に入らない伸びは、書く前に `__`(解析の見積もりが外れても、スタックを壊さない)
             if unit_l is None: unit_l = self.prog.label()
             if getattr(self.prog, "target", "bare") == "linux":
@@ -2692,6 +2695,9 @@ class Program:
         self.addr_cells = {}      # 定数の番地 → 最初に使った関数(64 ビットの読み書きが重なる組を知らせる)
         self.estimate = os.environ.get("SIGN_ESTIMATE") != "0"; self.infos = []       # 上界を証明でなく見積もりで通す(仕様: stack_abi.md §4.7)。通した関数は infos に残す
         self.work_trap = False
+        self.part_trap = {}      # strict: 余った関数が生きる呼び(id → 節)。実引数が `!_` になったら罠(.Ltrap_part)
+        self.part_seen = set()   # codegen がその罠を出した呼びの id
+        self.part_used = False
         self.sp = set()
         self.grow = {}        # 関数 → (累積を伸ばす引数, 1 回で伸びる個数, 食う引数)
         self.nlabel = 0
@@ -5637,8 +5643,10 @@ class Program:
            条件の行(`c : …`)の中で、実引数がその条件そのもの(末尾の切り出しなら ||xs|| > a)なら、その枝では `!_` でない。
         2. 部分適用を静的に解く: 漏らす呼びの実引数が 1 つ(比べか末尾の切り出し)で、後ろに字面の値が続き、並びが 3 項以上なら、条件の行で 2 つの枝に分けた木を返す
            (`!_` でない枝は今のまま、`!_` の枝は実引数を消して次の値を最後の実引数にした呼び。generate が作り直す)。枝の値の種類(Int と並び)が揃わない形は AsmError で断る。
-        3. 解けない漏らす呼び(後ろに値が続く・`~` が付く)は断る(StrictRefusal)。`~` は余った関数が値として流れに残る(asm に関数値は無い)。
-           引数の数が仮引数の数と違う漏らす呼びも断る(strict は引数がずれて別の関数の読みになる)。"""
+        3. 解けない漏らす呼び(後ろに値が続く・`~` が付く)は、実引数が実際に `!_` になったときだけ罠(.Ltrap_part, x16 = 3)で止める。
+           `~` は余った関数が値として流れに残る(asm に関数値は無い)ので、出ない入力は strict と同じ答え、出る入力は黙って別の答えにせず止まる。
+           罠を出せなかった呼び(codegen が節を作り直したなど)が残れば、generate の終わりで StrictRefusal(part_seen)。
+           引数の数が仮引数の数と違う漏らす呼びは断る(strict は引数がずれて別の関数の読みになる)。"""
         if not STRICT[0]: return
         def unwrap(n):
             while isinstance(n, tuple) and n and n[0] == "block": n = n[1]
@@ -5790,8 +5798,8 @@ class Program:
         for (n, live, f, voidarg, fit) in calls:
             if voidarg and not fit:
                 raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が `!_` になりうる呼び `%s …` で、引数の数が仮引数の数と違う(strict は `!_` の実引数が消えて引数がずれる。R83・R84)\n      %s" % (f, src(n)))
-            if voidarg and live:
-                raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が `!_` になりうる呼び `%s …` の後ろに値が続くか、`~` が付く(strict は余った関数が後ろの値を受け取る・値として残る。asm は呼び全体が `!_`。R83・R84)\n      %s" % (f, src(n)))
+            if voidarg and live:                       # 余った関数が生きる形: 関数値は asm に無いので、実引数が実際に `!_` になったときだけ罠で止める(出ない入力は strict と同じ答え)
+                self.part_trap[id(n)] = (n, src(n))
 
     def generate(self, target="bare", source=None):
         self.target = target
@@ -5904,8 +5912,11 @@ class Program:
         if close:
             a, b = close[0]
             self.note_estimate(self.addr_cells[a][0], "幅より近い定数の番地が %d 組あります(例: 0x%x と 0x%x。幅 %d byte)。仕様(value_representation.md §5.4)では `0x…` の幅は target の語幅(aarch64 は 8 バイト)なので重なります。4 バイトの変数・レジスタには幅を書く `4x…` を使います。番地ごとに別のセルとして扱う処理系の古い読みとは答えが変わります" % (len(close), a, b, self.addr_cells[a][1]))
+        if STRICT[0] and any(i not in self.part_seen for i in self.part_trap):             # 罠を出せなかった呼びが残るなら、strict の読みにできない(`!_` の実引数で答えが変わるのを黙って通さない)
+            raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が `!_` になりうる呼びの後ろに値が続くか、`~` が付く形で、実行時の罠を出せません(asm に関数値は無い)\n      %s" % "; ".join(sorted({t for i, (n, t) in self.part_trap.items() if i not in self.part_seen})[:1]))
         if self.trap_used:
             if self.work_trap: out += [".Ltrap_work:", "\tmov x16, #2  // 作業領域に入らない伸び(原因の印)", "\tb .Ltrap_halt", ""]
+            if self.part_used: out += [".Ltrap_part:", "\tmov x16, #3  // --strict: 余った関数が値として残る・後ろの値を受け取る形(asm に関数値は無い。原因の印)", "\tb .Ltrap_halt", ""]
             out += [".Ltrap:", "\tmov x16, #1  // Int の溢れなど(原因の印)", ".Ltrap_halt:", "\twfi  // Int の溢れ(罠)。integer_overflow.md §1", "\tb .Ltrap_halt", ""]
         if self.mixed_nest and False in self.nest_emit_seen: raise AsmError("内部の誤り: 入れ子の取り出しを出したあとで、印のある入れ子が見つかりました(印を外す命令が抜けた取り出しがあります)")
         if self.mixed_nest and self.nest_unsafe:

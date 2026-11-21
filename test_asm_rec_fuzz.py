@@ -48,7 +48,7 @@ def gen_mixed():
     d=fn("a","b" if mutual else "a")
     if mutual: d+="\n"+fn("b","a")
     return G2+"\n"+d+"\na (%s)\n"%" ".join(lit() for _ in range(random.randint(1,6)))
-bad=ok=ref=skip=0
+bad=ok=ref=skip=trap=0
 for i in range(int(sys.argv[2]) if len(sys.argv)>2 else 150):
     t=gen() if random.random()<0.5 else gen_mixed(); sv=sval(t)
     if sv is None: skip+=1; continue
@@ -58,8 +58,9 @@ for i in range(int(sys.argv[2]) if len(sys.argv)>2 else 150):
         got=ns["run_asm"](sign_asm.generate(tree,"linux"),linux=True)
     except (sign_asm.StrictRefusal, sign_asm.AsmError): ref+=1; continue
     except Exception as e: ref+=1; continue
+    if got[0]=="trap": trap+=1; continue                 # 実引数が実行時に `!_` になる入力: 余った関数が生きる形は罠で止める(答えを間違えない)
     if got[0]=="exit" and got[1].strip()==("__" if sv=="!_" else sv): ok+=1
     else: bad+=1; print("NG",repr(t),"strict",sv,"asm",got)
-print("一致", ok, "断り", ref, "strict が断る", skip, "違う答え", bad)
+print("一致", ok, "罠", trap, "断り", ref, "strict が断る", skip, "違う答え", bad)
 print("全部 ok" if not bad and ok > 20 else "NG")
 sys.exit(1 if bad or ok <= 20 else 0)

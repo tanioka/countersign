@@ -30,7 +30,7 @@ def gen():
     elif k==4: body="%s (q (xs ' %d~)) %s"%(pre,random.randint(1,3),post); return "f : xs ? "+body+"\n\nf (%s)\n"%" ".join(lit() for _ in range(random.randint(1,5)))
     else: body="%s + (g %s)"%(lit(),intarg())
     return "f : x ? "+body+"\n\nf %d\n"%random.randint(0,9)
-bad=ok=ref=skip=0
+bad=ok=ref=skip=trap=0
 for i in range(int(sys.argv[2]) if len(sys.argv)>2 else 60):
     t=G+"\n"+gen(); sv=sval(t)
     if sv is None: skip+=1; continue
@@ -40,8 +40,9 @@ for i in range(int(sys.argv[2]) if len(sys.argv)>2 else 60):
         got=ns["run_asm"](sign_asm.generate(tree,"linux"),linux=True)
     except (sign_asm.StrictRefusal, sign_asm.AsmError): ref+=1; continue
     except Exception as e: ref+=1; continue
+    if got[0]=="trap": trap+=1; continue                 # 実引数が実行時に `!_` になる入力: 余った関数が生きる形は罠で止める(答えを間違えない)
     if got[0]=="exit" and got[1].strip()==("__" if sv=="!_" else sv): ok+=1
     else: bad+=1; print("NG",repr(t[len(G):]),"strict",sv,"asm",got)
-print("一致", ok, "断り", ref, "strict が断る", skip, "違う答え", bad)
+print("一致", ok, "罠", trap, "断り", ref, "strict が断る", skip, "違う答え", bad)
 print("全部 ok" if not bad and ok > 30 else "NG")
 sys.exit(1 if bad or ok <= 30 else 0)

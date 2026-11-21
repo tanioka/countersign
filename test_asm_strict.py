@@ -36,7 +36,8 @@ for t, want in CASES:
     if sv != want or got != want: bad += 1; print("NG", repr(t), "strict", sv, "asm", got, "のはず", want)
 
 # ---- 部分適用(`!_` の実引数が消えて、関数が後ろの値を受け取る。R83・R84)。流れの値を、strict の読みと文字列で突き合わせる ----
-# 後ろに値が続く呼びは、`!_` の実引数が実行時に決まるなら、条件の行で枝を分けて出す(strict_call_check)。出せない形は断る。余った関数は関数の境界を越えない。
+# 後ろに値が続く呼びは、`!_` の実引数が実行時に決まるなら、条件の行で枝を分けて出す(strict_call_check)。分けられない形(後ろが 1 つだけ・`~` が付く・実引数の途中で余る)は、
+# 実引数が実際に `!_` になったときだけ罠(x16=3)で止める(出ない入力は strict と同じ答え)。出せない形は断る。余った関数は関数の境界を越えない。
 G_ = "g : x ? x + 1\nk : x y ? x + y\np : x ? g (x > 5)\nm : s ? (s ' 0)\nn : xs ? ||xs||\n"
 FLOWS = [   # (源, 'ok' か '断り')
     ("f : x ? 1 (g (x > 5)) 7 8\n\nf 3", "ok"), ("f : x ? 1 (g (x > 5)) 7 8\n\nf 9", "ok"),                          # 部分適用が実際に起きる枝(3)と起きない枝(9)
@@ -50,10 +51,10 @@ FLOWS = [   # (源, 'ok' か '断り')
     ("w : x ? [1 (p x) 2]\n\nw 3", "ok"), ("w : x ? ||(p x)||\n\nw 3", "ok"),
     ("w : x ? k 4 (g (x > 5))\n\nw 3", "ok"),
     ("a : xs ?\n\t||xs|| = 1 : (xs ' 0) 9\n\t(xs ' 0) (a (xs ' 1~))~\n\na (1 2 3)", "ok"),                          # `||xs|| = 1` が偽なら ||xs|| ≥ 2 なので、`xs ' 1~` は `!_` にならない(`~` の呼びも通る)
-    ("a : xs ?\n\t||xs|| < 1 : (xs ' 0) 9\n\t(xs ' 0) (a (xs ' 1~))~\n\na (1 2 3)", "断り"),                         # ||xs|| = 1 で `xs ' 1~` が `!_`: `~` で余った関数が値になる
-    ("f : x ? (g (x > 5)) 7\n\nf 3", "断り"),                                                                         # 後ろが 1 つだけ: 枝の値の種類(Int と並び)が揃わない
+    ("a : xs ?\n\t||xs|| < 1 : (xs ' 0) 9\n\t(xs ' 0) (a (xs ' 1~))~\n\na (1 2 3)", "罠"),                         # ||xs|| = 1 で `xs ' 1~` が `!_`: `~` で余った関数が値になる
+    ("f : x ? (g (x > 5)) 7\n\nf 3", "罠"), ("f : x ? (g (x > 5)) 7\n\nf 9", "ok"),                                                                         # 後ろが 1 つだけ: 枝の値の種類(Int と並び)が揃わない
     ("w : x ? 3 (g (x > 5))~\n\nw 3", "断り"),                                                                      # `~` は余った関数が値として残る(asm に関数値は無い)
-    ("w : x ? k (g (x > 5)) 4\n\nw 3", "断り"),                                                                      # 実引数の途中で余る
+    ("w : x ? k (g (x > 5)) 4\n\nw 3", "罠"), ("w : x ? k (g (x > 5)) 4\n\nw 9", "ok"),                                                                      # 実引数の途中で余る
 ]
 for t, want in FLOWS:
     t = G_ + "\n" + t + "\n"
@@ -71,7 +72,9 @@ for t, want in FLOWS:
         tree, rest = sign_asm.strict_rewrite(S.parse_source(t))
         got = ("断り", None) if rest else ns["run_asm"](sign_asm.generate(tree, "linux"), linux=True)
     except (sign_asm.StrictRefusal, sign_asm.AsmError): got = ("断り", None)
-    if want == "断り":
+    if want == "罠":                                        # 余った関数が生きる形で、実引数が実際に `!_` になる入力: 罠で止める(答えを間違えない)
+        if got[0] != "trap": bad += 1; print("NG 罠のはずの形", repr(t[-50:]), got)
+    elif want == "断り":
         if got[0] != "断り": bad += 1; print("NG 断るはずの形", repr(t[-50:]), got)
     elif got[0] == "断り": bad += 1; print("NG 断った", repr(t[-50:]))
     elif (got[0], got[1].strip()) != ("exit", ("__" if sv == "!_" else sv)): bad += 1; print("NG", repr(t[-50:]), "strict", sv, "asm", got)
