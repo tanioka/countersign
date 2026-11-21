@@ -1,5 +1,5 @@
 """--strict --asm(別の道: sign_asm.strict_rewrite)の試験。strict の読みの値と、書き換えた木から出した asm の値が同じこと。"""
-import sys, os
+import sys, os, io
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); sys.setrecursionlimit(20000)
 src = open(os.path.join(HERE, "test_asm.py"), encoding="utf-8").read()
 ns = {"__file__": os.path.join(HERE, "test_asm.py"), "__name__": "emu"}
@@ -34,6 +34,47 @@ for t, want in CASES:
     except sign_asm.StrictRefusal: got = ("断り", 6)
     except Exception as e: got = ("例外", str(e)[:50])
     if sv != want or got != want: bad += 1; print("NG", repr(t), "strict", sv, "asm", got, "のはず", want)
+
+# ---- 部分適用(`!_` の実引数が消えて、関数が後ろの値を受け取る。R83・R84)。流れの値を、strict の読みと文字列で突き合わせる ----
+# 後ろに値が続く呼びは、`!_` の実引数が実行時に決まるなら、条件の行で枝を分けて出す(strict_call_check)。出せない形は断る。余った関数は関数の境界を越えない。
+G_ = "g : x ? x + 1\nk : x y ? x + y\np : x ? g (x > 5)\nm : s ? (s ' 0)\nn : xs ? ||xs||\n"
+FLOWS = [   # (源, 'ok' か '断り')
+    ("f : x ? 1 (g (x > 5)) 7 8\n\nf 3", "ok"), ("f : x ? 1 (g (x > 5)) 7 8\n\nf 9", "ok"),                          # 部分適用が実際に起きる枝(3)と起きない枝(9)
+    ("f : x ? 1 (k 4 (x > 5)) 7 8\n\nf 3", "ok"), ("f : x ? 1 (k 4 (x > 5)) 7 8\n\nf 9", "ok"),
+    ("f : s ? `a` (m (s ' 1~)) `zz` `b`\n\nf `x`", "ok"), ("f : s ? `a` (m (s ' 1~)) `zz` `b`\n\nf `xyz`", "ok"),     # 末尾の切り出しは ||s|| > 1 の枝
+    ("f : s ? `a` (m (s ' 2~)) `zz` `b`\n\nf `xy`", "ok"), ("f : s ? `a` (m (s ' 2~)) `zz` `b`\n\nf `xyz`", "ok"),
+    ("f : xs ? 1 (n (xs ' 1~)) 7 8\n\nf (4 5 6)", "ok"),
+    ("q : x ? (p x) 7\n\nq 3", "ok"), ("q : x ? (p x) 7\n\nq 9", "ok"),                                              # 関数の戻り値に、余った関数は残らない
+    ("r : x ? 4 (p x)\n\nr 3", "ok"), ("r : x ? 4 (p x)\n\nr 9", "ok"),                                            # 末尾の余った関数は消える
+    ("w : x ? 1 + (p x)\n\nw 3", "ok"), ("w : x ? 1 + (p x)\n\nw 9", "ok"),                                        # 演算子の項では `!_` と同じ
+    ("w : x ? [1 (p x) 2]\n\nw 3", "ok"), ("w : x ? ||(p x)||\n\nw 3", "ok"),
+    ("w : x ? k 4 (g (x > 5))\n\nw 3", "ok"),
+    ("a : xs ?\n\t||xs|| = 1 : (xs ' 0) 9\n\t(xs ' 0) (a (xs ' 1~))~\n\na (1 2 3)", "ok"),                          # `||xs|| = 1` が偽なら ||xs|| ≥ 2 なので、`xs ' 1~` は `!_` にならない(`~` の呼びも通る)
+    ("a : xs ?\n\t||xs|| < 1 : (xs ' 0) 9\n\t(xs ' 0) (a (xs ' 1~))~\n\na (1 2 3)", "断り"),                         # ||xs|| = 1 で `xs ' 1~` が `!_`: `~` で余った関数が値になる
+    ("f : x ? (g (x > 5)) 7\n\nf 3", "断り"),                                                                         # 後ろが 1 つだけ: 枝の値の種類(Int と並び)が揃わない
+    ("w : x ? 3 (g (x > 5))~\n\nw 3", "断り"),                                                                      # `~` は余った関数が値として残る(asm に関数値は無い)
+    ("w : x ? k (g (x > 5)) 4\n\nw 3", "断り"),                                                                      # 実引数の途中で余る
+]
+for t, want in FLOWS:
+    t = G_ + "\n" + t + "\n"
+    sv = None
+    if want == "ok":                                        # 断る形は、strict の読みが値を出さなくてもよい(例: 関数を含む器は撒けない)
+        S.STRICT_GATES = True
+        try:
+            S.MEMORY.clear(); S.WARNINGS.clear()
+            _o = sys.stdout; sys.stdout = io.StringIO()
+            try: r = S.run(t)
+            finally: sys.stdout = _o
+            sv = S.show(r[-1]) if r else "!_"
+        finally: S.STRICT_GATES = False
+    try:
+        tree, rest = sign_asm.strict_rewrite(S.parse_source(t))
+        got = ("断り", None) if rest else ns["run_asm"](sign_asm.generate(tree, "linux"), linux=True)
+    except (sign_asm.StrictRefusal, sign_asm.AsmError): got = ("断り", None)
+    if want == "断り":
+        if got[0] != "断り": bad += 1; print("NG 断るはずの形", repr(t[-50:]), got)
+    elif got[0] == "断り": bad += 1; print("NG 断った", repr(t[-50:]))
+    elif (got[0], got[1].strip()) != ("exit", ("__" if sv == "!_" else sv)): bad += 1; print("NG", repr(t[-50:]), "strict", sv, "asm", got)
 
 # ---- test_asm.py の整数の表(CASES)を全部、strict の読みと突き合わせる ----
 # 溢れだけは、strict の読み(value_spec V5)が `!_`、asm は documents(integer_overflow.md)どおり罠(wfi)で、仕様どうしの食い違い(OPEN_QUESTIONS)。それ以外は一致する。

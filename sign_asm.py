@@ -3135,6 +3135,14 @@ class Program:
         elif g[0] == "cmp" and len(g[1]) == 2 and len(g[2]) == 1:
             l, r = self.lin(g[1][0], al), self.lin(g[1][1], al); op = g[2][0]
             if not truth:
+                if op == "=" and l is not None and r is not None:                      # `||p|| = c` が偽: 下限が c ちょうどなら c + 1(仮引数の器は空でない=下限は 1 から)
+                    co_ = dict(l[0])
+                    for k_, v_ in r[0].items(): co_[k_] = co_.get(k_, 0) - v_
+                    co_ = {k_: v_ for k_, v_ in co_.items() if v_}; c_ = l[1] - r[1]
+                    if len(co_) == 1:
+                        (p_, k_), = co_.items()
+                        if abs(k_) == 1 and not isinstance(p_, tuple) and max(1, base.get(p_, 0)) == -c_ * k_: out[p_] = -c_ * k_ + 1
+                    return out
                 op = {"<": ">=", ">": "<=", "<=": ">", ">=": "<"}.get(op)
                 if op is None: return out
             if l is None or r is None:                                         # 要素など ||p|| の式でないものの事実
@@ -5615,13 +5623,15 @@ class Program:
         return t[1] < lb
 
     def strict_call_check(self):
-        """--strict(STRICT[0])のとき、規則 6: 実引数が計算で `!_` になりうる関数の呼びを調べる。strict は `!_` の実引数が流れから消えて関数が余る(部分適用の値。R83・R84)。
-        asm(既定の読み)は呼び全体が `!_`。両者が分かれるのは、余った関数が後ろの値を受け取るとき(`(g v) 7`・`x (g v) y`・他の関数の実引数・`,` の辺)だけで、
-        その呼びが『何も続かない末尾』にあれば、余った関数は消えて `!_` になるので同じ答え(引数がちょうど足りる呼びの場合)。
+        """--strict(STRICT[0])のとき、規則 6: 実引数が計算で `!_` になりうる関数の呼びを調べる。strict は `!_` の実引数が流れから消えて関数が余る(部分適用。R83・R84)。
+        asm(既定の読み)は呼び全体が `!_`。両者が分かれるのは、余った関数が生きるとき(同じ流れの後ろに値が続いて受け取るか、`~` で値として流れに残るか)だけ。
+        演算子の項・`||…||`・添字・他の関数の最後の実引数では `!_` と同じ答え。余った関数は関数の境界(定義の本体の終わり)を越えない(`(p 0) 5` は p の本体が余った関数でも 5。strict の値で確かめた)。
         1. 実引数が `!_` になりうる(syntactic: 比べ・`& | ;`・`/ %`・書いた `__`。添字は範囲内の証明 idx_ok・末尾の切り出しは tail_nonvoid で言えなければ)呼びを「漏らす呼び」とする。
-           引数の数が仮引数の数と違う呼びは断る(strict は引数がずれて別の関数の読みになる)。
-        2. 関数 D の本体の末尾に漏らす呼びがあれば、D も余った関数を返しうる(D の呼びも漏らす呼び)。不動点まで。
-        3. 漏らす呼びが末尾(定義の本体の末尾・最上位の式の末尾。`&` `|` の右・括り・並びの最後・枝の値は引き継ぐ)にないものは断る(StrictRefusal)。"""
+           条件の行(`c : …`)の中で、実引数がその条件そのもの(末尾の切り出しなら ||xs|| > a)なら、その枝では `!_` でない。
+        2. 部分適用を静的に解く: 漏らす呼びの実引数が 1 つ(比べか末尾の切り出し)で、後ろに字面の値が続き、並びが 3 項以上なら、条件の行で 2 つの枝に分けた木を返す
+           (`!_` でない枝は今のまま、`!_` の枝は実引数を消して次の値を最後の実引数にした呼び。generate が作り直す)。枝の値の種類(Int と並び)が揃わない形は AsmError で断る。
+        3. 解けない漏らす呼び(後ろに値が続く・`~` が付く)は断る(StrictRefusal)。`~` は余った関数が値として流れに残る(asm に関数値は無い)。
+           引数の数が仮引数の数と違う漏らす呼びも断る(strict は引数がずれて別の関数の読みになる)。"""
         if not STRICT[0]: return
         def unwrap(n):
             while isinstance(n, tuple) and n and n[0] == "block": n = n[1]
@@ -5686,59 +5696,95 @@ class Program:
                     if isinstance(y, tuple): stack.append(y)
                     elif isinstance(y, list): stack.extend(z for z in y if isinstance(z, tuple))
             return False
-        calls = []                        # (呼びの節, 末尾か, 属する定義の名前か None, 漏らすか(実引数が void になりうる), 数が合うか)
+        gstack = []                       # いま居る条件の行の条件(鍵)。呼びの `!_` になりうる実引数が、その条件そのもの(か、末尾の切り出しの ||xs|| > a)なら、その枝では `!_` でない
+        sites = []                        # 部分適用を静的に解ける呼び (並びの節, 位置, 呼びの節, `!_` になりうる実引数の位置, 末尾の切り出し (器, a))
+        def guard_of(m):
+            """実引数 m が `!_` でないと、いまの条件の行の条件から言えるか(m が比べそのもので、行の条件と同じ。末尾の切り出しなら ||xs|| > a が条件)。"""
+            mm = unwrap(m)
+            if not gstack: return False
+            if isinstance(mm, tuple) and mm and mm[0] == "cmp": return self.skey(mm) in gstack
+            try: tl = self.tail_of(self.strip(mm))
+            except AsmError: return False
+            if tl is None or not (isinstance(tl[0], tuple) and tl[0][0] == "id"): return False
+            return self.skey(("cmp", [("norm", tl[0]), ("lit", tl[1])], [">"])) in gstack
+        calls = []                        # (呼びの節, 後ろに値が続くか・`~` が付くか(余った関数が生きるか), 呼ぶ関数の名前, 漏らすか(実引数が void になりうる), 数が合うか)
         def is_call(n, params):
             return n[0] == "seq" and len(n[1]) >= 2 and isinstance(n[1][0], tuple) and n[1][0][0] == "id" and n[1][0][1] in self.fns and n[1][0][1] not in params
-        def walk(n, params, tail, owner):
+        def walk(n, params, live):
+            """live = この節が、余った関数が生きる位置にあるか(同じ流れの後ろに値が続く・`~` で値として残る)。
+            余った関数は関数の境界(定義の本体の終わり)を越えない(`(p 0) 5` は p の本体が余った関数を返しても 5。strict の値で確かめた)。"""
             if not isinstance(n, tuple) or not n: return
             k = n[0]
             if k == "lam":
                 ps = set(params) | {q[1] for q in n[1] if isinstance(q, tuple) and len(q) > 1 and isinstance(q[1], str)}
-                walk(n[2], ps, True, owner); return
-            if k == "block": walk(n[1], params, tail, owner); return
+                walk(n[2], ps, False); return
+            if k == "block": walk(n[1], params, live); return
             if k == "seq":
                 if is_call(n, params):
                     f = n[1][0][1]; args = n[1][1:]
-                    voids = [j for j, m in enumerate(args) if arg_void(m)]
+                    voids = [j for j, m in enumerate(args) if arg_void(m) and not guard_of(m)]
                     for j, m in enumerate(args):                 # 実引数の流れの要素が `!_` になりうる(`acc~ (… ' 0)`)。strict は積まれずに消え、asm は印を要素に残す(質問書 A6)
                         if j not in voids and elem_void(unwrap(m), params):
                             raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数の並びの要素が `!_` になりうる呼び `%s …`(strict はその要素が消える。asm は `!_` の印を要素に残す。質問書 A6)\n      %s" % (f, src(n)))
-                    calls.append((n, tail, owner, f, bool(voids), len(args) == len(self.fns[f])))
-                    for m in args: walk(m, params, False, owner)
+                    calls.append((n, live, f, bool(voids), len(args) == len(self.fns[f])))
+                    for j, m in enumerate(args): walk(m, params, j < len(args) - 1)       # 後ろの実引数が、余った関数に受け取られる
                     return
                 its = n[1]
-                for j, x in enumerate(its): walk(x, params, tail and j == len(its) - 1, owner)
+                for i_, it0 in enumerate(its[:-1]):                       # 部分適用を静的に解ける形: `!_` になりうる実引数が 1 つの呼びの後ろに、字面の値が続く
+                    c_ = unwrap(it0)
+                    if isinstance(c_, tuple) and c_ and c_[0] == "seq" and is_call(c_, params) and len(c_[1]) - 1 == len(self.fns[c_[1][0][1]]) and len(its) >= 3:
+                        vs_ = [j for j, m in enumerate(c_[1][1:]) if arg_void(m) and not guard_of(m)]
+                        r1_ = unwrap(its[i_ + 1])
+                        if len(vs_) == 1 and isinstance(r1_, tuple) and r1_ and r1_[0] == "lit":
+                            aj_ = unwrap(c_[1][1 + vs_[0]]); cond_ = None
+                            try: tl_ = self.tail_of(self.strip(aj_))
+                            except AsmError: tl_ = None
+                            if tl_ is not None and isinstance(tl_[0], tuple) and tl_[0][0] == "id": cond_ = ("cmp", [("norm", tl_[0]), ("lit", tl_[1])], [">"])      # `xs ' a~` は ||xs|| > a のときだけ在る
+                            elif isinstance(aj_, tuple) and aj_ and aj_[0] == "cmp": cond_ = aj_                                                                 # 比べは、真なら左の値、偽なら `!_`(条件の行は `!_` でなければ真)
+                            if cond_ is not None: sites.append((n, i_, c_, vs_[0], cond_)); break
+                for j, x in enumerate(its): walk(x, params, live or j < len(its) - 1)     # 後ろに値が続く項は、余った関数がそれを受け取る
                 return
             if k == "cases":
                 for c, e in n[1]:
-                    if c is not None: walk(c, params, False, owner)
-                    walk(e, params, tail, owner)
+                    if c is not None: walk(c, params, False)
+                    if c is not None: gstack.append(self.skey(c))
+                    try: walk(e, params, live)
+                    finally:
+                        if c is not None: gstack.pop()
                 return
             if k == "bin" and len(n) == 4 and n[1] in ("&", "|"):
-                walk(n[2], params, False, owner); walk(n[3], params, tail, owner); return
-            if k == "post" and n[1] == "~": walk(n[2], params, tail, owner); return          # `(g …)~`: 展開しても、余った関数の後ろには何も続かない
+                walk(n[2], params, False); walk(n[3], params, live); return
+            if k == "post" and n[1] == "~": walk(n[2], params, True); return          # `(g …)~`: 余った関数が値として流れに残る
             for y in n[1:]:
-                if isinstance(y, tuple): walk(y, params, False, owner)
+                if isinstance(y, tuple): walk(y, params, False)
                 elif isinstance(y, list):
                     for z in y:
                         if isinstance(z, tuple):
-                            if len(z) == 2 and k == "cases": walk(z[0], params, False, owner); walk(z[1], params, tail, owner)
-                            else: walk(z, params, False, owner)
+                            if len(z) == 2 and k == "cases": walk(z[0], params, False); walk(z[1], params, live)
+                            else: walk(z, params, False)
         for n in self.nodes:
-            if n[0] == "def" and isinstance(n[2], tuple) and n[2][0] == "lam": walk(n[2], set(), True, n[1])
-            elif n[0] == "def": walk(n[2], set(), False, None)
-            else: walk(n, set(), True, None)
-        leaky = set()                     # 余った関数を返しうる関数
-        changed = True
-        while changed:
-            changed = False
-            for (n, tail, owner, f, voidarg, fit) in calls:
-                if tail and owner is not None and owner not in leaky and ((voidarg and fit) or f in leaky): leaky.add(owner); changed = True
-        for (n, tail, owner, f, voidarg, fit) in calls:
+            if n[0] == "def" and isinstance(n[2], tuple) and n[2][0] == "lam": walk(n[2], set(), False)
+            elif n[0] == "def": walk(n[2], set(), False)
+            else: walk(n, set(), False)
+        if sites:
+            if getattr(self, "sc_depth", 0) > 30: raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 余った関数が後ろの値を受け取る呼びが多すぎて、静的に解ききれません")
+            seq_, i_, c_, j_, cond = sites[0]
+            its = seq_[1]; head = c_[1][0]; args = c_[1][1:]
+            newcall = ("seq", [head] + args[:j_] + args[j_ + 1:] + [its[i_ + 1]]) + tuple(c_[2:])        # `!_` の実引数は流れから消え、関数は次の値を受け取る
+            items2 = list(its[:i_]) + [("block", newcall)] + list(its[i_ + 2:])
+            row2 = items2[0] if len(items2) == 1 else ("seq", items2) + tuple(seq_[2:])
+            new = ("cases", [(cond, seq_), (None, row2)])
+            def subst(x):
+                if x is seq_: return new
+                if isinstance(x, tuple): return tuple(subst(y) for y in x) if any(isinstance(y, (tuple, list)) for y in x) else x
+                if isinstance(x, list): return [subst(y) for y in x]
+                return x
+            return [subst(n0) for n0 in self.nodes]
+        for (n, live, f, voidarg, fit) in calls:
             if voidarg and not fit:
                 raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が `!_` になりうる呼び `%s …` で、引数の数が仮引数の数と違う(strict は `!_` の実引数が消えて引数がずれる。R83・R84)\n      %s" % (f, src(n)))
-            if (voidarg or f in leaky) and not tail:
-                raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が `!_` になりうる呼び `%s …`(か、そうなりうる関数の呼び)が、末尾でない所にある(strict は余った関数が後ろの値を受け取る。asm は呼び全体が `!_`。R83・R84)\n      %s" % (f, src(n)))
+            if voidarg and live:
+                raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が `!_` になりうる呼び `%s …` の後ろに値が続くか、`~` が付く(strict は余った関数が後ろの値を受け取る・値として残る。asm は呼び全体が `!_`。R83・R84)\n      %s" % (f, src(n)))
 
     def generate(self, target="bare", source=None):
         self.target = target
@@ -5758,7 +5804,11 @@ class Program:
         self.solve_widths()
         self.solve_slots()
         self.solve_maybe()
-        self.strict_call_check()
+        nn = self.strict_call_check()
+        if nn is not None:
+            sub = Program(nn); sub.mk_const = getattr(self, "mkc_next", getattr(self, "mk_const", 0)); sub.sc_depth = getattr(self, "sc_depth", 0) + 1; out = sub.generate(target, source)
+            self.__dict__.update(sub.__dict__)
+            return out
         self.check_dyn()
         self.sp = self.single_possible()
         ex0 = [n for n in self.nodes if n[0] not in ("def", "dyn")]
