@@ -184,6 +184,10 @@ def _classify(tok, env):
                 return ("A", leaf_text(tok))
     if tok[0] == "(":
         in_ = tokens(tok[1:-1]) or []
+        if len(in_) >= 2 and all(re.fullmatch(r"[a-z][\w']*", x) for x in in_):
+            cf_ = [env.get(x) for x in in_]
+            if all(c is not None and c[0] == "F" and isinstance(c[1], int) and c[2] for c in cf_):
+                return ("F", 1 + sum(c[1] - 1 for c in cf_), leaf_text(tok))      # 関数だけの括りは合成した 1 つの関数で、開かない(R8)。口は合成の口
         in2_ = [t for t in in_ if t != "|"] if len(in_) == 3 and in_[1] == "|" else in_
         if len(in2_) == 2 and re.fullmatch(r"-?\d+", in2_[0]) and re.fullmatch(r"[a-z][\w']*", in2_[1]) and (env.get(in2_[1]) or ("",))[0] == "F":
             return ("A", leaf_text(tok))                                  # 字面の数は `!_` でない辺なので、続く関数はいつも余る(R52・R136・R76)。括りは値
