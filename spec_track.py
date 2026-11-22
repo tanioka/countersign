@@ -69,15 +69,30 @@ for doc in HEAD:
         rec["id"] = key(rec["doc"], rec["rule"], rec["src"])
         res.append(rec)
 
+KNOWN = {   # 食い違いの切り分け済み。 (規則, 源の先頭) → 理由。数えは「既知」に分ける
+    ("R125", "q 1"): "取り込みの誤読: 知らせ名は説明文中の語で、本文は知らせ無し",
+    ("R125", "f 0"): "表示の綴り: 実装は `_`、仕様は `!_`(同じ値)",
+    ("R99", "io@"): "未実装: 標準ライブラリの取り込み(io@)。仕様も実装は G21 と注記",
+    ("R49", "(w != 3) , 5"): "仕様が注記: 実装は知らせ無し(§6.4)",
+    ("R62", "04x1000 + 0x3"): "取り込みの誤読: 本文は値 0x1003、後ろの `!_` は別の形の注記",
+    ("R62", "0x4000 # $inc"): "取り込みの誤読/仕様が注記: 実装は知らせ無し(§6.4)",
+    ("R21", "g :"): "取り込みの誤読: 手で動かすと G22 で断る(定義の読みが PRE との連結で変わる)",
+    ("R21", "io@"): "未実装: 標準ライブラリの取り込み(io@)",
+    ("R22", "f [1]"): "実装の穴: 実体の形が深くなり続ける G7 の守りが無い(OPEN_QUESTIONS 参照)",
+}
+for r in res:
+    if r["state"] == "ng":
+        for (rl, pre), why in KNOWN.items():
+            if r["rule"] == rl and r["src"].startswith(pre): r["state"] = "known"; r["known"] = why
+tot = {"ok": 0, "ng": 0, "skip": 0, "known": 0}
 def rule_key(r):
     m = re.match(r"([RV])(\d+)", r); return (m.group(1), int(m.group(2))) if m else ("0", 0)
 print(f"仕様リポジトリ HEAD {rev}  ({docs})")
-tot = {"ok": 0, "ng": 0, "skip": 0}
 for r in res: tot[r["state"]] += 1
-print(f"合計: 一致 {tot['ok']} / 食い違い {tot['ng']} / 省略 {tot['skip']}  (見本 {len(res)})\n")
+print(f"合計: 一致 {tot['ok']} / 食い違い(未切り分け) {tot['ng']} / 既知の食い違い {tot['known']} / 省略 {tot['skip']}  (見本 {len(res)})\n")
 print("規則    一致 食い違い 省略")
 byrule = {}
-for r in res: byrule.setdefault(r["rule"], {"ok": 0, "ng": 0, "skip": 0})[r["state"]] += 1
+for r in res: byrule.setdefault(r["rule"], {"ok": 0, "ng": 0, "skip": 0, "known": 0})[r["state"]] += 1
 for rl in sorted(byrule, key=rule_key):
     c = byrule[rl]
     if verbose or c["ng"]: print(f"{rl:9}{c['ok']:4} {c['ng']:6} {c['skip']:6}")
@@ -85,7 +100,10 @@ print("\n省略の内訳(別集計):")
 cls = lambda w: re.sub(r"\(.*", "", w)
 for why in sorted({cls(r["why"]) for r in res if r["state"] == "skip"}):
     print(f"  {sum(1 for r in res if r['state']=='skip' and cls(r['why'])==why):4}  {why}")
-print("\n食い違い:")
+print("\n既知の食い違い(切り分け済み):")
+for r in res:
+    if r["state"] == "known": print(f"  {r['rule']} L{r['line']} `{r['src'][:30]!s}`: {r['known']}")
+print("\n未切り分けの食い違い:")
 for r in res:
     if r["state"] == "ng": print(f"  {r['doc'].split('_')[0]} {r['rule']} L{r['line']}: `{r['src'][:70]}`\n        {r['why']}")
 
