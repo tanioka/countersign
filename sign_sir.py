@@ -77,7 +77,6 @@ def expr(n, params, arity):
         if op == "&": return ("and", expr(n[2], params, arity), expr(n[3], params, arity))
         if op == "|": return ("or", expr(n[2], params, arity), expr(n[3], params, arity))
         if op == "'":
-            if INFUNC[0]: raise Unsup("関数の中の添字(R24・R81 の形の見え方が未モデル)")
             key = unblock(n[3])
             if key[0] == "post" and key[1] == "~": key = unblock(key[2])
             if key[0] == "id" and key[1] != "__":                                  # R64: 鍵の名前は欄の名前。値の名前でも `!_`

@@ -60,7 +60,13 @@ def lexpr(r, names, d):
     return f"({a} {r.choice(['+','-','*','/','%','|','&','<','=='])} {b})"
 def list_program(r):
     names = ["la", "lb"][:r.randint(1, 2)]
-    return "\n".join(f"{n} : {lst(r)}" for n in names) + "\n" + lexpr(r, names, 3) + "\n"
+    defs = "\n".join(f"{n} : {lst(r)}" for n in names) + "\n"
+    if r.random() < .4:                                                    # リストを受ける関数。鍵が仮引数の名前なら欄の名前で void(R64)
+        k = r.choice(["0", "1", "2", "-1", "i", "9"])
+        body = r.choice([f"(xs ' {k}) + ||xs||", f"xs ' {k}", f"||xs|| * (xs ' {k})", f"(xs ' {k}) | (xs ' 0)", f"((xs ' {k}) < 100) + 1"])
+        defs += f"gf : xs i ? {body}\n"
+        return defs + f"gf {r.choice(names)} {r.choice(['2', '1', '(1 < 0)', num(r)])}\n"
+    return defs + lexpr(r, names, 3) + "\n"
 def program(r):
     if FLOW_RATE[0] and r.random() < FLOW_RATE[0]: return flow_program(r)
     if r.random() < LIST_RATE[0]: return list_program(r)
