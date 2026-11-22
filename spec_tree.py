@@ -495,6 +495,14 @@ def root_tree(toks, seps, env):
     parts, prev = [], 0
     for i in seps + [len(toks)]: parts.append(toks[prev:i]); prev = i + 1
     if any(not p for p in parts): return None
+    if op == ",":
+        keep = [p for p in parts if not (len(p) == 1 and (classify(p[0], env) or ("",))[0] == "V")]      # `!_` と分かる辺は `,` の被演算子で単位として消える(R61・R137)
+        if len(keep) < len(parts):
+            if len(keep) == 1:
+                r_ = resolve_seq(keep[0], env, root_alone=True)
+                if r_ is None and keep[0] == ["_"]: r_ = "(unit _)"           # 残った恒等射が根に立つ(R61)
+                return r_
+            return None
     sides = [resolve_seq(p, env, root_alone=True) for p in parts]
     if any(x is None for x in sides): return None
     if op == ",":

@@ -1757,8 +1757,8 @@
 "actual": "!_",
 "expected": "!_",
 "tree_want": "(unit _)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R61|5e82aca0bf"
 },
 {
@@ -5193,8 +5193,8 @@
 "dollar-non-function"
 ],
 "tree_want": "(: v 1)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R103|3fe6c0a713"
 },
 {
