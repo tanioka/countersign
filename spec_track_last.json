@@ -887,8 +887,8 @@
 "actual": "<fn/2>",
 "expected": "知らせ",
 "tree_want": "(: h (? [f x] (construct (apply @f x) (unit inc))))",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R136|0c0be5f14d"
 },
 {

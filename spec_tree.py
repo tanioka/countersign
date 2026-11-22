@@ -413,7 +413,7 @@ def build(terms):
         app = f"(apply {head} {a[0] if len(a) == 1 else '(construct ' + ' '.join(a) + ')'})"
         if not isinstance(mouth, tuple) and not spread and use < mouth: app = f"(unit {app})"          # 部分適用は口の開いた関数として残る(R136)
         out.append(app); out += rest
-        if tail and (isinstance(mouth, tuple) or spread or len(args) < mouth or run[0][-1].startswith("|")):
+        if tail and ((isinstance(mouth, tuple) and not run[0][-1].startswith("@")) or spread or (not isinstance(mouth, tuple) and len(args) < mouth) or run[0][-1].startswith("|")):
             pl = pipeline(terms[i:])                                           # 口の足りない・残りを受ける関数の後ろの関数と値は、結果を受ける(R11・R31・R40・R41)
             if pl is None: return None
             out.pop(); out += pl
