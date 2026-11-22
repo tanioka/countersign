@@ -269,7 +269,16 @@ def raise_ast(funcs, top):
             return ("cmp", bs, ops)
         if k == "and": return ("bin", "&", blk(r(e[1], False)), blk(r(e[2], False)))
         if k == "or": return ("bin", "|", blk(r(e[1], False)), blk(r(e[2], False)))
-        if k == "rows": return ("cases", [(None if c is None else blk(r(c, False)), blk(r(v, False))) for c, v in e[1]])
+        if k == "rows":
+            rows = e[1]
+            if any(c is not None and not nonvoid(v) for c, v in rows[:-1]) or (rows[-1][0] is not None and not nonvoid(rows[-1][1]) and len(rows) > 1 and False):
+                # 値が void になりうる行は次の行へ落ちる(V10)。`cases` ではなく `(c & v) | 残り` の連鎖で表す(旧経路の補正 3 と同じ形)
+                acc = None
+                for c, v in reversed(rows):
+                    cur = blk(r(v, False)) if c is None else ("bin", "&", blk(r(c, False)), blk(r(v, False)))
+                    acc = cur if acc is None else ("bin", "|", ("block", cur), ("block", acc))
+                return ("block", acc)
+            return ("cases", [(None if c is None else blk(r(c, False)), blk(r(v, False))) for c, v in rows])
         if k == "call":
             if not e[2]: return ("id", e[1])
             return ("seq", [("id", e[1])] + [blk(r(x, False)) for x in e[2]])          # void になりうる実引数は strict の部分適用。asm 側の strict_call_check が罠か断りにする
