@@ -6585,7 +6585,8 @@ def strict_rewrite(tree):
       5. `a != b`・`a !== b` → `(a == a) & (b == b) & (a != b)`(どちらかが `!_` なら `!_`。既定の道の `!=` は void を「違う」と読む)
       4. 行の左が名前だけ `y : …`(y は仮引数かファイルの値) → 左を `(y | y)` に(条件の行と読ませる。R128)。仮引数でもファイルの定義でもない名前は直せない
     戻り値: (書き換えた木, 直せなかった形の [(番号, 説明, 式の綴り)])"""
-    import sign_interp as SI
+    import sign_interp as SI, os
+    off = set(os.environ.get("SIGN_NOPATCH", "").split(","))                  # 計測用: 補正の番号を切る(例 SIGN_NOPATCH=3,5)。既定は全部入れる
     rest = []
     funcs = {n[1] for n in tree if isinstance(n, tuple) and n and n[0] == "def" and isinstance(n[2], tuple) and n[2][0] == "lam"}
     vals = {n[1] for n in tree if isinstance(n, tuple) and n and n[0] == "def" and not (isinstance(n[2], tuple) and n[2][0] == "lam")}
@@ -6636,18 +6637,18 @@ def strict_rewrite(tree):
             key = unwrap(n[3] if n[1] == "'" else n[2])
             if isinstance(key, tuple) and key and key[0] == "post" and key[1] == "~": key = unwrap(key[2])
             if isinstance(key, tuple) and key and key[0] == "id": return ("id", "__")
-        if k == "bin" and len(n) == 4 and n[1] in ("!=", "!=="):                  # 5. strict: `!_` を含む比べは `!_`(完全性公理)。既定の道では `!=` は void を「違う」と読むので、両辺が値のときだけ比べに進ませる
+        if k == "bin" and len(n) == 4 and n[1] in ("!=", "!==") and "5" not in off:                  # 5. strict: `!_` を含む比べは `!_`(完全性公理)。既定の道では `!=` は void を「違う」と読むので、両辺が値のときだけ比べに進ませる
             l_, r_ = tr(n[2], params), tr(n[3], params)
             if not (isinstance(l_, tuple) and l_[0] == "lit" and isinstance(r_, tuple) and r_[0] == "lit"):
                 return ("bin", "&", ("bin", "==", l_, l_), ("bin", "&", ("bin", "==", r_, r_), ("bin", n[1], l_, r_)))
             return ("bin", n[1], l_, r_)
-        if k == "cmp" and len(n) == 3 and n[2] == ["!="] and len(n[1]) == 2:       # `a != b` は cmp の形で来る
+        if k == "cmp" and len(n) == 3 and n[2] == ["!="] and len(n[1]) == 2 and "5" not in off:       # `a != b` は cmp の形で来る
             l_, r_ = tr(n[1][0], params), tr(n[1][1], params)
             if not (isinstance(l_, tuple) and l_[0] == "lit" and isinstance(r_, tuple) and r_[0] == "lit"):
                 return ("bin", "&", ("bin", "==", l_, l_), ("bin", "&", ("bin", "==", r_, r_), ("cmp", [l_, r_], ["!="])))
             return ("cmp", [l_, r_], ["!="])
         if k == "seq" and _fold_minmax(n) is not None: return _fold_minmax(n)    # 6. 順序の比べの畳みは最大・最小(`!_` を返さず、strict の値になる)
-        if k == "seq" and len(n[1]) == 2:
+        if k == "seq" and len(n[1]) == 2 and "2" not in off:
             h, m = n[1]
             if isinstance(h, tuple) and (h[0] == "lit" or (h[0] == "id" and (h[1] in params or h[1] in vals) and h[1] not in funcs)) \
                     and isinstance(m, tuple) and m[0] == "id" and m[1] in funcs and m[1] not in params:
@@ -6655,12 +6656,12 @@ def strict_rewrite(tree):
         if k == "cases":
             rows = []
             for c, e in n[1]:
-                if isinstance(c, tuple) and c[0] == "id":
+                if isinstance(c, tuple) and c[0] == "id" and "4" not in off:
                     if c[1] in params or c[1] in vals: c = ("bin", "|", c, c)
                     else: rest.append((4, "行の左が名前だけ `%s : …`(仮引数でもファイルの定義でもない名前。strict では未定義)" % c[1], src(c) + " : " + src(e)))
                 rows.append((tr(c, params) if c is not None else None, tr(e, params)))
             for i, (c, e) in enumerate(rows[:-1]):
-                if c is not None and (maybe_void(e) or has_call(e)):
+                if "3" not in off and c is not None and (maybe_void(e) or has_call(e)):
                     return ("cases", rows[:i] + [(None, chain(rows[i:]))])
             return ("cases", rows)
         return (k,) + tuple(tr(y, params) for y in n[1:])
