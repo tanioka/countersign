@@ -19,6 +19,9 @@ OK += [("inc (vs ' _) 5", "(apply inc 5)"), ("inc (b @ pw) 5", "(apply inc 5)")]
 OK += [("[+ inc] 5", "(apply [+ inc] 5)"), ("[+ i] 5", "(apply [+ i] 5)"), ("[< _] 5", "(apply [< _] 5)")]     # 点なしの括りの片側が関数・恒等射(R87・R29・R48)
 OK += [("[inc,] 1 2 3", "(apply [inc,] (construct 1 2 3))")]     # `[F,]` は口 1 つの F の写像(R50)
 OK += [("~1 2 3", "(construct ~1 2 3)"), ("-_ 5", "(construct -_ 5)"), ("!inc 5", "(construct !inc 5)")]     # 値の印・前置 `~` の葉(R87・R77)
+for src_, defs_, want_ in [("f -x", ["f : a ? a", "x : 3"], "(apply f -x)")]:
+    g_ = T.tree_of(src_, P + defs_)
+    if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 値の名前に前置 `-` は値(R2)
 NONE = ["inc ~1 5", "[add,] vs", "v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc", "inc i [* 2,] 1 2"]
 for s, t in OK:
     g = T.tree_of(s, P)
