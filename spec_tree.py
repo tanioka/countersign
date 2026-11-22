@@ -314,7 +314,13 @@ def build(terms):
             out += [f"(unit {r[-1]})" for r in run] if len(run) == 1 else [f"(unit (compose {' '.join(r[-1] for r in run)}))"]
             i = j; continue
         if any(r[0] == "I" and r[1] == "_" for r in run) and (len(run) > 1 or len(args) != 1): return None      # `_` の恒等射は 1 つの実引数だけ受ける形(R44)に限る
-        if run[0][0] == "I" and run[0][1] != "_": return None                 # 恒等射の名前が頭の適用は R29・R74 の読みで未対応
+        if run[0][0] == "I" and run[0][1] != "_":                              # 恒等射の名前(`i`)が頭の適用(R29・R74)
+            if i != 0 or run[0][1] != "i": return None
+            if any(t[0] == "F" for t in terms[1:]):                            # 何も受けていない頭の恒等射に、恒等射でない関数が続けば、単位律で消える(木にも書かない)
+                return build(terms[1:])
+            if len(run) == 1 and args and not tail and not any(a.endswith("~") for a in args):
+                return f"(apply {run[0][-1]} {args[0] if len(args) == 1 else '(construct ' + ' '.join(args) + ')'})"      # 関数が続かなければ、並び全体を受ける
+            return None
         if len(run) > 1:
             if any(r[0] == "F" and isinstance(r[1], tuple) and not r[-1].startswith("@") for r in run):
                 pl = pipeline(terms[i:])                                       # 合成の中の可変長の口(`inc [+] 5 6`、R41): 前の結果を最初に受け、残りの値を全部受ける

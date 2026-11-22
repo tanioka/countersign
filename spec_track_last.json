@@ -1137,8 +1137,8 @@
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
 "tree_want": "(apply i (construct 1 2 3))",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R29|0d7bb31d9e"
 },
 {
@@ -1150,8 +1150,8 @@
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
 "tree_want": "(construct (apply inc 1) 2)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R29|82ed69e36f"
 },
 {
@@ -1326,8 +1326,8 @@
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
 "tree_want": "(construct (apply inc 1) 2)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R74|82ed69e36f"
 },
 {
@@ -1343,8 +1343,8 @@
 "leftover-lambda"
 ],
 "tree_want": "(construct 5 (unit inc))",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R74|57b87e28f4"
 },
 {
@@ -2095,8 +2095,8 @@
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
 "tree_want": "(apply i 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R137|abb2119324"
 },
 {
