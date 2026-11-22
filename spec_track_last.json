@@ -3316,8 +3316,8 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R27|335ccec614"
 },
 {
@@ -3328,8 +3328,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R27|2e6dea77bb"
 },
 {
@@ -3340,8 +3340,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R27|e4d2f76524"
 },
 {
@@ -3352,8 +3352,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R27|60cc287cb5"
 },
 {
@@ -3401,8 +3401,8 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R27|20339a549a"
 },
 {
@@ -3417,8 +3417,8 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R27|5db6b6d450"
 },
 {
@@ -5810,8 +5810,8 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R62|9298ea5601"
 },
 {
@@ -6060,8 +6060,8 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R62|831625ad70"
 },
 {
@@ -6575,8 +6575,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R117|566b7bc989"
 },
 {

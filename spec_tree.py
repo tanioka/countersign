@@ -150,6 +150,10 @@ def _classify(tok, env):
         if any(re.fullmatch(r"[^\w\s$\[\]()'\"~]+", t) or t in ("'",) for t in inner): return ("A", leaf_text(tok)) if _plain(inner, env) else None
         return ("A", leaf_text(tok)) if _plain(inner, env) else None
     if tok == "_": return ("I", "_")
+    if tok == "|_|": return ("F", 1, tok)                                        # R27: 囲みの中の関数(絶対値)
+    if tok == "||_||": return ("F", ("var", 1), tok)                              # 長さ(残りを受ける)
+    mb = re.fullmatch(r"\|\|?([\w']+)\|?\|", tok)
+    if mb and (env.get(mb.group(1)) or ("",))[0] == "F": return ("A", tok)        # 関数を囲んだ物は値(R27)
     m = re.fullmatch(r"[\w']+", tok)
     if m:
         k = env.get(tok)
@@ -266,7 +270,7 @@ def ref_mouths(terms, env, named):
         out.append(("A", a[1]))
     return out
 def _plain_head(name, env):
-    return not name.startswith(("[", "@")) and (env.get(name) is None or env[name][0] != "F" or len(env[name]) < 3 or env[name][2])
+    return not name.startswith(("[", "@", "|")) and (env.get(name) is None or env[name][0] != "F" or len(env[name]) < 3 or env[name][2])
 
 def operand(tok, env, root):
     c = classify(tok, env)
@@ -331,7 +335,7 @@ def build(terms):
         app = f"(apply {head} {a[0] if len(a) == 1 else '(construct ' + ' '.join(a) + ')'})"
         if not isinstance(mouth, tuple) and not spread and use < mouth: app = f"(unit {app})"          # 部分適用は口の開いた関数として残る(R136)
         out.append(app); out += rest
-        if tail and (isinstance(mouth, tuple) or spread or len(args) < mouth): return None     # 口の足りない・残りを受ける関数の後ろの関数と値は、結果を受けるので未対応(R40・R11)
+        if tail and (isinstance(mouth, tuple) or spread or len(args) < mouth or run[0][-1].startswith("|")): return None     # 口の足りない・残りを受ける関数の後ろの関数と値は、結果を受けるので未対応(R40・R11)
         i = k
     return out[0] if len(out) == 1 else "(construct " + " ".join(out) + ")"
 
@@ -344,9 +348,23 @@ def fold_chain(g, env):
     for o in ops[1:]: t = f"({g[1]} {t} {o})"
     return t
 
+def ml_lines(src):
+    """複数行の源を論理行に分ける。字下げの無い行ごとに 1 行、行頭が空白(`␠`)だけの続きの行は前の行につなぐ。タブの字下げのブロック・`io@`・空行は None"""
+    out = []
+    for ln in src.split("\n"):
+        if not ln.strip(): continue
+        if ln.startswith("\t") or ln.strip() == "io@" or ln.strip().endswith("@"): return None
+        if ln[0] in " ␠": 
+            if not out: return None
+            out[-1] += " " + ln.lstrip(" ␠")
+        else: out.append(ln)
+    return out
 def tree_of(src, defs=(), kinds="eval"):
     """源(1 行)の木。出せない形は None。kinds: "text"(綴りから)/ "eval"(評価器に聞く、P1)"""
-    if "\n" in src.strip(): return None
+    if "\n" in src.strip():
+        lines = ml_lines(src)
+        if lines is None or len(lines) < 2: return tree_of(lines[0], defs, kinds) if lines else None
+        return tree_of(lines[-1], list(defs) + lines[:-1], kinds)             # 複数行の見本: 木は最後の行のもの、前の行は定義(読めない形は None)
     env = kinds_from(list(defs)) if kinds == "text" else kinds_from_eval(list(defs))
     if env is None: return None
     env_defaults.clear()
