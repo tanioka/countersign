@@ -1,4 +1,4 @@
-# alpha1 追従: 設計者の仕様(tanioka/Sign)の R 規則・V 規則の見本を strict と突き合わせ、前回との差を出す。
+# alpha1 追従: 設計者の仕様(johnny-shaman/Sign)の R 規則・V 規則の見本を strict と突き合わせ、前回との差を出す。
 # 仕様リポジトリが非公開なら、リポジトリの secret SPEC_TOKEN(読み取りの token)を設定する。
 name: spec-track
 on:
@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
-          repository: tanioka/Sign
+          repository: johnny-shaman/Sign
           path: sign-spec
           token: ${{ secrets.SPEC_TOKEN || github.token }}
       - uses: actions/setup-python@v5
