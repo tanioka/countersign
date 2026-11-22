@@ -74,6 +74,7 @@ for doc in HEAD:
             got = T.tree_of(src, [l for l in A.PRE.splitlines() if l.split(" ")[0] not in names_] + list(defs))
             defs_all = [l for l in A.PRE.splitlines() if l.split(" ")[0] not in names_] + list(defs)
             got_e = T.tree_of(src, defs_all, kinds="eval")
+            rec["tree_want"] = exp_t
             rec["tree_eval"] = "unsupported" if got_e is None else ("match" if got_e == exp_t else "mismatch")
             if got_e is not None and got_e != exp_t: rec["tree_eval_got"] = got_e; rec["tree_exp"] = exp_t
             rec["tree"] = "unsupported" if got is None else ("match" if got == exp_t else "mismatch")
@@ -115,6 +116,9 @@ tr = [r for r in res if "tree" in r]
 if tr:
     import collections as _c
     c = _c.Counter(r["tree"] for r in tr)
+    if "--tree-list" in sys.argv:
+        for r_ in tr:
+            if r_.get("tree_eval") == "unsupported": print("木 未対応 %s L%s: %r  期待 %s" % (r_["rule"], r_["line"], r_["src"][:70], r_.get("tree_want", "")[:70]))
     print(f"\n木の突き合わせ(spec_tree.py。仕様の見本 {len(tr)} 件): 一致 {c['match']} / 不一致 {c['mismatch']} / 未対応 {c['unsupported']}")
     ce = _c.Counter(r["tree_eval"] for r in tr)
     print(f"木(評価器に聞く版 kinds=eval): 一致 {ce['match']} / 不一致 {ce['mismatch']} / 未対応 {ce['unsupported']}")

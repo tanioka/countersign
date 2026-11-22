@@ -10,6 +10,7 @@
 "state": "ok",
 "actual": "9",
 "expected": "9",
+"tree_want": "(apply f (construct (+ x 1) y))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R1|9ce27d90bf"
@@ -22,6 +23,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(& (apply inc 1) (apply inc 2))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R1|c4191953cc"
@@ -34,6 +36,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply f -x)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R2|f6b5b8f504"
@@ -46,6 +49,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply (compose inc double inc) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R8|955f752ff5"
@@ -58,6 +62,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply (compose [inc double] inc) 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R8|f393076d45"
@@ -80,8 +85,9 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_want": "(apply g (apply add (construct (apply inc 5) 3)))",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R11|8e2df923a9"
 },
 {
@@ -92,6 +98,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(, (construct 1 2) (construct 3 4))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R19|904d785f9e"
@@ -105,6 +112,7 @@
 "state": "ok",
 "actual": "[2, 3]",
 "expected": "2 3",
+"tree_want": "(, (apply inc 1) (apply inc 2))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R19|919059f3b5"
@@ -118,6 +126,7 @@
 "state": "ok",
 "actual": "[4, 4]",
 "expected": "4 4",
+"tree_want": "(construct (apply inc 3) 4)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R35|de1273e966"
@@ -130,6 +139,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply [+ 1] 1) 2 3)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R35|7d4c06711a"
@@ -142,6 +152,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply [!_] (construct 1 2 3 4 5))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R35|d947fa2354"
@@ -155,6 +166,7 @@
 "state": "ok",
 "actual": "[5, 4]",
 "expected": "5 4",
+"tree_want": "(construct 5 (apply inc 3))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R40|8294f0e3f1"
@@ -168,8 +180,9 @@
 "state": "ok",
 "actual": "-8",
 "expected": "-8",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_want": "(apply f2 (construct (apply f2 (construct 3 5)) 6))",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R40|31ab5f6971"
 },
 {
@@ -180,8 +193,9 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_want": "(apply inc (apply [+] (construct 1 2 3)))",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R41|84423ddff6"
 },
 {
@@ -192,8 +206,9 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_want": "(apply [+] (construct (apply inc 5) 6))",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R41|e4d46ae367"
 },
 {
@@ -204,6 +219,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct 1 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R47|3c28d037e3"
@@ -217,6 +233,7 @@
 "state": "ok",
 "actual": "11",
 "expected": "11",
+"tree_want": "(apply (compose double inc) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R47|3d08367af1"
@@ -229,6 +246,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply d 1) 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R47|2ad329e2af"
@@ -245,6 +263,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(construct 1 2 (unit inc))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R47|19ed8ac47e"
@@ -257,6 +276,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct 5 (unit (? [$p0] (apply f2 (construct $p0 3)))))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R47|fa4ce8c533"
@@ -280,6 +300,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply use (construct 7 8)) 9)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R120|2eb0d4f584"
@@ -292,6 +313,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct z 1 2)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R120|6266294824"
@@ -305,6 +327,7 @@
 "state": "ok",
 "actual": "[2, 2]",
 "expected": "2 2",
+"tree_want": "(, (apply inc 1) 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R121|7708849554"
@@ -321,6 +344,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(, (unit (apply f3 1)) (, 2 3))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R121|e00cf38272"
@@ -333,6 +357,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply tl (construct 1 2)) 3)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R24|1594e606af"
@@ -345,6 +370,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply p3 (construct 1 [2 3] 4 5))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R24|f9f09a2feb"
@@ -357,6 +383,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply f (construct 1 2 3 4))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R24|5619382465"
@@ -369,6 +396,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(: pb (? [[x]] (defer {x + 1})))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R25|27f0464c0c"
@@ -381,6 +409,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply (' p a) 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R26|8d01123e21"
@@ -394,6 +423,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
+"tree_want": "(' 5 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|df12fe2bb0"
@@ -407,6 +437,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
+"tree_want": "(' [5] 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|9607107472"
@@ -420,6 +451,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(+ [5 ' 0] 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|6bf1e85447"
@@ -433,6 +465,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(' [3 < 2] 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|44d52a7848"
@@ -446,6 +479,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|7ba0d24679"
@@ -459,6 +493,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R26|b572371800"
@@ -472,6 +507,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|024e892822"
@@ -485,6 +521,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
+"tree_want": "(' 5 -1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|f217e32ea6"
@@ -498,6 +535,7 @@
 "state": "ok",
 "actual": "[5]",
 "expected": "5",
+"tree_want": "(' 5 ~-1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|5323f4a91d"
@@ -511,6 +549,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|27d4cdf1cf"
@@ -524,6 +563,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R26|6fe88bf5ee"
@@ -537,6 +577,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R26|2b6e0abfa1"
@@ -549,6 +590,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(' [1 2 3] ~1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|514dae6230"
@@ -562,6 +604,7 @@
 "state": "ok",
 "actual": "1",
 "expected": "1",
+"tree_want": "(' pw 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|bb1bacafe7"
@@ -574,6 +617,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(@ a pw)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|c7c3678214"
@@ -587,6 +631,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R26|9ed3652d8d"
@@ -599,6 +644,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(' pt 1~)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|9eb35cd6fd"
@@ -611,6 +657,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(' 0x10 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|ac14343671"
@@ -623,6 +670,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(' 0x10 1~)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|a94cef35fb"
@@ -635,6 +683,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(' 0x10 [1 ~ 3])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|2bd1c45546"
@@ -648,6 +697,7 @@
 "state": "ok",
 "actual": "[0x18, 0x20, 0x28]",
 "expected": "知らせ",
+"tree_want": "(# [0x10 ' [1 ~ 3]] [7 8 9])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|477c6f6317"
@@ -660,6 +710,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply inc [0x10 ' 1]) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|b162a7e97d"
@@ -673,6 +724,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|fa0272cbb5"
@@ -686,6 +738,7 @@
 "state": "ok",
 "actual": "0x20",
 "expected": "0x20",
+"tree_want": "(' [[0x10 0x20] ' 1~] 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|287d5c79f7"
@@ -699,6 +752,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R26|4ad45ad504"
@@ -711,6 +765,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply f [0x10])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R26|747befc8bd"
@@ -723,6 +778,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply use (construct $inc 5))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R81|dffe8daa32"
@@ -740,6 +796,7 @@
 "dollar-non-function",
 "leftover-lambda"
 ],
+"tree_want": "(unit sh)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R81|07d411a046"
@@ -753,6 +810,7 @@
 "state": "ok",
 "actual": "<fn/1>",
 "expected": "知らせ",
+"tree_want": "(: tg (? [q] (apply @q vs~)))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R81|6f7ca55e5c"
@@ -766,6 +824,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply tg $add)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R81|274d1c49fb"
@@ -800,6 +859,7 @@
 "state": "ok",
 "actual": "0",
 "expected": "0",
+"tree_want": "(apply cnt (construct $inc 5))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R81|baf18c0e41"
@@ -812,6 +872,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply r2 $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R81|1ce06bc5b2"
@@ -825,6 +886,7 @@
 "state": "ok",
 "actual": "<fn/2>",
 "expected": "知らせ",
+"tree_want": "(: h (? [f x] (construct (apply @f x) (unit inc))))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R136|0c0be5f14d"
@@ -841,6 +903,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(construct (apply t 5) (unit inc))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R136|776d9b0ab7"
@@ -857,6 +920,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(construct [inc , [3 < 4]] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R136|566efa2cc9"
@@ -873,6 +937,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(apply inc [3 < 2])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R136|a05b6e62f6"
@@ -889,6 +954,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(apply fz 3)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R136|3fc4baada1"
@@ -902,6 +968,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply g1 3)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R136|eb57fce7e8"
@@ -918,6 +985,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(, (unit inc) [3 < 2])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R136|c4f59a4eab"
@@ -934,6 +1002,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(construct [3 | inc] 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R136|a37a7e88fa"
@@ -947,6 +1016,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply g6 (construct 1 [3 < 2]))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R136|b30ca0ab30"
@@ -960,6 +1030,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply g7 (construct [3 < 2] 5))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R136|3e12353580"
@@ -976,6 +1047,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(apply g2 [3 < 2])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R136|ac646acc9c"
@@ -988,6 +1060,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(unit (? [$p0] (apply add (construct $p0 10))))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R16|b1cef9d663"
@@ -1000,6 +1073,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(unit (? [$p0] (apply add (construct 3 $p0))))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R16|824455bad1"
@@ -1012,6 +1086,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(unit (? [$p0] (apply p (construct $p0 2))))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R16|127b10547f"
@@ -1024,6 +1099,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(unit (? [$p0] (apply [add] (construct $p0 2))))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R16|70afdba442"
@@ -1036,6 +1112,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(unit (? [$p0] (apply q (construct $p0 2))))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R16|fa41d83020"
@@ -1059,6 +1136,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply i (construct 1 2 3))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R29|0d7bb31d9e"
@@ -1071,6 +1149,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply inc 1) 2)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R29|82ed69e36f"
@@ -1087,6 +1166,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(& 1 (unit _))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R29|a521758e84"
@@ -1103,6 +1183,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(' (unit _) 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R29|022ee4779f"
@@ -1119,6 +1200,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(apply pp 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R29|3b9f4ed4d2"
@@ -1135,6 +1217,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(apply fb 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R29|39ef173462"
@@ -1147,6 +1230,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply _ 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R44|30cb6fc2fe"
@@ -1159,6 +1243,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct 5 (apply _ 3))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R44|426bc36ef4"
@@ -1171,6 +1256,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(unit (compose inc _ inc))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R46|389a0fec5b"
@@ -1205,6 +1291,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply inc 5) (unit _))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R69|9436dceb55"
@@ -1238,6 +1325,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply inc 1) 2)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R74|82ed69e36f"
@@ -1254,6 +1342,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(construct 5 (unit inc))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R74|57b87e28f4"
@@ -1266,6 +1355,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply (compose inc i inc) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R74|4cf391a4b9"
@@ -1278,6 +1368,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply [* 2,] (apply i (construct (apply inc 1) 2)))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R74|99a4a26788"
@@ -1290,6 +1381,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply inc 5) (apply _ 6))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R89|adc0211a45"
@@ -1302,6 +1394,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply pq (construct 1 2)) (apply _ 5))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R89|84662b8186"
@@ -1346,6 +1439,7 @@
 "state": "ok",
 "actual": "-1",
 "expected": "-1",
+"tree_want": "(construct (apply f2 (construct [3 < 2] 1)) 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R83|55a33b141a"
@@ -1368,6 +1462,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply gd (construct 3 [3 < 2] 7))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R83|f0d465571a"
@@ -1401,6 +1496,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "知らせ",
+"tree_want": "(apply fq w)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R122|4f4a690494"
@@ -1414,6 +1510,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "知らせ",
+"tree_want": "(apply fq $w)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R122|34ab1467ae"
@@ -1430,6 +1527,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(apply fq $vs)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R122|905afea509"
@@ -1446,6 +1544,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(apply fq [3 < 2])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R122|676789c89c"
@@ -1459,6 +1558,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(apply fm (construct w 5))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R122|979c966590"
@@ -1471,6 +1571,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R84|fc18bcb932"
@@ -1483,6 +1584,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R84|ebd3c1fc8f"
@@ -1495,6 +1597,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R84|0362bbfd00"
@@ -1511,6 +1614,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R84|34941b560d"
@@ -1527,6 +1631,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(apply fz (construct 1 2))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R84|70b30c43af"
@@ -1550,6 +1655,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R112|9ce949ccc0"
@@ -1562,6 +1668,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R112|2066ba5b27"
@@ -1578,6 +1685,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R112|cd683554aa"
@@ -1595,6 +1703,7 @@
 "dollar-non-function",
 "leftover-lambda"
 ],
+"tree_want": "(unit inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R112|3e3dd1b788"
@@ -1619,6 +1728,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
+"tree_want": "(, (unit _) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R61|3628b87e26"
@@ -1632,6 +1742,7 @@
 "state": "ok",
 "actual": "[1, 2]",
 "expected": "1 2",
+"tree_want": "(, 1 (, (unit _) 2))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R61|87e32b5349"
@@ -1645,6 +1756,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(unit _)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R61|5e82aca0bf"
@@ -1697,6 +1809,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(, (unit inc) 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R61|edb6521708"
@@ -1748,6 +1861,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
+"tree_want": "(, (unit (compose i i)) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R61|9ba641d242"
@@ -1775,6 +1889,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(, (unit (compose i i)) (unit i))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R61|1a146dbe3b"
@@ -1788,6 +1903,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(construct [inc , [3 < 2]] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R61|c3ab1bb67b"
@@ -1811,6 +1927,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(: x (, (unit _) (unit _)))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R61|520928b291"
@@ -1867,6 +1984,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(| (unit _) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R137|b5b12b9183"
@@ -1883,6 +2001,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(| (unit inc) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R137|d7f202a91a"
@@ -1899,6 +2018,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(apply [inc | 1 & inc] 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R137|40f98c6945"
@@ -1921,6 +2041,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct 5 3)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R137|2a084a6f70"
@@ -1947,6 +2068,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(apply pc (construct [w 1] 5))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R137|c8f4a96921"
@@ -1959,6 +2081,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(: v 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R137|8163a73abc"
@@ -1971,6 +2094,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply i 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R137|abb2119324"
@@ -1994,6 +2118,7 @@
 "state": "ok",
 "actual": "8",
 "expected": "8",
+"tree_want": "(apply [+] (construct 5 w 3))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R137|784ac43485"
@@ -2058,6 +2183,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R137|6b5c29a6cd"
@@ -2074,6 +2200,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(unit (apply (compose inc add) 5))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R42|a8450e35fe"
@@ -2100,6 +2227,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(construct 5 (unit inc))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R48|98055beed5"
@@ -2124,6 +2252,7 @@
 "state": "ok",
 "actual": "7",
 "expected": "知らせ",
+"tree_want": "(; 7 (unit i))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R48|d70b6f028c"
@@ -2140,6 +2269,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(& 1 (unit i))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R48|231aece8a2"
@@ -2156,6 +2286,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(+ 0x10 (unit i))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R48|6abf165924"
@@ -2172,6 +2303,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(apply f 0x10)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R48|b8d426a2b3"
@@ -2188,6 +2320,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(: f (? [x] (+ 0x10 (unit i))))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R48|aae8059245"
@@ -2204,6 +2337,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(== (unit i) 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R48|b23bfb4623"
@@ -2220,6 +2354,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(' (unit i) 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R48|002d6840ca"
@@ -2250,6 +2385,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(~ 1 (unit i))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R48|62ced730ac"
@@ -2266,6 +2402,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(# (unit i) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R48|d50090cccc"
@@ -2282,6 +2419,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(apply f 3)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R48|878e4b95c5"
@@ -2295,6 +2433,7 @@
 "state": "ok",
 "actual": "[5, 3]",
 "expected": "5 3",
+"tree_want": "(construct [5 inc] 3)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R52|c7a9e45e39"
@@ -2308,6 +2447,7 @@
 "state": "ok",
 "actual": "[5, 3]",
 "expected": "5 3",
+"tree_want": "(construct v 3)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R52|c180d8a2d5"
@@ -2324,6 +2464,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(== (unit inc) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R76|a378f34d71"
@@ -2340,6 +2481,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(apply pp 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R76|3b9f4ed4d2"
@@ -2353,6 +2495,7 @@
 "state": "ok",
 "actual": "1",
 "expected": "1",
+"tree_want": "(+ (unit inc) 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R87|0a8a2acbf3"
@@ -2366,6 +2509,7 @@
 "state": "ok",
 "actual": "1",
 "expected": "1",
+"tree_want": "(+ (unit _) 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R87|a31e8cdd56"
@@ -2379,6 +2523,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
+"tree_want": "(construct -_ 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R87|39e0da3af7"
@@ -2391,6 +2536,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct !inc 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R87|84979526ab"
@@ -2407,6 +2553,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(' (unit inc) 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R87|6be9d252b0"
@@ -2423,6 +2570,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(@ 0 (unit inc))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R87|e4d2bb2f05"
@@ -2439,6 +2587,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(apply [+ inc] 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R87|42dc652e04"
@@ -2455,6 +2604,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(apply s 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R87|6f2f264923"
@@ -2468,6 +2618,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
+"tree_want": "(apply [+ i] 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R87|08f671e3f3"
@@ -2484,6 +2635,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(apply [< _] 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R87|bd4bb2b0dd"
@@ -2500,6 +2652,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(# (unit inc) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R87|be0185bf72"
@@ -2512,6 +2665,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply (compose [' 0] inc) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R87|c17cd3dbd7"
@@ -2528,6 +2682,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(# box (unit inc))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R116|3e43c903d3"
@@ -2541,6 +2696,7 @@
 "state": "ok",
 "actual": "0",
 "expected": "知らせ",
+"tree_want": "(# box (unit _))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R116|63f44a45f8"
@@ -2553,6 +2709,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply gq (construct 1 !_))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R107|31a8b93535"
@@ -2565,6 +2722,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(unit (? [$p0] (apply gq (construct 1 $p0))))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R107|9218a304ec"
@@ -2598,6 +2756,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(construct [gq 1 , w] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R124|4657ea977d"
@@ -2614,6 +2773,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(construct (apply k 1) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R125|d62b7c5884"
@@ -2641,6 +2801,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
+"tree_want": "(construct (' [q 1] g) 4)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R125|9b14545837"
@@ -2657,6 +2818,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(construct (' [f 1] g) 4)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R125|b10d7ee8c7"
@@ -2673,6 +2835,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(construct (' [q 1] g) 4)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R125|9b14545837"
@@ -2689,6 +2852,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(apply adder2 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R125|ce2c19f381"
@@ -2705,6 +2869,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(apply q 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R125|6565476899"
@@ -2721,6 +2886,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(construct (' [f 5] g) 4)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R125|2cd338f333"
@@ -2734,6 +2900,7 @@
 "state": "ok",
 "actual": "[<fn/1>, 1]",
 "expected": "知らせ",
+"tree_want": "(apply q 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R125|6565476899"
@@ -2750,6 +2917,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(apply q 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R125|6565476899"
@@ -2767,6 +2935,7 @@
 "bare-function-return"
 ],
 "why": "知らせ ['bare-function-return'] が出ない(出た: [])",
+"tree_want": "(apply q 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R125|6565476899",
@@ -2784,6 +2953,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(apply q 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R125|6565476899"
@@ -2800,6 +2970,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(apply pq 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R125|8eb499f8f7"
@@ -2816,6 +2987,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(apply t 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R125|e2a42af746"
@@ -2832,6 +3004,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(apply pp 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R125|3b9f4ed4d2"
@@ -2848,6 +3021,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(apply f 3)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R125|878e4b95c5"
@@ -2862,6 +3036,7 @@
 "actual": "_",
 "expected": "!_",
 "why": "値 '_' (期待 !_)",
+"tree_want": "(apply f 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R125|a300d98380",
@@ -2876,6 +3051,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
+"tree_want": "(apply [-] (construct 10 3 2))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R31|465bb8a1ab"
@@ -2889,6 +3065,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(apply [&] (construct 1 w 3))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R31|6f72a0ad7f"
@@ -2902,6 +3079,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(apply [+] (construct 0x10 [3 < 2]))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R31|15e2ae6a68"
@@ -2928,6 +3106,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(apply [<] (construct [$inc + 1] 3))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R31|e006dec66a"
@@ -2944,6 +3123,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(apply [|] (construct [$inc + 1] 5))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R31|ac916df9e0"
@@ -2956,8 +3136,9 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_want": "(apply g (apply [+] (construct 5 3)))",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R31|0f3e0b7b5f"
 },
 {
@@ -2972,6 +3153,7 @@
 "expected_warn": [
 "pointfree-not-folded"
 ],
+"tree_want": "(construct (apply [<<] (construct 1 4)) 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R32|5f44f412d4"
@@ -2984,6 +3166,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply [inc,] (construct 1 2 3))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R50|b604963638"
@@ -2996,6 +3179,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct [add,] vs)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R50|b2edb176c5"
@@ -3008,6 +3192,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply [' 0] [1 2]) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R77|6b9a776370"
@@ -3020,6 +3205,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply [' 0] [1 2 3]) (apply inc 4))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R77|ce72195017"
@@ -3033,6 +3219,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
+"tree_want": "(apply [' 0] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R77|45fb9dfd3f"
@@ -3046,6 +3233,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "知らせ",
+"tree_want": "(apply [' 0] $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R77|fa812e1e10"
@@ -3059,6 +3247,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply @[[' 0] $inc] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R77|1999ca9ed2"
@@ -3075,6 +3264,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ [[' 0] $inc] 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R77|6a9969f368"
@@ -3102,6 +3292,7 @@
 "state": "ok",
 "actual": "_",
 "expected": "知らせ",
+"tree_want": "(unit i)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R95|eff8fdde09"
@@ -3118,6 +3309,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(unit [* 2,])",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R95|bf33daff3b"
@@ -3131,6 +3323,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
+"tree_want": "(, (unit i) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R95|af32bcc525"
@@ -3147,6 +3340,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(& 1 (unit [i w]))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R95|339451cdf3"
@@ -3160,6 +3354,7 @@
 "state": "ok",
 "actual": "[10]",
 "expected": "10",
+"tree_want": "(apply v 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R95|8020b53037"
@@ -3187,6 +3382,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(apply f 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R95|de744ca1e5"
@@ -3199,6 +3395,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply [+] w~)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R95|8a5a2760e2"
@@ -3211,6 +3408,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply [+] w)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R95|fe37dd4214"
@@ -3223,6 +3421,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply (compose [+] inc) w~)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R95|7de2f3a5c6"
@@ -3235,6 +3434,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc (apply ||_|| (construct 1 2)))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R27|e4d4565281"
@@ -3248,6 +3448,7 @@
 "state": "ok",
 "actual": "0",
 "expected": "知らせ",
+"tree_want": "(apply ||_|| w)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R27|bb38751978"
@@ -3261,6 +3462,7 @@
 "state": "ok",
 "actual": "0",
 "expected": "0",
+"tree_want": "(apply ||_|| w~)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R27|5b84142b1b"
@@ -3274,6 +3476,7 @@
 "state": "ok",
 "actual": "[0, 1, 2]",
 "expected": "0 1 2",
+"tree_want": "(construct v 1 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R27|d9ec13b56f"
@@ -3287,6 +3490,7 @@
 "state": "ok",
 "actual": "1",
 "expected": "1",
+"tree_want": "(apply ||_|| 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R27|7b975febee"
@@ -3300,6 +3504,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(apply |_| w)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R27|3b0f7435e7"
@@ -3316,6 +3521,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(unit ||_||)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R27|335ccec614"
@@ -3328,6 +3534,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply |_| [0 - 5])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R27|2e6dea77bb"
@@ -3340,6 +3547,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply (compose inc |_|) [0 - 5])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R27|e4d2f76524"
@@ -3352,6 +3560,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply (compose |_| inc) [0 - 5])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R27|60cc287cb5"
@@ -3364,6 +3573,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc (apply |_| [0 - 5]))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R27|a77907ad5d"
@@ -3401,6 +3611,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(construct |inc| 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R27|20339a549a"
@@ -3417,6 +3628,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(construct ||inc|| 1 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R27|5db6b6d450"
@@ -3429,6 +3641,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply f (construct 1 2 3 4))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R64|5619382465"
@@ -3441,6 +3654,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply f vs~)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R64|3e681b8793"
@@ -3454,6 +3668,7 @@
 "state": "ok",
 "actual": "1",
 "expected": "知らせ",
+"tree_want": "(apply f (construct 1 2 3))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R64|75f9df6fef"
@@ -3467,6 +3682,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(apply fe (construct 1 2))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R91|4bce28231a"
@@ -3490,6 +3706,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply f [1 , 2 , 3])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R66|41fa36329a"
@@ -3536,6 +3753,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(, (unit (compose fp i)) (, 1 2))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R66|1cd7b8abf3"
@@ -3552,6 +3770,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(, (unit (apply pb 1)) 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R66|8a16363040"
@@ -3564,6 +3783,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply fp [1 2 , 3])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R93|aff30dbf07"
@@ -3577,6 +3797,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply add vs~)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R51|88cf7dd3fa"
@@ -3589,6 +3810,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc vs~)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R51|210beeee3b"
@@ -3602,6 +3824,7 @@
 "state": "ok",
 "actual": "8",
 "expected": "8",
+"tree_want": "(apply (compose inc add) vs~)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R51|54cc18277e"
@@ -3656,6 +3879,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct ~1 2 3)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R79|c25735b0b0"
@@ -3762,6 +3986,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "$inc",
+"tree_want": "(apply tw $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R99|3215213b76"
@@ -3775,6 +4000,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "$inc",
+"tree_want": "(apply tw [t 1])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R99|492e53992d"
@@ -3788,6 +4014,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "$inc",
+"tree_want": "(apply tm (construct $inc [t 1]))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R99|12e5522f53"
@@ -3804,6 +4031,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ $say 1)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R99|cd3c058baa"
@@ -3820,6 +4048,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ x 1)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R99|7187d2e62a"
@@ -3836,6 +4065,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(: tk (? [f] (+ $@f 1)))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R99|6c409fb1c1"
@@ -3850,6 +4080,7 @@
 "actual": "断り: 標準ライブラリの import(IO@ など)は未実装",
 "expected": "!_",
 "why": "断り: 標準ライブラリの import(IO@ など)は未実装",
+"tree_want": "(== $say 1)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R99|51eaa50845",
@@ -3928,6 +4159,7 @@
 "state": "ok",
 "actual": "<fn/1>",
 "expected": "知らせ",
+"tree_want": "(: tw (? [f] $f))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R100|79d62c36a6"
@@ -3944,6 +4176,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(apply tw 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R100|363b1acd10"
@@ -4015,6 +4248,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(: tk (? [f] $[@f , 1]))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R101|145d4fc460"
@@ -4057,6 +4291,7 @@
 "state": "ok",
 "actual": "[$_, $inc]",
 "expected": "知らせ",
+"tree_want": "(, $_ $inc)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R101|6b4130e245"
@@ -4108,6 +4343,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply map (construct $inc vs))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R49|168f515545"
@@ -4120,6 +4356,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply map (construct $p vs))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R49|8c18665fce"
@@ -4132,6 +4369,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply @[$_] (construct 1 2))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R49|3af7760c68"
@@ -4144,6 +4382,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply @q (construct 1 2))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R49|e38e02a316"
@@ -4156,6 +4395,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply @[$[x ? x]] 1) 2)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R49|edcd48023c"
@@ -4168,6 +4408,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct (apply inc 1) 2)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R49|c2e334bee5"
@@ -4192,6 +4433,7 @@
 "state": "ok",
 "actual": "_",
 "expected": "知らせ",
+"tree_want": "(unit @[$_])",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R49|74ea502999"
@@ -4229,6 +4471,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "知らせ",
+"tree_want": "(apply h [s : $inc])",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R49|5234039a1d"
@@ -4242,6 +4485,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(apply h [s : w])",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R49|fa28040994"
@@ -4269,6 +4513,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply @[fs ' 0] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R49|e34ef1e29d"
@@ -4282,6 +4527,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply @[ws ' 1] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R49|0d7cc11502"
@@ -4415,6 +4661,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R56|924054d70f"
@@ -4438,6 +4685,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(== $w $w)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R56|9400568ab6"
@@ -4544,6 +4792,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
+"tree_want": "(apply bq 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R59|5227b81af7"
@@ -4557,6 +4806,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "知らせ",
+"tree_want": "(' $inc 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|749388c01c"
@@ -4569,6 +4819,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct [$inc ' 0] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|92d8d1b7b5"
@@ -4582,6 +4833,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply @[$inc ' 0] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|95d0fae580"
@@ -4595,6 +4847,7 @@
 "state": "ok",
 "actual": "[$inc, 5]",
 "expected": "知らせ",
+"tree_want": "(construct [$$inc ' 0] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|d20aa1512d"
@@ -4607,6 +4860,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct [fs1 ' 0] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|2bd8e06ee9"
@@ -4619,6 +4873,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply use (construct [$inc ' 0] 5))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|47d5aa6183"
@@ -4632,6 +4887,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "知らせ",
+"tree_want": "(apply t 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|e2a42af746"
@@ -4645,6 +4901,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(' $inc 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|a325fb9cc6"
@@ -4658,6 +4915,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "知らせ",
+"tree_want": "(' $inc -1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|9587e7f543"
@@ -4671,6 +4929,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply @[$inc ' -1] 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R102|21dd32edf0"
@@ -4684,6 +4943,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|16fae904cb"
@@ -4700,6 +4960,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(' $vs 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|65cfae9698"
@@ -4713,6 +4974,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(' $w 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|651b48f742"
@@ -4725,6 +4987,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|024e892822"
@@ -4741,6 +5004,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R102|0f4df5feb6"
@@ -4753,6 +5017,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct 5 (apply @[$inc] 3))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R78|4e3fa9690c"
@@ -4765,6 +5030,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply (compose inc @[$inc]) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R78|220b6d50d8"
@@ -4777,6 +5043,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(construct 5 (apply @p 3))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R78|0c9f34d307"
@@ -4801,6 +5068,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R78|c4dd49e245"
@@ -4814,6 +5082,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R78|7f5f602c68"
@@ -4923,6 +5192,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(: v 1)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R103|3fe6c0a713"
@@ -4947,6 +5217,7 @@
 "state": "ok",
 "actual": "<fn/1>",
 "expected": "知らせ",
+"tree_want": "(: loop (? [s] (apply loop [s + 1])))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R103|33e2cbcb76"
@@ -4959,6 +5230,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(+ 0x10 0x20)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|a95166f53a"
@@ -4972,6 +5244,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(- 0x10 0x20)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|b240831109"
@@ -4988,6 +5261,7 @@
 "expected_warn": [
 "address-number-mix"
 ],
+"tree_want": "(+ 0x10 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|202a2f5115"
@@ -5001,6 +5275,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(* 0x4 [3 < 2])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|10ba42aed8"
@@ -5017,6 +5292,7 @@
 "expected_warn": [
 "address-without-arrow"
 ],
+"tree_want": "(* 0x4 0x2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|811b7592a3"
@@ -5033,6 +5309,7 @@
 "expected_warn": [
 "address-without-arrow"
 ],
+"tree_want": "(+ [0x4 * 0x2] 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|75c47e9586"
@@ -5049,6 +5326,7 @@
 "expected_warn": [
 "address-number-mix"
 ],
+"tree_want": "(* [0x10 + 1] 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|9b9fea0cf2"
@@ -5090,6 +5368,7 @@
 "expected_warn": [
 "address-number-mix"
 ],
+"tree_want": "(;; 0x10 [0x0 + 24])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|7ea0e0c72a"
@@ -5103,6 +5382,7 @@
 "state": "ok",
 "actual": "0x0",
 "expected": "0x0",
+"tree_want": "(&& 0x10 0xF)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|bb03e596b0"
@@ -5127,6 +5407,7 @@
 "state": "ok",
 "actual": "0x20",
 "expected": "0x20",
+"tree_want": "(< 0x20 0x30)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|be6578d476"
@@ -5139,6 +5420,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(+ [0x10 ' 1~] 0x8)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|761c3b7f39"
@@ -5152,6 +5434,7 @@
 "state": "ok",
 "actual": "0x18",
 "expected": "0x18",
+"tree_want": "(+ [w , 0x10] 0x8)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|4eafa101ab"
@@ -5165,6 +5448,7 @@
 "state": "ok",
 "actual": "0x30",
 "expected": "0x30",
+"tree_want": "(+ p q)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|6d91c193ee"
@@ -5179,6 +5463,7 @@
 "actual": "0x1003",
 "expected": "!_",
 "why": "値 '0x1003' (期待 !_)",
+"tree_want": "(+ 04x1000 0x3)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|75191c7792",
@@ -5203,6 +5488,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(|| 04x1000 0x3)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|1a5c64c783"
@@ -5230,6 +5516,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(+ $vs 0x10)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|b80413bd84"
@@ -5246,6 +5533,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(, [$vs + 0x10] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|432be8718a"
@@ -5262,6 +5550,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(+ $vs $vs)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|8dc20c51f3"
@@ -5278,6 +5567,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(- 0x1000 $vs)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|8c8fd77d43"
@@ -5294,6 +5584,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(+ $[inc 5] 1)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R62|d138371fa5"
@@ -5310,6 +5601,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(# [$vs + 0x8] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|7512ca9ae1"
@@ -5326,6 +5618,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(== $vs 0x10)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|a517353605"
@@ -5342,6 +5635,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ $inc 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|e2de1020d0"
@@ -5358,6 +5652,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ (+ $inc 1) 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|e6fb949cbd"
@@ -5374,6 +5669,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ 1 [$inc + 2])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|a690198ede"
@@ -5390,6 +5686,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ $inc 0x80)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|82a12f7d23"
@@ -5434,6 +5731,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ $inc [3 < 2])",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|bb7eaa10cd"
@@ -5450,6 +5748,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ $inc $w)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|b1a9af8ed4"
@@ -5467,6 +5766,7 @@
 "dollar-non-function",
 "level-mismatch"
 ],
+"tree_want": "(+ $inc $vs)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|da97ea7764"
@@ -5484,6 +5784,7 @@
 "leftover-lambda",
 "level-mismatch"
 ],
+"tree_want": "(+ (unit inc) $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|c130b53f2d"
@@ -5500,6 +5801,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(apply @[$inc + $w] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|277779417e"
@@ -5513,6 +5815,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "$inc",
+"tree_want": "(== $inc $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|628dc29baa"
@@ -5526,6 +5829,7 @@
 "state": "ok",
 "actual": "$<fn/1>",
 "expected": "知らせ",
+"tree_want": "(== $[x ? inc x] $inc)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R62|fefe551d33"
@@ -5539,6 +5843,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(== $[1 +] $inc)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R62|fa92aa8933"
@@ -5552,6 +5857,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(== $inc $double)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|580160da41"
@@ -5565,6 +5871,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "$inc",
+"tree_want": "(!== $inc $double)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|ea0c52ec90"
@@ -5578,6 +5885,7 @@
 "state": "ok",
 "actual": "$p",
 "expected": "$p",
+"tree_want": "(== $p $[x ? x == 0 & 0 | p (x - 1)])",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R62|12502fece7"
@@ -5591,6 +5899,7 @@
 "state": "ok",
 "actual": "$p",
 "expected": "$p",
+"tree_want": "(== $p $q1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|91f135d47b"
@@ -5604,6 +5913,7 @@
 "state": "ok",
 "actual": "[$p, 1]",
 "expected": "知らせ",
+"tree_want": "(, [$p == $q1] 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|d22c8b1692"
@@ -5617,6 +5927,7 @@
 "state": "ok",
 "actual": "$f",
 "expected": "$f",
+"tree_want": "(== $f $g)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|a054360a41"
@@ -5630,6 +5941,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(== $f $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|34f244493b"
@@ -5643,6 +5955,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(== $is_even $is_odd)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|9c7924f528"
@@ -5656,6 +5969,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(== $inc $w)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|8851466ef0"
@@ -5669,6 +5983,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "知らせ",
+"tree_want": "(== $inc 0x08)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|ac49de5a46"
@@ -5685,6 +6000,7 @@
 "expected_warn": [
 "address-number-mix"
 ],
+"tree_want": "(== $inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|1063ec61d3"
@@ -5701,6 +6017,7 @@
 "expected_warn": [
 "address-number-mix"
 ],
+"tree_want": "(== $inc vs)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|5b0f2d6f64"
@@ -5717,6 +6034,7 @@
 "expected_warn": [
 "address-number-mix"
 ],
+"tree_want": "(== 0x10 vs)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|61eca3f494"
@@ -5733,6 +6051,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(= $inc $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|8f87823d39"
@@ -5749,6 +6068,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ [$inc == $inc] 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|ea87959e2d"
@@ -5762,6 +6082,7 @@
 "state": "ok",
 "actual": "1",
 "expected": "1",
+"tree_want": "(+ [$inc == $double] 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|1022bc9dbd"
@@ -5778,6 +6099,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ g9 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|98d432105a"
@@ -5794,6 +6116,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ $g9 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|5d2caf45e6"
@@ -5810,6 +6133,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ v 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|9298ea5601"
@@ -5826,6 +6150,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(: t (? [y] (+ $inc 1)))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|42dd0505c5"
@@ -5842,6 +6167,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ [t 1] 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|1770125e40"
@@ -5858,6 +6184,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ [t 1] 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|5b976903ba"
@@ -5916,6 +6243,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(apply [+ 1] $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|0e78136322"
@@ -5932,6 +6260,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(apply inc $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|c404f6b567"
@@ -5948,6 +6277,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(: tw2 (? [f] (+ $f 1)))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|0174333523"
@@ -5964,6 +6294,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(apply tw2 $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|b9533ac9d1"
@@ -5980,6 +6311,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(apply tw2 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|cabdf7b2cd"
@@ -5996,6 +6328,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(| [$inc + 1] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|a05842b499"
@@ -6012,6 +6345,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(, [$inc + 1] 3)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|e3e302f1ac"
@@ -6028,6 +6362,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(construct (apply inc [$inc + 1]) 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|1e88234e6a"
@@ -6044,6 +6379,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ [[$inc + 1] & 5] 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|99fe9fe4f4"
@@ -6060,6 +6396,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(| v 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|831625ad70"
@@ -6091,6 +6428,7 @@
 "dollar-non-function",
 "level-mismatch"
 ],
+"tree_want": "(+ $[$inc + 1] 2)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R62|e9415aea85"
@@ -6107,6 +6445,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(# [$inc + 0x80] 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|0c2038f141"
@@ -6119,6 +6458,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(: g9 $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|8e70fb584b"
@@ -6131,6 +6471,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(: fs (, $inc (, $double 3)))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R62|e7e743992a"
@@ -6143,6 +6484,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(: fz3 (, g9 3))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R62|60cfaf15fa"
@@ -6155,6 +6497,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(: p 0x10)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|5f4e4d4475"
@@ -6168,6 +6511,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(# [fs ' [0 ~ 0]] $double)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R62|89063341f4"
@@ -6181,6 +6525,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(# [fs ' [0 ~ 0]] 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R62|02a7fdf1ef"
@@ -6195,6 +6540,7 @@
 "actual": "0x4000",
 "expected": "!_",
 "why": "値 '0x4000' (期待 !_)",
+"tree_want": "(# 0x4000 $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|3cf85b391b",
@@ -6209,6 +6555,7 @@
 "state": "ok",
 "actual": "0x4000",
 "expected": "知らせ",
+"tree_want": "(# 0x4000 65)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|5585d3315c"
@@ -6225,6 +6572,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(# g9 $double)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|72b561aa05"
@@ -6237,6 +6585,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(: a3 (apply adder 3))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|429a37429d"
@@ -6253,6 +6602,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
+"tree_want": "(: p (+ $vs 0x10))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|080b882dab"
@@ -6266,6 +6616,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "知らせ",
+"tree_want": "(apply hh $inc)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R62|ee063560f8"
@@ -6279,6 +6630,7 @@
 "state": "ok",
 "actual": "2",
 "expected": "2",
+"tree_want": "(/ [0x20 - 0x10] 0x8)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R98|3639a84a11"
@@ -6292,6 +6644,7 @@
 "state": "ok",
 "actual": "0x10",
 "expected": "0x10",
+"tree_want": "(% 0x1010 0x100)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R98|45620ed403"
@@ -6308,6 +6661,7 @@
 "expected_warn": [
 "address-number-mix"
 ],
+"tree_want": "(/ 0x10 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R98|a420170c9e"
@@ -6351,6 +6705,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply [!_] (construct 1 2 3 4 5))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R138|d947fa2354"
@@ -6375,6 +6730,7 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
+"tree_want": "(apply inc 5)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R21|a4d118d38f"
@@ -6398,6 +6754,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(: hh (? [[x]] (defer {zz})))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R21|f1554ecb75"
@@ -6470,6 +6827,7 @@
 "state": "ok",
 "actual": "3",
 "expected": "3",
+"tree_want": "(< (<= 0 3) 5)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R119|533ed876e8"
@@ -6486,6 +6844,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
+"tree_want": "(+ $inc 1)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R119|e2de1020d0"
@@ -6575,6 +6934,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(: width (+ 640 16))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R117|566b7bc989"
@@ -6689,6 +7049,7 @@
 "state": "ok",
 "actual": "2",
 "expected": "2",
+"tree_want": "(apply g [width : 640])",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R128|27381b2b83"
@@ -6702,6 +7063,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
+"tree_want": "(apply f 0)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R128|a300d98380"
@@ -6791,6 +7153,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply gz (construct 3 !_))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R139|d36cdca40b"
@@ -6821,6 +7184,7 @@
 "expected_warn": [
 "bare-function-return"
 ],
+"tree_want": "(apply o (construct 3 !_))",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R139|053d2b32c8"
@@ -6837,6 +7201,7 @@
 "expected_warn": [
 "name-shadow"
 ],
+"tree_want": "(apply h 2)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R133|6096fcdc4d"
@@ -6864,6 +7229,7 @@
 "expected_warn": [
 "name-shadow"
 ],
+"tree_want": "(' bb r)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R133|53c16f922a"
@@ -6877,6 +7243,7 @@
 "state": "ok",
 "actual": "27",
 "expected": "27",
+"tree_want": "(apply [shape ' cube] 3)",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R133|1dab9a74de"
@@ -6890,6 +7257,7 @@
 "state": "ok",
 "actual": "25",
 "expected": "25",
+"tree_want": "(' obj r)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R133|0a3ba252b3"
@@ -6903,6 +7271,7 @@
 "state": "ok",
 "actual": "1228800",
 "expected": "1228800",
+"tree_want": "(' screen bytes)",
 "tree_eval": "match",
 "tree": "match",
 "id": "coproduct_spec.md|R133|a40e47af38"
@@ -6959,6 +7328,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(: obj (block (: m (block (? [{y : 2}] y)))))",
 "tree_eval": "unsupported",
 "tree": "unsupported",
 "id": "coproduct_spec.md|R134|9f2d967293"

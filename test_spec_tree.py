@@ -3,7 +3,9 @@ import spec_tree as T, spec_audit as A
 P = A.PRE.splitlines()
 OK = [("inc 3 4", "(construct (apply inc 3) 4)"), ("d 1 2", "(construct (apply d 1) 2)"), ("inc i inc 5", "(apply (compose inc i inc) 5)"),
       ("inc # 5", "(# (unit inc) 5)"), ("nosuchname 5", "5"), ("inc typo 5", "(apply inc 5)"), ("inc (5 ' 1) 5", "(apply inc 5)"), ("inc (0x10 ' 1) 5", "(construct (apply inc [0x10 ' 1]) 5)"), ("[+ 1] 1 2 3", "(construct (apply [+ 1] 1) 2 3)"), ("inc add 5", "(unit (apply (compose inc add) 5))"), ("add 1 2", "(apply add (construct 1 2))"), ("$inc + 0x80", "(+ $inc 0x80)")]
-NONE = ["inc _ 2", "i 1 2 3"]
+OK += [("inc add 5 g 3", "(apply g (apply add (construct (apply inc 5) 3)))"), ("[+] 1 2 inc 3", "(apply inc (apply [+] (construct 1 2 3)))"),     # 合成の連なり: 左から順に値を受け、前の結果を次へ(R11・R41)
+       ("inc [+] 5 6", "(apply [+] (construct (apply inc 5) 6))"), ("f2 3 f2 5 6", "(apply f2 (construct (apply f2 (construct 3 5)) 6))"), ("[+] 5 g 3", "(apply g (apply [+] (construct 5 3)))")]
+NONE = ["inc _ 2", "i 1 2 3", "add 1 inc"]
 bad = 0
 for s, t in OK:
     g = T.tree_of(s, P)

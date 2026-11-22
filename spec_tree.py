@@ -316,7 +316,11 @@ def build(terms):
         if any(r[0] == "I" and r[1] == "_" for r in run) and (len(run) > 1 or len(args) != 1): return None      # `_` の恒等射は 1 つの実引数だけ受ける形(R44)に限る
         if run[0][0] == "I" and run[0][1] != "_": return None                 # 恒等射の名前が頭の適用は R29・R74 の読みで未対応
         if len(run) > 1:
-            if any(r[0] == "F" and isinstance(r[1], tuple) and not r[-1].startswith("@") for r in run): return None
+            if any(r[0] == "F" and isinstance(r[1], tuple) and not r[-1].startswith("@") for r in run):
+                pl = pipeline(terms[i:])                                       # 合成の中の可変長の口(`inc [+] 5 6`、R41): 前の結果を最初に受け、残りの値を全部受ける
+                if pl is None: return None
+                out += pl
+                return out[0] if len(out) == 1 else "(construct " + " ".join(out) + ")"
             mouth = 1 + sum(((1 if isinstance(r[1], tuple) else r[1]) if r[0] == "F" else 1) - 1 for r in run)
         else: mouth = run[0][1] if run[0][0] == "F" else 1
         head = run[0][-1] if len(run) == 1 else "(compose " + " ".join(r[-1] for r in run) + ")"
@@ -336,9 +340,35 @@ def build(terms):
         app = f"(apply {head} {a[0] if len(a) == 1 else '(construct ' + ' '.join(a) + ')'})"
         if not isinstance(mouth, tuple) and not spread and use < mouth: app = f"(unit {app})"          # 部分適用は口の開いた関数として残る(R136)
         out.append(app); out += rest
-        if tail and (isinstance(mouth, tuple) or spread or len(args) < mouth or run[0][-1].startswith("|")): return None     # 口の足りない・残りを受ける関数の後ろの関数と値は、結果を受けるので未対応(R40・R11)
+        if tail and (isinstance(mouth, tuple) or spread or len(args) < mouth or run[0][-1].startswith("|")):
+            pl = pipeline(terms[i:])                                           # 口の足りない・残りを受ける関数の後ろの関数と値は、結果を受ける(R11・R31・R40・R41)
+            if pl is None: return None
+            out.pop(); out += pl
+            return out[0] if len(out) == 1 else "(construct " + " ".join(out) + ")"
         i = k
     return out[0] if len(out) == 1 else "(construct " + " ".join(out) + ")"
+
+def pipeline(ts):
+    """関数と値だけの並び(先頭は関数)を、左から合成して読む: 関数は左から順に、値を左から必要な数だけ受け、前の関数の結果を最初の実引数にして次へ渡す。
+    可変長の口は残りの値を全部受ける。余った値は後ろに積む。値が足りない・恒等射・撒いた値・`|` の関数は None(R11・R31・R40・R41・R35)"""
+    if not ts or ts[0][0] != "F": return None
+    fs = [t for t in ts if t[0] == "F"]; vs = [t[1] for t in ts if t[0] == "A"]
+    if len(fs) + len(vs) != len(ts) or any(v.endswith("~") for v in vs): return None
+    if any(f[-1].startswith(("|", "@")) for f in fs): return None
+    cur = None
+    for f in fs:
+        m = f[1]
+        if isinstance(m, tuple):                                               # 可変長: 残りの値を全部(最低の数は m[1])
+            take = len(vs) if cur is None else len(vs)
+            if take + (0 if cur is None else 1) < m[1]: return None
+            args = ([] if cur is None else [cur]) + vs[:take]; vs = []
+        else:
+            need = m - (0 if cur is None else 1)
+            if need < 0 or len(vs) < need: return None
+            args = ([] if cur is None else [cur]) + vs[:need]; vs = vs[need:]
+        if not args: return None
+        cur = f"(apply {f[-1]} {args[0] if len(args) == 1 else '(construct ' + ' '.join(args) + ')'})"
+    return [cur] + vs
 
 def fold_chain(g, env):
     """畳んだ中置が 3 つ以上の語(同じ演算子の連なり)なら左結合の入れ子 `(+ (+ a b) c)`"""
