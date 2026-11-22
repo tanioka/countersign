@@ -372,7 +372,10 @@ def build(terms):
         else:
             use, rest = (len(args), []) if len(args) < mouth else (mouth, args[mouth:])
         a = args[:use]
-        if len(run) == 1 and run[0][0] == "F" and any(env_defaults.get(run[0][-1]) or []) and not isinstance(mouth, tuple) and len(args) > mouth: return None     # 既定値のある関数に口より多く渡す形は仕様が「未知」(R83)
+        if len(run) == 1 and run[0][0] == "F" and any(env_defaults.get(run[0][-1]) or []) and not isinstance(mouth, tuple) and len(args) > mouth:     # 既定値のある関数に口より多く渡す形は仕様が「未知」(R83)
+            if i == 0 and k == len(terms) and any(x.startswith("[") for x in args):      # 計算の `!_` でありうる括りがあると、口に入る数が決まらず、全部を 1 つの束で渡す
+                out.append(f"(apply {head} (construct {' '.join(args)}))"); return out[0]
+            return None
         if len(run) == 1 and run[0][0] == "F" and not isinstance(mouth, tuple) and not spread and len(args) < mouth:
             dm = (env_defaults.get(run[0][-1]) if env_defaults else None)
             if dm and all(dm[len(args):mouth]): a = a + ["!_"] * (mouth - len(args)); use = mouth      # R107: 開いた口が全部既定値の口なら既定値の印 `!_` で埋める
