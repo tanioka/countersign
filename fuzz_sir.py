@@ -6,12 +6,13 @@ import sign_interp as S, sign_sir as R
 from fixblank import fix
 
 LIST_RATE = [0.0]
+NOVOID = [False]
 def num(r):
     return str(r.choice([0, 1, 2, 3, 5, 7, 10, 100, 9223372036854775807]))
 def atom(r, ps):
     c = r.random()
     if ps and c < .4: return r.choice(ps)
-    if c < .5: return "__"
+    if c < .5 and not NOVOID[0]: return "__"
     return num(r)
 def expr(r, ps, d):
     if d <= 0 or r.random() < .25: return atom(r, ps)
@@ -97,9 +98,25 @@ def obs_asm(t):
     if got[0] != "ok": return ("refuse", str(got)[:30])
     return ("void",) if got[1] == "__" else ("val", got[1])
 
+def obs_asm_sir(t):
+    """SIR を旧 AST に戻し、strict_rewrite を通さずに generate へ。戻せない形は ("unsup",)。"""
+    import sign_asm
+    obs_asm("0\n")                                                     # エミュレータの準備
+    try:
+        f, top = R.lower(S.parse_source(t))
+        nodes = R.raise_ast(f, top)
+    except R.Unsup as e: return ("unsup", str(e)[:30])
+    try: got = _ns["run_asm"](sign_asm.generate(nodes))
+    except sign_asm.AsmError as e: return ("refuse", str(e)[:30])
+    except Exception as e: return ("refuse", "例外 " + type(e).__name__)
+    if got[0] == "trap": return ("trap",)
+    if got[0] != "ok": return ("refuse", str(got)[:30])
+    return ("void",) if got[1] == "__" else ("val", got[1])
+
 def main():
     av = [x for x in sys.argv[1:] if not x.startswith('--')]
     n = int(av[0]) if av else 2000; r = random.Random(int(av[1]) if len(av) > 1 else 1)
+    NOVOID[0] = '--novoid' in sys.argv
     LIST_RATE[0] = 0.5 if '--lists' in sys.argv else 0.0
     tally, bad = {}, []
     for _ in range(n):
@@ -115,6 +132,10 @@ def main():
             k = "後段 一致" if c == b else ("後段 断り" if c[0] == "refuse" else "後段 罠" if c[0] == "trap" else "後段 誤答")
             tally[k] = tally.get(k, 0) + 1
             if k == "後段 誤答": bad.append((t, "機械語 " + str(c), b))
+            d = obs_asm_sir(t)
+            k2 = "SIR経由 戻せない" if d[0] == "unsup" else "SIR経由 一致" if d == b else ("SIR経由 断り" if d[0] == "refuse" else "SIR経由 罠" if d[0] == "trap" else "SIR経由 誤答")
+            tally[k2] = tally.get(k2, 0) + 1
+            if k2 == "SIR経由 誤答": bad.append((t, "SIR経由の機械語 " + str(d), b))
     print("乱数照合:", tally, "食い違い", len(bad))
     for t, a, b in bad[:8]: print("---\n" + t + f"評価器 {a} / SIR {b}")
     return 1 if bad else 0

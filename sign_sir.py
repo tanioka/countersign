@@ -218,3 +218,45 @@ def evaluate(funcs, top, fuel=200000):
     except RecursionError: return ("fuel",)
     if isinstance(v, tuple): raise Unsup("リストの値")
     return ("void",) if v is None else ("val", v)
+
+# ---- SIR → 旧 AST(段階 C の試作): strict_rewrite を通さずに generate へ渡せる木を、SIR から作る ----
+def nonvoid(e):
+    """e は void にならない(被演算子に置いても単位の読みが要らない)と静的に言える。"""
+    k = e[0]
+    if k in ("int", "var"): return True
+    if k == "neg": return nonvoid(e[1])
+    if k == "op":
+        if not (nonvoid(e[2]) and nonvoid(e[3])): return False
+        if e[1] in ("/", "%"): return e[3][0] == "int" and e[3][1] != 0
+        return True
+    return False
+
+def raise_ast(funcs, top):
+    """SIR を旧 AST の列にする。void の単位の読みが要る形(void になりうる被演算子・呼びの実引数)は Unsup。整数だけ。"""
+    def blk(x): return ("block", x) if x[0] in ("bin", "cmp", "seq", "neg", "cases") else x
+    def r(e, in_flow):
+        k = e[0]
+        if k == "int": return ("lit", e[1]) if e[1] >= 0 else ("neg", ("lit", -e[1]))
+        if k == "void": return ("id", "__")
+        if k == "var": return ("id", e[1])
+        def operand(x):
+            if not nonvoid(x): raise Unsup("void の単位の読み(被演算子が void になりうる)")
+            return blk(r(x, False))
+        if k == "neg": return ("neg", operand(e[1]))
+        if k == "op": return ("bin", e[1], operand(e[2]), operand(e[3]))
+        if k == "cmp": return ("cmp", [operand(e[2]), operand(e[3])], [e[1]])
+        if k == "chain": return ("cmp", [operand(x) for x in e[2]], list(e[1]))
+        if k == "and": return ("bin", "&", blk(r(e[1], False)), blk(r(e[2], False)))
+        if k == "or": return ("bin", "|", blk(r(e[1], False)), blk(r(e[2], False)))
+        if k == "rows": return ("cases", [(None if c is None else blk(r(c, False)), blk(r(v, False))) for c, v in e[1]])
+        if k == "call":
+            if not e[2]: return ("id", e[1])
+            return ("seq", [("id", e[1])] + [operand(x) for x in e[2]])
+        if k == "flow" and len(e[1]) == 1: return r(e[1][0], in_flow)
+        raise Unsup("旧 AST に戻せない形 " + k)
+    out = []
+    for name, (ps, body) in funcs.items():
+        b = r(body, False)
+        out.append(("def", name, ("lam", [("name", p, None) for p in ps], b)) if ps else ("def", name, b))
+    out.append(r(top, False))
+    return out
