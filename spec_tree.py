@@ -195,7 +195,21 @@ def operand(tok, env, root):
     if c[0] == "V": return c[1]
     return f"(unit {c[-1]})"
 
+def hole_rewrite(terms):
+    """`f _ 2`(f の口が 2 以上で、口の数ちょうどの実引数のうち 1 つが穴 `_`)→ (unit (? [$p0] (apply f (construct … $p0 …))))。R16"""
+    out, i = [], 0
+    while i < len(terms):
+        t = terms[i]
+        if t[0] == "F" and isinstance(t[1], int) and t[1] >= 2 and i + t[1] < len(terms) + 0 and (i == len(terms) - 1 or True):
+            seg = terms[i + 1:i + 1 + t[1]]
+            if len(seg) == t[1] and sum(1 for x in seg if x[0] == "I" and x[1] == "_") == 1 and all(x[0] == "A" or (x[0] == "I" and x[1] == "_") for x in seg):
+                args = ["$p0" if x[0] == "I" else x[1] for x in seg]
+                out.append(("A", f"(unit (? [$p0] (apply {t[-1]} (construct {' '.join(args)}))))"))
+                i += 1 + t[1]; continue
+        out.append(t); i += 1
+    return out
 def build(terms):
+    terms = hole_rewrite(terms)
     if len(terms) > 1 and any(t[0] == "I" and t[1] == "_" for t in terms): return None    # 並びの中の `_` は穴か恒等射か(R16・R44)で未対応
     out, i, n = [], 0, len(terms)
     while i < n:
