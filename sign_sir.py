@@ -272,7 +272,17 @@ def raise_ast(funcs, top):
         if k == "rows": return ("cases", [(None if c is None else blk(r(c, False)), blk(r(v, False))) for c, v in e[1]])
         if k == "call":
             if not e[2]: return ("id", e[1])
-            return ("seq", [("id", e[1])] + [operand(x) for x in e[2]])
+            return ("seq", [("id", e[1])] + [blk(r(x, False)) for x in e[2]])          # void になりうる実引数は strict の部分適用。asm 側の strict_call_check が罠か断りにする
+        if k == "fold":
+            op = e[1]
+            xs = [x for x in e[2] if x[0] != "void"]                                  # 字面の void は畳みで飛ばされる
+            if not all(x[0] in ("int", "var") for x in xs): raise Unsup("畳みの実引数が整数の字面・名前でない")
+            if not xs: return ("id", "__")
+            if len(xs) == 1: return r(xs[0], False)
+            if op in ("==", "="): return ("seq", [("sec", "fold", op, None, False)] + [r(x, False) for x in xs])
+            acc = r(xs[0], False)
+            for x in xs[1:]: acc = ("block", ("bin", "|", ("cmp", [acc, r(x, False)], [op]), r(x, False)))      # `a op b` は成り立てば a、外れれば void。`|` で右
+            return acc
         if k == "flow" and len(e[1]) == 1: return r(e[1][0], in_flow)
         raise Unsup("旧 AST に戻せない形 " + k)
     out = []
