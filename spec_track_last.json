@@ -4249,8 +4249,8 @@
 "dollar-non-function"
 ],
 "tree_want": "(: tk (? [f] $[@f , 1]))",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R101|145d4fc460"
 },
 {
@@ -4292,8 +4292,8 @@
 "actual": "[$_, $inc]",
 "expected": "知らせ",
 "tree_want": "(, $_ $inc)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R101|6b4130e245"
 },
 {
@@ -4370,8 +4370,8 @@
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
 "tree_want": "(apply @[$_] (construct 1 2))",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R49|3af7760c68"
 },
 {
@@ -4409,8 +4409,8 @@
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
 "tree_want": "(construct (apply inc 1) 2)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R49|c2e334bee5"
 },
 {
@@ -4434,8 +4434,8 @@
 "actual": "_",
 "expected": "知らせ",
 "tree_want": "(unit @[$_])",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R49|74ea502999"
 },
 {
@@ -5585,8 +5585,8 @@
 "dollar-non-function"
 ],
 "tree_want": "(+ $[inc 5] 1)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R62|d138371fa5"
 },
 {
@@ -5830,8 +5830,8 @@
 "actual": "$<fn/1>",
 "expected": "知らせ",
 "tree_want": "(== $[x ? inc x] $inc)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R62|fefe551d33"
 },
 {
@@ -5844,8 +5844,8 @@
 "actual": "!_",
 "expected": "!_",
 "tree_want": "(== $[1 +] $inc)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R62|fa92aa8933"
 },
 {
@@ -5886,8 +5886,8 @@
 "actual": "$p",
 "expected": "$p",
 "tree_want": "(== $p $[x ? x == 0 & 0 | p (x - 1)])",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R62|12502fece7"
 },
 {
@@ -6429,8 +6429,8 @@
 "level-mismatch"
 ],
 "tree_want": "(+ $[$inc + 1] 2)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R62|e9415aea85"
 },
 {

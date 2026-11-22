@@ -77,15 +77,29 @@ def leaf_text(t):
         out.append(("[" if ch == "(" else "]" if ch == ")" else ch) if not q else ch)
     return "".join(out)
 
+def _balanced(t):
+    """t の最初の括弧が最後で閉じる(中で途切れない)"""
+    d = 0
+    for i, ch in enumerate(t):
+        if ch in "[(": d += 1
+        elif ch in "])":
+            d -= 1
+            if d == 0: return i == len(t) - 1
+    return False
+
 def classify(tok, env):
     c = _classify(tok, env)
-    if c and c[0] == "A" and re.fullmatch(r"\$[\w']+", tok):
+    if c and c[0] == "A" and re.fullmatch(r"\$[\w']+", tok) and tok != "$_":
         k = env.get(tok[1:])
         if k is None: return None
         if k[0] in ("A", "V"): return ("V", tok)                                # `$` の先が値: `!_` と分かる値(R99)
     return c
 def _classify(tok, env):
     """語 → ('A', 綴り) / ('F', 口, 名前) / ('I', 名前) / ('V', 綴り) / None(未対応)"""
+    if re.fullmatch(r"\$_", tok): return ("A", tok)                                   # 恒等射の番地(R62・R101): 値
+    if len(tok) > 3 and tok[0] == "$" and tok[1] in "[(" and tok[-1] == {"[": "]", "(": ")"}[tok[1]] and _balanced(tok[1:]):
+        return ("A", "$[" + tok[2:-1] + "]")                                    # 式の番地 `$[…]`・`$(…)`: 値。括りは `[…]` で書く(R62)
+    if tok == "@[$_]": return ("I", tok)                                              # 恒等射の番地を開いた物は恒等射(R74・R49)
     if len(tok) > 1 and tok[0] == "@" and not tok.startswith("@@"):                    # 前置 `@`(関数の番地を開く、R49・R78)
         base = tok[1:]
         if re.fullmatch(r"[\w']+", base):
@@ -97,6 +111,7 @@ def _classify(tok, env):
         if base[0] in "[(":
             if base[0] == "[":
                 its = tokens(base[1:-1]) or []
+                if any(x.startswith(("$[", "$(")) for x in its): return None      # 式の番地を開く括りは、口の数が中の式で決まる(R49): 未対応
                 cs = [classify(x, env) for x in its]
                 if not its or any(c is None for c in cs): return None
                 if all(c[0] == "V" for c in cs): return ("V", tok)
@@ -315,7 +330,7 @@ def build(terms):
             i = j; continue
         if any(r[0] == "I" and r[1] == "_" for r in run) and (len(run) > 1 or len(args) != 1): return None      # `_` の恒等射は 1 つの実引数だけ受ける形(R44)に限る
         if run[0][0] == "I" and run[0][1] != "_":                              # 恒等射の名前(`i`)が頭の適用(R29・R74)
-            if i != 0 or run[0][1] != "i": return None
+            if i != 0 or run[0][1] not in ("i", "@[$_]"): return None
             if any(t[0] == "F" for t in terms[1:]):                            # 何も受けていない頭の恒等射に、恒等射でない関数が続けば、単位律で消える(木にも書かない)
                 return build(terms[1:])
             if len(run) == 1 and args and not tail and not any(a.endswith("~") for a in args):
