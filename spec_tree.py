@@ -394,6 +394,8 @@ def build(terms):
             return None
         if len(run) > 1:
             if any(r[0] == "F" and isinstance(r[1], tuple) and not r[-1].startswith("@") for r in run):
+                if len(args) == 1 and args[0].endswith("~") and not tail and i == 0 and all(r[0] == "F" for r in run) and not any(r[-1].startswith(("@", "|")) for r in run):
+                    return f"(apply (compose {' '.join(r[-1] for r in run)}) {args[0]})"      # 撒いた流れ 1 つを受ける可変長の口を含む合成は、合成のまま流れを受ける(R95・R84)
                 pl = pipeline(terms[i:])                                       # 合成の中の可変長の口(`inc [+] 5 6`、R41): 前の結果を最初に受け、残りの値を全部受ける
                 if pl is None: return None
                 out += pl
