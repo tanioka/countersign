@@ -607,6 +607,7 @@ def kinds_from_eval(defs):
                     rem = len(ps) - len(getattr(v, "args", None) or [])                     # 部分適用の Closure は元の口を持ち、束縛済みの実引数を別に持つ
                     if base and base[0] == "F" and isinstance(base[1], int) and base[2] and base[1] - k_ == rem > 0:
                         env[nm] = ("F", rem, True, [("p",)] * rem, [False] * rem); continue      # 別名 `p : add`・部分適用の名前 `q : f3 1` は、残りの口の素の関数(R16)
+                if not has_def and isinstance(dn, tuple) and dn and dn[0] == "input" and all(p[0] == "name" for p in ps): env[nm] = ("A",); continue      # 番地を開いた物をしまう名前(`z : @$inc`)は種類が未知で、続く値を受けない葉(R120)
                 if (has_def and any(p[0] != "name" for p in ps)) or not (isinstance(dn, tuple) and dn and dn[0] == "lam"): env[nm] = None; continue     # 既定値のある口・括りでない定義(`z : @$inc`)の種類は仕様が「未知」
                 last = ps[-1] if ps else None
                 var = last is not None and last[0] == "destr" and (len(last[1]) > 1 or last[2])
