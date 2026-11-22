@@ -66,12 +66,31 @@ def run(src):
     except BaseException as e:
         out = ""; err = str(e).split("\n")[0]
     return out, err, {k[0] for k in S.WARNINGS}
+PRE = ("inc : x ? x + 1\ndouble : x ? x * 2\nd : x ? x * 10\ng : x ? x * 10\nadd : x y ? x + y\nf2 : x y ? x - y\nf3 : a b c ? a + b + c\nuse : f x ? @f x\n"
+           "vs : 1 , 2 , 3\ni : _\npw : [a : 1]\nw : pw ' zz\n"
+           "gq :\n\t\tx\n\t\ty : 1\n\t? x + y\n\ngd :\n\t\tys\n\t\tzs : 3\n\t? ys + zs\n")                    # §4 の前書きの共通の定義
+
+def judge(exp, warns, none_w, out, err, ws):
+    """期待(expect の結果)と実際(run の結果)を比べる。食い違いの理由を返す(一致なら None)。"""
+    why = None
+    if exp and exp[0] == "val":
+        if err: why = f"断り: {err[:70]}"
+        elif norm_out(out) != exp[1]: why = f"値 {out!r} (期待 {' '.join(exp[1])})"
+    elif exp and exp[0] == "refuse":
+        if not err or exp[1] not in err.split(":")[0] + err[:60]: why = f"断りのはずが {('断り: ' + err[:60]) if err else '値 ' + out}"
+    if why is None and exp and exp[0] == "val" or (exp and exp[0] == "refuse" and why is None) or exp is None:
+        if warns and not err:
+            missing = warns - ws
+            if missing: why = f"知らせ {sorted(missing)} が出ない(出た: {sorted(ws)})"
+        if none_w and not warns and not err:
+            extra = ws & {"bare-function-return", "level-mismatch"}                  # 仕様の前書き: 根に残った関数の leftover-lambda と値の `$` の dollar-non-function は、例で省いた所がある
+            if extra and why is None: why = f"知らせ無しのはずが {sorted(extra)}"
+    return why
+
 if __name__ == "__main__":
     path = sys.argv[1]; verbose = "-v" in sys.argv
     stats = {"ok": 0, "ng": 0, "skip": 0}; ngs = []
-    PRE = ("inc : x ? x + 1\ndouble : x ? x * 2\nd : x ? x * 10\ng : x ? x * 10\nadd : x y ? x + y\nf2 : x y ? x - y\nf3 : a b c ? a + b + c\nuse : f x ? @f x\n"
-           "vs : 1 , 2 , 3\ni : _\npw : [a : 1]\nw : pw ' zz\n"
-           "gq :\n\t\tx\n\t\ty : 1\n\t? x + y\n\ngd :\n\t\tys\n\t\tzs : 3\n\t? ys + zs\n")                    # §4 の前書きの共通の定義
+
     for ln_no, line in enumerate(open(path, encoding="utf-8"), 1):
         p = parse(line.rstrip("\n"))
         if not p: continue
@@ -83,19 +102,7 @@ if __name__ == "__main__":
         prog = pre + "\n\n".join(defs) + ("\n\n" if defs else "") + src
         prog = fixblank(prog) + "\n"
         out, err, ws = run(prog)
-        why = None
-        if exp and exp[0] == "val":
-            if err: why = f"断り: {err[:70]}"
-            elif norm_out(out) != exp[1]: why = f"値 {out!r} (期待 {' '.join(exp[1])})"
-        elif exp and exp[0] == "refuse":
-            if not err or exp[1] not in err.split(":")[0] + err[:60]: why = f"断りのはずが {('断り: ' + err[:60]) if err else '値 ' + out}"
-        if why is None and exp and exp[0] == "val" or (exp and exp[0] == "refuse" and why is None) or exp is None:
-            if warns and not err:
-                missing = warns - ws
-                if missing: why = f"知らせ {sorted(missing)} が出ない(出た: {sorted(ws)})"
-            if none_w and not warns and not err:
-                extra = ws & {"bare-function-return", "level-mismatch"}                  # 仕様の前書き: 根に残った関数の leftover-lambda と値の `$` の dollar-non-function は、例で省いた所がある
-                if extra and why is None: why = f"知らせ無しのはずが {sorted(extra)}"
+        why = judge(exp, warns, none_w, out, err, ws)
         if why: stats["ng"] += 1; ngs.append((ln_no, line.strip()[:140], why))
         else: stats["ok"] += 1
     print(f"一致 {stats['ok']} / 食い違い {stats['ng']} / 読めず {stats['skip']}")

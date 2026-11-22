@@ -1,0 +1,6900 @@
+{
+"rev": "8f0d60c4",
+"items": [
+{
+"doc": "coproduct_spec.md",
+"rule": "R1",
+"line": 291,
+"src": "f x + 1 y",
+"kind": "R",
+"state": "ok",
+"actual": "9",
+"expected": "9",
+"id": "coproduct_spec.md|R1|9ce27d90bf"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R1",
+"line": 292,
+"src": "inc 1 & inc 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R1|c4191953cc"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R2",
+"line": 298,
+"src": "f -x",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R2|f6b5b8f504"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R8",
+"line": 304,
+"src": "inc double inc 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R8|955f752ff5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R8",
+"line": 305,
+"src": "(inc double) inc 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R8|f393076d45"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R11",
+"line": 311,
+"src": "double inc 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R11|3d08367af1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R11",
+"line": 312,
+"src": "inc add 5 g 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R11|8e2df923a9"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R19",
+"line": 318,
+"src": "1 2 , 3 4",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R19|904d785f9e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R19",
+"line": 319,
+"src": "inc 1 , inc 2",
+"kind": "R",
+"state": "ok",
+"actual": "[2, 3]",
+"expected": "2 3",
+"id": "coproduct_spec.md|R19|919059f3b5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R35",
+"line": 325,
+"src": "inc 3 4",
+"kind": "R",
+"state": "ok",
+"actual": "[4, 4]",
+"expected": "4 4",
+"id": "coproduct_spec.md|R35|de1273e966"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R35",
+"line": 326,
+"src": "[+ 1] 1 2 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R35|7d4c06711a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R35",
+"line": 327,
+"src": "[!_] 1 2 3 4 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R35|d947fa2354"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R40",
+"line": 333,
+"src": "5 inc 3",
+"kind": "R",
+"state": "ok",
+"actual": "[5, 4]",
+"expected": "5 4",
+"id": "coproduct_spec.md|R40|8294f0e3f1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R40",
+"line": 334,
+"src": "f2 3 f2 5 6",
+"kind": "R",
+"state": "ok",
+"actual": "-8",
+"expected": "-8",
+"id": "coproduct_spec.md|R40|31ab5f6971"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R41",
+"line": 340,
+"src": "[+] 1 2 inc 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R41|84423ddff6"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R41",
+"line": 341,
+"src": "inc [+] 5 6",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R41|e4d46ae367"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R47",
+"line": 353,
+"src": "1 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R47|3c28d037e3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R47",
+"line": 354,
+"src": "double inc 5",
+"kind": "R",
+"state": "ok",
+"actual": "11",
+"expected": "11",
+"id": "coproduct_spec.md|R47|3d08367af1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R47",
+"line": 355,
+"src": "d 1 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R47|2ad329e2af"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R47",
+"line": 356,
+"src": "1 2 inc",
+"kind": "R",
+"state": "ok",
+"actual": "[1, 2]",
+"expected": "1 2",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R47|19ed8ac47e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R47",
+"line": 357,
+"src": "5 f2 _ 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R47|fa4ce8c533"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R118",
+"line": 363,
+"src": "sub (3 < 2) 1 2",
+"kind": "R",
+"state": "ok",
+"actual": "-1",
+"expected": "-1",
+"id": "coproduct_spec.md|R118|95e038ad36"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R120",
+"line": 369,
+"src": "use 7 8 9",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R120|2eb0d4f584"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R120",
+"line": 370,
+"src": "z 1 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R120|6266294824"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R121",
+"line": 376,
+"src": "inc 1 , 2",
+"kind": "R",
+"state": "ok",
+"actual": "[2, 2]",
+"expected": "2 2",
+"id": "coproduct_spec.md|R121|7708849554"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R121",
+"line": 377,
+"src": "f3 1 , 2 , 3",
+"kind": "R",
+"state": "ok",
+"actual": "[2, 3]",
+"expected": "2 3",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R121|e00cf38272"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R24",
+"line": 387,
+"src": "tl 1 2 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R24|1594e606af"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R24",
+"line": 388,
+"src": "p3 1 [2 3] 4 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R24|f9f09a2feb"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R24",
+"line": 389,
+"src": "f 1 2 3 4",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R24|5619382465"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R25",
+"line": 395,
+"src": "pb : [x] ? x + 1",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R25|27f0464c0c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 405,
+"src": "p ' a 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R26|8d01123e21"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 406,
+"src": "5 ' 0",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R26|df12fe2bb0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 407,
+"src": "[5] ' 0",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R26|9607107472"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 408,
+"src": "(5 ' 0) + 1",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R26|6bf1e85447"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 409,
+"src": "(3 < 2) ' 0",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R26|44d52a7848"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 410,
+"src": "inc (5 ' 1) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R26|7ba0d24679"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 411,
+"src": "inc ([1 2] ' 5) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R26|b572371800"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 412,
+"src": "inc n8 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R26|024e892822"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 413,
+"src": "5 ' -1",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R26|f217e32ea6"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 414,
+"src": "5 ' ~-1",
+"kind": "R",
+"state": "ok",
+"actual": "[5]",
+"expected": "5",
+"id": "coproduct_spec.md|R26|5323f4a91d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 415,
+"src": "inc (5 ' a) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R26|27d4cdf1cf"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 416,
+"src": "inc (vs ' _) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R26|6fe88bf5ee"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 417,
+"src": "inc (5 ' [1 ~ 3]) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R26|2b6e0abfa1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 418,
+"src": "[1 2 3] ' ~1",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R26|514dae6230"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 419,
+"src": "pw ' 0",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"id": "coproduct_spec.md|R26|bb1bacafe7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 420,
+"src": "a @ pw",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R26|c7c3678214"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 421,
+"src": "inc (b @ pw) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R26|9ed3652d8d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 422,
+"src": "pt ' 1~",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R26|9eb35cd6fd"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 423,
+"src": "0x10 ' 0",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R26|ac14343671"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 424,
+"src": "0x10 ' 1~",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R26|a94cef35fb"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 425,
+"src": "0x10 ' [1 ~ 3]",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R26|2bd1c45546"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 426,
+"src": "(0x10 ' [1 ~ 3]) # [7 8 9]",
+"kind": "R",
+"state": "ok",
+"actual": "[0x18, 0x20, 0x28]",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R26|477c6f6317"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 427,
+"src": "inc (0x10 ' 1) 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R26|b162a7e97d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 428,
+"src": "inc (0x10 ' a) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R26|fa0272cbb5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 429,
+"src": "([0x10 0x20] ' 1~) ' 0",
+"kind": "R",
+"state": "ok",
+"actual": "0x20",
+"expected": "0x20",
+"id": "coproduct_spec.md|R26|287d5c79f7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 430,
+"src": "inc (([0x10 0x20] ' 1~) ' 1) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R26|4ad45ad504"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R26",
+"line": 431,
+"src": "f [0x10]",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R26|747befc8bd"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R81",
+"line": 441,
+"src": "use $inc 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R81|dffe8daa32"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R81",
+"line": 442,
+"src": "sh $vs",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function",
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R81|07d411a046"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R81",
+"line": 443,
+"src": "tg : q ? @q vs~",
+"kind": "R",
+"state": "ok",
+"actual": "<fn/1>",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R81|6f7ca55e5c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R81",
+"line": 444,
+"src": "tg $add",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R81|274d1c49fb"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R81",
+"line": 445,
+"src": "tg $f3",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G19: 撒いた並び x~ を受ける関数の口が1つか2つに決まりません(口が3つ以上か口の数が分からない)。要素を書き並",
+"expected": "G19",
+"id": "coproduct_spec.md|R81|9d920d1827"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R81",
+"line": 446,
+"src": "gq vs~",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R81|148259967c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R81",
+"line": 447,
+"src": "cnt $inc 5",
+"kind": "R",
+"state": "ok",
+"actual": "0",
+"expected": "0",
+"id": "coproduct_spec.md|R81|baf18c0e41"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R81",
+"line": 448,
+"src": "r2 $inc",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R81|1ce06bc5b2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R136",
+"line": 456,
+"src": "h : f x ? @f x inc",
+"kind": "R",
+"state": "ok",
+"actual": "<fn/2>",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R136|0c0be5f14d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R136",
+"line": 457,
+"src": "t 5 inc",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "知らせ",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R136|776d9b0ab7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R136",
+"line": 458,
+"src": "(inc , (3 < 4)) 5",
+"kind": "R",
+"state": "ok",
+"actual": "[3, 5]",
+"expected": "3 5",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R136|566efa2cc9"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R136",
+"line": 459,
+"src": "inc (3 < 2)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R136|a05b6e62f6"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R136",
+"line": 460,
+"src": "fz 3",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R136|3fc4baada1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R136",
+"line": 461,
+"src": "g1 3",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R136|eb57fce7e8"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R136",
+"line": 462,
+"src": "inc , (3 < 2)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R136|c4f59a4eab"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R136",
+"line": 463,
+"src": "(3 | inc) 5",
+"kind": "R",
+"state": "ok",
+"actual": "[3, 5]",
+"expected": "3 5",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R136|a37a7e88fa"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R136",
+"line": 464,
+"src": "g6 1 (3 < 2)",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R136|b30ca0ab30"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R136",
+"line": 465,
+"src": "g7 (3 < 2) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R136|3e12353580"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R136",
+"line": 466,
+"src": "g2 (3 < 2)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R136|ac646acc9c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R16",
+"line": 474,
+"src": "add _ 10",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R16|b1cef9d663"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R16",
+"line": 475,
+"src": "add 3 _",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R16|824455bad1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R16",
+"line": 476,
+"src": "p _ 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R16|127b10547f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R16",
+"line": 477,
+"src": "[add] _ 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R16|70afdba442"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R16",
+"line": 478,
+"src": "q _ 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R16|fa41d83020"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R16",
+"line": 479,
+"src": "go _ vs~",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G13: 撒く項のある並びの穴は読みません(R16・R34。`go _ vs~`)。穴を実引数で埋めるか、撒く項を外しま",
+"expected": "G13",
+"id": "coproduct_spec.md|R16|1afca26802"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R29",
+"line": 485,
+"src": "i 1 2 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R29|0d7bb31d9e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R29",
+"line": 486,
+"src": "i inc 1 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R29|82ed69e36f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R29",
+"line": 487,
+"src": "1 & _",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R29|a521758e84"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R29",
+"line": 488,
+"src": "_ ' 0",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R29|022ee4779f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R29",
+"line": 489,
+"src": "pp 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R29|3b9f4ed4d2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R29",
+"line": 490,
+"src": "fb 1",
+"kind": "R",
+"state": "ok",
+"actual": "9",
+"expected": "9",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R29|39ef173462"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R44",
+"line": 505,
+"src": "_ 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R44|30cb6fc2fe"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R44",
+"line": 506,
+"src": "5 _ 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R44|426bc36ef4"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R46",
+"line": 512,
+"src": "inc _ inc",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R46|389a0fec5b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R46",
+"line": 513,
+"src": "[<<] _ 2",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G7: アリティの数えられない点なしの実引数に _ は書けません(読みが決まらない位置。R46)",
+"expected": "G7",
+"id": "coproduct_spec.md|R46|5202cc7df6"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R46",
+"line": 514,
+"src": "5 io1 _",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G5: 括りの関数の実引数の !_ は断ります(`s !_ 2 3`・`5 io1 !_`)",
+"expected": "G5",
+"id": "coproduct_spec.md|R46|1337032810"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R69",
+"line": 520,
+"src": "inc 5 _",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R69|9436dceb55"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R69",
+"line": 521,
+"src": "fp 1 _",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G5: 括りの関数の口(名前 3 個)に書いた `_` は、括りの口の穴で読みが決まりません(`fp 1 _`。R46・",
+"expected": "G5",
+"id": "coproduct_spec.md|R69|2fae0e16a2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R69",
+"line": 522,
+"src": "fp 1 _ , 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R69|a2dad574e9"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R74",
+"line": 528,
+"src": "i inc 1 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R74|82ed69e36f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R74",
+"line": 529,
+"src": "i 5 inc",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "知らせ",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R74|57b87e28f4"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R74",
+"line": 530,
+"src": "inc i inc 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R74|4cf391a4b9"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R74",
+"line": 531,
+"src": "inc i [* 2,] 1 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R74|99a4a26788"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R89",
+"line": 537,
+"src": "inc 5 _ 6",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R89|adc0211a45"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R89",
+"line": 538,
+"src": "pq 1 2 _ 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R89|84662b8186"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R89",
+"line": 539,
+"src": "add _ 1 _",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G13: 前から n 個の外に穴があります(`inc 5 !_`)",
+"expected": "G13",
+"id": "coproduct_spec.md|R89|53a8a74da4"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R126",
+"line": 545,
+"src": "inc i add 5 6",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R126|334a7a7e73"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R126",
+"line": 546,
+"src": "inc i inc vs~",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R126|ccd71a286c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R83",
+"line": 554,
+"src": "f2 (3 < 2) 1 2",
+"kind": "R",
+"state": "ok",
+"actual": "-1",
+"expected": "-1",
+"id": "coproduct_spec.md|R83|55a33b141a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R83",
+"line": 555,
+"src": "(add (3 < 2) 1) 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R83|02e4926dfc"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R83",
+"line": 556,
+"src": "gd 3 (3 < 2) 7",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R83|f0d465571a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R83",
+"line": 557,
+"src": "second (3 < 2) 1",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R83|d3ee849814"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R122",
+"line": 563,
+"src": "seven (3 < 2)",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R122|0b5b3495dc"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R122",
+"line": 564,
+"src": "fq w",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R122|4f4a690494"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R122",
+"line": 565,
+"src": "fq $w",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R122|34ab1467ae"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R122",
+"line": 566,
+"src": "fq $vs",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R122|905afea509"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R122",
+"line": 567,
+"src": "fq (3 < 2)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R122|676789c89c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R122",
+"line": 568,
+"src": "fm w 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R122|979c966590"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R84",
+"line": 574,
+"src": "inc w~ 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R84|fc18bcb932"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R84",
+"line": 575,
+"src": "inc q~ 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R84|ebd3c1fc8f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R84",
+"line": 576,
+"src": "inc [$w]~ 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R84|0362bbfd00"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R84",
+"line": 577,
+"src": "inc p~ 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R84|34941b560d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R84",
+"line": 578,
+"src": "fz 1 2",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G16: 括りの関数の実体の本体の根が、空の流れ(書いた `_` と同じ)で口の開いた関数のままです(`k2 : [~t",
+"expected": "知らせ",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R84|70b30c43af"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R84",
+"line": 579,
+"src": "g (3 < 2)",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G19: 撒いた並び x~ を受ける関数の口が1つか2つに決まりません(計算の `!_` を撒いた流れは、読む段では空と",
+"expected": "G19",
+"id": "coproduct_spec.md|R84|152bb5bebb"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R112",
+"line": 585,
+"src": "inc w 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R112|9ce949ccc0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R112",
+"line": 586,
+"src": "inc q 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R112|2066ba5b27"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R112",
+"line": 587,
+"src": "inc $vs 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R112|cd683554aa"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R112",
+"line": 588,
+"src": "inc $vs",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function",
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R112|3e3dd1b788"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R115",
+"line": 594,
+"src": "pw ' zz",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R115|f1cc5d984e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 607,
+"src": "_ , 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R61|3628b87e26"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 608,
+"src": "1 , _ , 2",
+"kind": "R",
+"state": "ok",
+"actual": "[1, 2]",
+"expected": "1 2",
+"id": "coproduct_spec.md|R61|87e32b5349"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 609,
+"src": "w , _",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R61|5e82aca0bf"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 610,
+"src": "(3 < 2) , 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R61|58fad98611"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 611,
+"src": "$vs , 1",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R61|dc2ea753cf"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 612,
+"src": "@[$w] , 1",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"id": "coproduct_spec.md|R61|c7dff4d79f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 613,
+"src": "inc , 2",
+"kind": "R",
+"state": "ok",
+"actual": "2",
+"expected": "2",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R61|edb6521708"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 614,
+"src": "(inc , double) 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R61|8e7a00165e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 615,
+"src": "(inc , double , double) 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R61|a9edd53f93"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 616,
+"src": "(inc , (double , double)) 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R61|90c19219b0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 617,
+"src": "i i , 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R61|9ba641d242"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 618,
+"src": "(i i , inc) 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R61|ad44860a19"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 619,
+"src": "i i , i",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R61|1a146dbe3b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 620,
+"src": "(inc , (3 < 2)) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R61|c3ab1bb67b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 621,
+"src": "(_ , _) 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R61|95846920a4"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 622,
+"src": "x : _ , _",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R61|520928b291"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R61",
+"line": 623,
+"src": "_ , _ ; 7",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R61|5b3c40f49e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 629,
+"src": "w | 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R137|942b48b425"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 630,
+"src": "$w | 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R137|21806aefaf"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 631,
+"src": "$vs | 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R137|d6c959b417"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 632,
+"src": "_ | 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R137|b5b12b9183"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 633,
+"src": "inc | 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R137|d7f202a91a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 634,
+"src": "(inc | 1 & inc) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R137|40f98c6945"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 635,
+"src": "w 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R137|8d89aff762"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 636,
+"src": "5 w 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R137|2a084a6f70"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 637,
+"src": "[w 5]",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R137|0f61e29228"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 638,
+"src": "pc [w 1] 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R137|c8f4a96921"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 639,
+"src": "v : w 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R137|8163a73abc"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 640,
+"src": "i w 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R137|abb2119324"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 641,
+"src": "[* 2,] 1 w 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R137|655b235717"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 642,
+"src": "[+] 5 w 3",
+"kind": "R",
+"state": "ok",
+"actual": "8",
+"expected": "8",
+"id": "coproduct_spec.md|R137|784ac43485"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 643,
+"src": "$vs 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "知らせ",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R137|683151c497"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 644,
+"src": "(1 & inc) 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "知らせ",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R137|f6a8a7e94a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 645,
+"src": "fq w 1 2",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R137|40d36c1c3e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 646,
+"src": "w w",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R137|202b303291"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R137",
+"line": 647,
+"src": "inc [w w] 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R137|6b5c29a6cd"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R42",
+"line": 653,
+"src": "inc add 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R42|a8450e35fe"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R42",
+"line": 654,
+"src": "c1 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R42|b13219200c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 660,
+"src": "5 inc",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R48|98055beed5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 661,
+"src": "5 i i",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R48|52ff2ec0fb"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 662,
+"src": "7 ; i",
+"kind": "R",
+"state": "ok",
+"actual": "7",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R48|d70b6f028c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 663,
+"src": "1 & i",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R48|231aece8a2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 664,
+"src": "0x10 + i",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R48|6abf165924"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 665,
+"src": "f 0x10",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R48|b8d426a2b3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 666,
+"src": "f : x ? 0x10 + i",
+"kind": "R",
+"state": "ok",
+"actual": "<fn/1>",
+"expected": "知らせ",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R48|aae8059245"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 667,
+"src": "i == 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R48|b23bfb4623"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 668,
+"src": "i ' 0",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R48|002d6840ca"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 669,
+"src": "(1 & _) | 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R48|51e922faed"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 670,
+"src": "1 ~ i",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R48|62ced730ac"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 671,
+"src": "i # 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R48|d50090cccc"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R48",
+"line": 672,
+"src": "f 3",
+"kind": "R",
+"state": "ok",
+"actual": "3",
+"expected": "3",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R48|878e4b95c5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R52",
+"line": 678,
+"src": "(5 inc) 3",
+"kind": "R",
+"state": "ok",
+"actual": "[5, 3]",
+"expected": "5 3",
+"id": "coproduct_spec.md|R52|c7a9e45e39"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R52",
+"line": 679,
+"src": "v 3",
+"kind": "R",
+"state": "ok",
+"actual": "[5, 3]",
+"expected": "5 3",
+"id": "coproduct_spec.md|R52|c180d8a2d5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R76",
+"line": 685,
+"src": "inc == 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R76|a378f34d71"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R76",
+"line": 686,
+"src": "pp 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R76|3b9f4ed4d2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R87",
+"line": 692,
+"src": "inc + 1",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"id": "coproduct_spec.md|R87|0a8a2acbf3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R87",
+"line": 693,
+"src": "_ + 1",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"id": "coproduct_spec.md|R87|a31e8cdd56"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R87",
+"line": 694,
+"src": "-_ 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R87|39e0da3af7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R87",
+"line": 695,
+"src": "!inc 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R87|84979526ab"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R87",
+"line": 696,
+"src": "inc ' 0",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R87|6be9d252b0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R87",
+"line": 697,
+"src": "0 @ inc",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R87|e4d2bb2f05"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R87",
+"line": 698,
+"src": "[+ inc] 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R87|42dc652e04"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R87",
+"line": 699,
+"src": "s : [+ inc]\ns 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R87|6f2f264923"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R87",
+"line": 700,
+"src": "[+ i] 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R87|08f671e3f3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R87",
+"line": 701,
+"src": "[< _] 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R87|bd4bb2b0dd"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R87",
+"line": 702,
+"src": "inc # 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R87|be0185bf72"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R87",
+"line": 703,
+"src": "[' 0] inc 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R87|c17cd3dbd7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R116",
+"line": 709,
+"src": "box # inc",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R116|3e43c903d3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R116",
+"line": 710,
+"src": "box # _",
+"kind": "R",
+"state": "ok",
+"actual": "0",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R116|63f44a45f8"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R107",
+"line": 716,
+"src": "gq 1",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R107|31a8b93535"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R107",
+"line": 717,
+"src": "gq 1 _",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R107|9218a304ec"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R124",
+"line": 723,
+"src": "[3 (gq 1)]",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R124|cb33338df5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R124",
+"line": 724,
+"src": "[gq 1] 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R124|20588678a2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R124",
+"line": 725,
+"src": "(gq 1 , w) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R124|4657ea977d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 733,
+"src": "k 1 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|d62b7c5884"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 734,
+"src": "adder 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|e24b3aeb30"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 735,
+"src": "(q 1) ' g 4",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R125|9b14545837"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 736,
+"src": "(f 1) ' g 4",
+"kind": "R",
+"state": "ok",
+"actual": "4",
+"expected": "4",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|b10d7ee8c7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 737,
+"src": "(q 1) ' g 4",
+"kind": "R",
+"state": "ok",
+"actual": "4",
+"expected": "知らせ",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|9b14545837"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 738,
+"src": "adder2 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|ce2c19f381"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 739,
+"src": "q 1",
+"kind": "R",
+"state": "ok",
+"actual": "[1]",
+"expected": "知らせ",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|6565476899"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 740,
+"src": "(f 5) ' g 4",
+"kind": "R",
+"state": "ok",
+"actual": "4",
+"expected": "4",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|2cd338f333"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 741,
+"src": "q 1",
+"kind": "R",
+"state": "ok",
+"actual": "[<fn/1>, 1]",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R125|6565476899"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 742,
+"src": "q 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|6565476899"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 743,
+"src": "q 1",
+"kind": "R",
+"state": "ng",
+"actual": "[<fn/1>, 3]",
+"expected": "知らせ",
+"expected_warn": [
+"bare-function-return"
+],
+"why": "知らせ ['bare-function-return'] が出ない(出た: [])",
+"id": "coproduct_spec.md|R125|6565476899"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 744,
+"src": "q 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|6565476899"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 745,
+"src": "pq 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|8eb499f8f7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 746,
+"src": "t 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|e2a42af746"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 747,
+"src": "pp 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|3b9f4ed4d2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 748,
+"src": "f 3",
+"kind": "R",
+"state": "ok",
+"actual": "7",
+"expected": "7",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R125|878e4b95c5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R125",
+"line": 749,
+"src": "f 0",
+"kind": "R",
+"state": "ng",
+"actual": "_",
+"expected": "!_",
+"why": "値 '_' (期待 !_)",
+"id": "coproduct_spec.md|R125|a300d98380"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R31",
+"line": 757,
+"src": "[-] 10 3 2",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R31|465bb8a1ab"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R31",
+"line": 758,
+"src": "[&] 1 w 3",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R31|6f72a0ad7f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R31",
+"line": 759,
+"src": "[+] 0x10 (3 < 2)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R31|15e2ae6a68"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R31",
+"line": 760,
+"src": "[<] 1 (5 / 0) 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R31|b2e733abf4"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R31",
+"line": 761,
+"src": "[<] ($inc + 1) 3",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R31|e006dec66a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R31",
+"line": 762,
+"src": "[|] ($inc + 1) 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R31|ac916df9e0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R31",
+"line": 763,
+"src": "[+] 5 g 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R31|0f3e0b7b5f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R32",
+"line": 769,
+"src": "[<<] 1 4 2",
+"kind": "R",
+"state": "ok",
+"actual": "64",
+"expected": "知らせ",
+"expected_warn": [
+"pointfree-not-folded"
+],
+"id": "coproduct_spec.md|R32|5f44f412d4"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R50",
+"line": 775,
+"src": "[inc,] 1 2 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R50|b604963638"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R50",
+"line": 776,
+"src": "[add,] vs",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R50|b2edb176c5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R77",
+"line": 782,
+"src": "[' 0] [1 2] 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R77|6b9a776370"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R77",
+"line": 783,
+"src": "[' 0] [1 2 3] inc 4",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R77|ce72195017"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R77",
+"line": 784,
+"src": "[' 0] 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R77|45fb9dfd3f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R77",
+"line": 785,
+"src": "[' 0] $inc",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R77|fa812e1e10"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R77",
+"line": 786,
+"src": "@([' 0] $inc) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R77|1999ca9ed2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R77",
+"line": 787,
+"src": "([' 0] $inc) + 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R77|6a9969f368"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R95",
+"line": 793,
+"src": "fe 1 2",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R95|4bce28231a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R95",
+"line": 794,
+"src": "i w",
+"kind": "R",
+"state": "ok",
+"actual": "_",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R95|eff8fdde09"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R95",
+"line": 795,
+"src": "[* 2,] w",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R95|bf33daff3b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R95",
+"line": 796,
+"src": "i w , 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R95|af32bcc525"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R95",
+"line": 797,
+"src": "1 & (i w)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R95|339451cdf3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R95",
+"line": 798,
+"src": "v 5",
+"kind": "R",
+"state": "ok",
+"actual": "[10]",
+"expected": "10",
+"id": "coproduct_spec.md|R95|8020b53037"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R95",
+"line": 799,
+"src": "$x",
+"kind": "R",
+"state": "ok",
+"actual": "$x",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R95|36fbd44a85"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R95",
+"line": 800,
+"src": "f 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R95|de744ca1e5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R95",
+"line": 801,
+"src": "[+] w~",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R95|8a5a2760e2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R95",
+"line": 802,
+"src": "[+] w",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R95|fe37dd4214"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R95",
+"line": 803,
+"src": "[+] inc w~",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R95|7de2f3a5c6"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 809,
+"src": "||_|| 1 2 inc",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R27|e4d4565281"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 810,
+"src": "||_|| w",
+"kind": "R",
+"state": "ok",
+"actual": "0",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R27|bb38751978"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 811,
+"src": "||_|| w~",
+"kind": "R",
+"state": "ok",
+"actual": "0",
+"expected": "0",
+"id": "coproduct_spec.md|R27|5b84142b1b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 812,
+"src": "v 1 2",
+"kind": "R",
+"state": "ok",
+"actual": "[0, 1, 2]",
+"expected": "0 1 2",
+"id": "coproduct_spec.md|R27|d9ec13b56f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 813,
+"src": "||_|| w 5",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"id": "coproduct_spec.md|R27|7b975febee"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 814,
+"src": "|_| w",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R27|3b0f7435e7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 815,
+"src": "||_||",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R27|335ccec614"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 816,
+"src": "|_| (0 - 5)",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R27|2e6dea77bb"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 817,
+"src": "inc |_| (0 - 5)",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R27|e4d2f76524"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 818,
+"src": "|_| inc (0 - 5)",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R27|60cc287cb5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 819,
+"src": "|_| (0 - 5) inc",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R27|a77907ad5d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 820,
+"src": "|$w|",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R27|057b8612e7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 821,
+"src": "||0x10||",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R27|4ac6d87284"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 822,
+"src": "|inc| 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R27|20339a549a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R27",
+"line": 823,
+"src": "||inc|| 1 2",
+"kind": "R",
+"state": "ok",
+"actual": "[1, 2]",
+"expected": "1 2",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R27|5db6b6d450"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R64",
+"line": 831,
+"src": "f 1 2 3 4",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R64|5619382465"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R64",
+"line": 832,
+"src": "f vs~",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R64|3e681b8793"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R64",
+"line": 833,
+"src": "f 1 2 3 w",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R64|75f9df6fef"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R91",
+"line": 839,
+"src": "fe 1 2",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R91|4bce28231a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R91",
+"line": 840,
+"src": "fe 1 w 2",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R91|efc59ad0d2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R66",
+"line": 846,
+"src": "f 1 , 2 , 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R66|41fa36329a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R66",
+"line": 847,
+"src": "fp _ , 1 , 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R66|ccb4a06956"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R66",
+"line": 848,
+"src": "pb 1 _ , 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R66|4872ead7a8"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R66",
+"line": 849,
+"src": "fp _ , _",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R66|6abcae76a1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R66",
+"line": 850,
+"src": "fp i , 1 , 2",
+"kind": "R",
+"state": "ok",
+"actual": "[1, 2]",
+"expected": "知らせ",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R66|1cd7b8abf3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R66",
+"line": 851,
+"src": "pb 1 , 2",
+"kind": "R",
+"state": "ok",
+"actual": "2",
+"expected": "知らせ",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R66|8a16363040"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R93",
+"line": 857,
+"src": "fp 1 2 , 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R93|aff30dbf07"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R51",
+"line": 863,
+"src": "add vs~",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R51|88cf7dd3fa"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R51",
+"line": 864,
+"src": "inc vs~",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R51|210beeee3b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R51",
+"line": 865,
+"src": "inc add vs~",
+"kind": "R",
+"state": "ok",
+"actual": "8",
+"expected": "8",
+"id": "coproduct_spec.md|R51|54cc18277e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R51",
+"line": 866,
+"src": "f3 vs~",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G19: 撒いた並び x~ を受ける関数の口が1つか2つに決まりません(口が3つ以上か口の数が分からない)。要素を書き並",
+"expected": "G19",
+"id": "coproduct_spec.md|R51|82a2185003"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R51",
+"line": 867,
+"src": "inc f3 vs~",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G19: 撒いた並び x~ を受ける合成の口が1つか2つに決まりません(口が3つ以上か口の数が分からない)。要素を書き並",
+"expected": "G19",
+"id": "coproduct_spec.md|R51|c0439c40b9"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R51",
+"line": 868,
+"src": "inc i add vs~",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R51|ed9f686c68"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R51",
+"line": 869,
+"src": "inc i f3 vs~",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R51|395476690f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R79",
+"line": 875,
+"src": "~1 2 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R79|c25735b0b0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R79",
+"line": 876,
+"src": "inc ~_ 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R79|68a03bdbe7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R67",
+"line": 882,
+"src": "gx : a ~y ? a",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G22: 括りの外の ~x は仮引数に書けません(2026-10-04 に廃止、R67)。`[x ~xs]` と括って書",
+"expected": "G22",
+"id": "coproduct_spec.md|R67|c2733f4bd1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 890,
+"src": "$inc",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R99|1f4378956f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 891,
+"src": "$[add 1]",
+"kind": "R",
+"state": "ok",
+"actual": "$<fn/1>",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R99|dbf4179e20"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 892,
+"src": "$$inc",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R99|c2f7bd07df"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 893,
+"src": "$[$inc]",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R99|df6ba595a3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 894,
+"src": "$vs",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R99|2f10c698a0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 895,
+"src": "$p",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R99|fc23764ac5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 896,
+"src": "tw $inc",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "$inc",
+"id": "coproduct_spec.md|R99|3215213b76"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 897,
+"src": "tw (t 1)",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "$inc",
+"id": "coproduct_spec.md|R99|492e53992d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 898,
+"src": "tm $inc (t 1)",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "$inc",
+"id": "coproduct_spec.md|R99|12e5522f53"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 899,
+"src": "io@\n$say + 1",
+"kind": "R",
+"state": "ok",
+"actual": "断り: 標準ライブラリの import(IO@ など)は未実装",
+"expected": "知らせ",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R99|cd3c058baa"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 900,
+"src": "io@\nx : $say\nx + 1",
+"kind": "R",
+"state": "ok",
+"actual": "断り: 標準ライブラリの import(IO@ など)は未実装",
+"expected": "知らせ",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R99|7187d2e62a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 901,
+"src": "tk : f ? $@f + 1",
+"kind": "R",
+"state": "ok",
+"actual": "<fn/1>",
+"expected": "知らせ",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R99|6c409fb1c1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 902,
+"src": "io@\n$say == 1",
+"kind": "R",
+"state": "ng",
+"actual": "断り: 標準ライブラリの import(IO@ など)は未実装",
+"expected": "!_",
+"why": "断り: 標準ライブラリの import(IO@ など)は未実装",
+"id": "coproduct_spec.md|R99|51eaa50845"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 903,
+"src": "[sq : z ? z * z\n$sq]",
+"kind": "R",
+"state": "ok",
+"actual": "[sq: <fn/1>]",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R99|50a7a0fe6a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R99",
+"line": 904,
+"src": "$[5 inc]",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G20: `$[…]` の中に、値の上に積まれて余る関数があります(`$[add (5 inc)]`・`$[x ? x ",
+"expected": "G20",
+"id": "coproduct_spec.md|R99|3a4980cf7d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R100",
+"line": 910,
+"src": "$vs",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R100|2f10c698a0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R100",
+"line": 911,
+"src": "$$vs",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R100|0e4c18152f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R100",
+"line": 912,
+"src": "$[heavy 5]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R100|611fc6c41a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R100",
+"line": 913,
+"src": "tw : f ? $f",
+"kind": "R",
+"state": "ok",
+"actual": "<fn/1>",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R100|79d62c36a6"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R100",
+"line": 914,
+"src": "tw 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R100|363b1acd10"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R100",
+"line": 915,
+"src": "$_",
+"kind": "R",
+"state": "ok",
+"actual": "$_",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R100|3569547b5e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R101",
+"line": 921,
+"src": "$[v , 1]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R101|bf62dec0b7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R101",
+"line": 922,
+"src": "$[inc , double]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function",
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R101|8f01e339ca"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R101",
+"line": 923,
+"src": "$[inc , 1]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function",
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R101|dd0cbe4225"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R101",
+"line": 924,
+"src": "tk : f ? $[@f , 1]",
+"kind": "R",
+"state": "ok",
+"actual": "<fn/1>",
+"expected": "知らせ",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R101|145d4fc460"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R101",
+"line": 925,
+"src": "$[inc , _]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function",
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R101|bc406751c0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R101",
+"line": 926,
+"src": "$[_ , _]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R101|9b899b4ef7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R101",
+"line": 927,
+"src": "$_ , $inc",
+"kind": "R",
+"state": "ok",
+"actual": "[$_, $inc]",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R101|6b4130e245"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R101",
+"line": 928,
+"src": "$[1 , $vs]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R101|f3cea37071"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R101",
+"line": 929,
+"src": "$[w , w]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R101|f9a716f1d1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R101",
+"line": 930,
+"src": "$pq9",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R101|8c39a72e0f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 936,
+"src": "map $inc vs",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R49|168f515545"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 937,
+"src": "map $p vs",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R49|8c18665fce"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 938,
+"src": "@[$_] 1 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R49|3af7760c68"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 939,
+"src": "@q 1 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R49|e38e02a316"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 940,
+"src": "@[$[x ? x]] 1 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R49|edcd48023c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 941,
+"src": "@[$_] inc 1 2",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R49|c2e334bee5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 942,
+"src": "@[$_] _",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G7: 恒等射の口に `_` を書いた形は断ります(`i _`・`@[$_] _`。口は並び全体を受けるので、穴の規則が",
+"expected": "G7",
+"id": "coproduct_spec.md|R49|cebf43883f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 943,
+"src": "@[$_] w~",
+"kind": "R",
+"state": "ok",
+"actual": "_",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R49|74ea502999"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 944,
+"src": "(@[$_] , inc) 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R49|e38d1dcee7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 945,
+"src": "$g9",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R49|1f3493786d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 946,
+"src": "h [s : $inc]",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R49|5234039a1d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 947,
+"src": "h [s : w]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R49|fa28040994"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 948,
+"src": "h [s : 5]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R49|7247149fd9"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 949,
+"src": "@(fs ' 0) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R49|e34ef1e29d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 950,
+"src": "@(ws ' 1) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R49|0d7cc11502"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 951,
+"src": "(inc ' 0) , 1",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R49|7059c99b7d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 952,
+"src": "(w < 3) , 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R49|efacec0ca4"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 953,
+"src": "(w != 3) , 5",
+"kind": "R",
+"state": "ng",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"leftover-lambda"
+],
+"why": "知らせ ['leftover-lambda'] が出ない(出た: [])",
+"id": "coproduct_spec.md|R49|6edc968d31"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 954,
+"src": "$(1 & inc)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R49|b006bf3019"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R49",
+"line": 955,
+"src": "($inc == $double) , 1",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"id": "coproduct_spec.md|R49|752d709a9e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R56",
+"line": 961,
+"src": "$w",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R56|58d338b979"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R56",
+"line": 962,
+"src": "$w~",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G20: 後置の印(`~` `!`)の付いた `$` の項は、1つの関数と言い切れません(`$inc~`・`$vs~`・",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R56|20a1aee00a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R56",
+"line": 963,
+"src": "$[w]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R56|90ea4742a4"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R56",
+"line": 964,
+"src": "$q",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R56|23f35593d5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R56",
+"line": 965,
+"src": "$$w",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R56|15390c0c14"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R56",
+"line": 966,
+"src": "inc $w 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R56|924054d70f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R56",
+"line": 967,
+"src": "$w , 1",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R56|59894f7e26"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R56",
+"line": 968,
+"src": "$w == $w",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R56|9400568ab6"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R56",
+"line": 969,
+"src": "||$w||",
+"kind": "R",
+"state": "ok",
+"actual": "0",
+"expected": "0",
+"id": "coproduct_spec.md|R56|4eecf9719f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R57",
+"line": 975,
+"src": "$inc~",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G20: 後置の印(`~` `!`)の付いた `$` の項は、1つの関数と言い切れません(`$inc~`・`$vs~`・",
+"expected": "G20",
+"id": "coproduct_spec.md|R57|bf311111aa"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R59",
+"line": 981,
+"src": "$[add (5 inc)]",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G20: `$[…]` の中に、値の上に積まれて余る関数があります(`$[add (5 inc)]`・`$[x ? x ",
+"expected": "G20",
+"id": "coproduct_spec.md|R59|a36a048990"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R59",
+"line": 982,
+"src": "$[add (5 _)]",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R59|105f75c7e0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R59",
+"line": 983,
+"src": "$[5 _]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R59|1395895623"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R59",
+"line": 984,
+"src": "$[[x] ? f2 (5 inc) 1]",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G20: `$[…]` の中に、値の上に積まれて余る関数があります(`$[add (5 inc)]`・`$[x ? x ",
+"expected": "G20",
+"id": "coproduct_spec.md|R59|0673b48ed0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R59",
+"line": 985,
+"src": "$[[x] ? x inc]",
+"kind": "R",
+"state": "ok",
+"actual": "$<fn/1>",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R59|54b97cee4b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R59",
+"line": 986,
+"src": "use $bq 5",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G20: `$` で開いた関数を呼んだ形で、本体に値の上に積まれて余る関数があります。1つの関数と言い切れません(R59",
+"expected": "G20",
+"id": "coproduct_spec.md|R59|0190e15303"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R59",
+"line": 987,
+"src": "bq 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "知らせ",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R59|5227b81af7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 993,
+"src": "$inc ' 0",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R102|749388c01c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 994,
+"src": "($inc ' 0) 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R102|92d8d1b7b5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 995,
+"src": "@($inc ' 0) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R102|95d0fae580"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 996,
+"src": "($$inc ' 0) 5",
+"kind": "R",
+"state": "ok",
+"actual": "[$inc, 5]",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R102|d20aa1512d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 997,
+"src": "(fs1 ' 0) 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R102|2bd8e06ee9"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 998,
+"src": "use ($inc ' 0) 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R102|47d5aa6183"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 999,
+"src": "t 1",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R102|e2a42af746"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 1000,
+"src": "$inc ' 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R102|a325fb9cc6"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 1001,
+"src": "$inc ' -1",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R102|9587e7f543"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 1002,
+"src": "@($inc ' -1) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R102|21dd32edf0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 1003,
+"src": "inc ($inc ' a) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R102|16fae904cb"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 1004,
+"src": "$vs ' 0",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R102|65cfae9698"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 1005,
+"src": "$w ' 0",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R102|651b48f742"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 1006,
+"src": "inc n8 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R102|024e892822"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R102",
+"line": 1007,
+"src": "inc n9 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R102|0f4df5feb6"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R78",
+"line": 1013,
+"src": "5 @[$inc] 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R78|4e3fa9690c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R78",
+"line": 1014,
+"src": "inc @[$inc] 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R78|220b6d50d8"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R78",
+"line": 1015,
+"src": "5 @p 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R78|0c9f34d307"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R78",
+"line": 1016,
+"src": "@[$w] 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R78|0c4e33aa17"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R78",
+"line": 1017,
+"src": "inc @[$w] 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R78|c4dd49e245"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R78",
+"line": 1018,
+"src": "inc @w 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R78|7f5f602c68"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R78",
+"line": 1019,
+"src": "@[$vs]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R78|14a2fa2963"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R78",
+"line": 1020,
+"src": "@(0x10 + 0x8)",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R78|5950e6af8f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R103",
+"line": 1028,
+"src": "v : 1 , $[v + 1]",
+"kind": "R",
+"state": "ok",
+"actual": "断り: interpret-not-yet: 23 行目の値の定義 v が、自分の値を求める途中でもう一度引かれました(値の定義",
+"expected": "知らせ",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R103|f9f5dbc76d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R103",
+"line": 1029,
+"src": "v : 1 , $[v + $inc]",
+"kind": "R",
+"state": "ok",
+"actual": "断り: interpret-not-yet: 23 行目の値の定義 v が、自分の値を求める途中でもう一度引かれました(値の定義",
+"expected": "知らせ",
+"expected_warn": [
+"dollar-non-function",
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R103|8ed06f52dc"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R103",
+"line": 1030,
+"src": "$[inc + 1]",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function",
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R103|669c8b1e95"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R103",
+"line": 1031,
+"src": "v",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "知らせ",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R103|7a38d8cbd2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R103",
+"line": 1032,
+"src": "v",
+"kind": "R",
+"state": "ok",
+"actual": "断り: name-cycle: 定義 v が `$v` を `@` で下ろして自分を引く輪です(持ち上げだけを通る輪ではない。§",
+"expected": "name-cycle",
+"id": "coproduct_spec.md|R103|7a38d8cbd2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R103",
+"line": 1033,
+"src": "v : 1 , $v",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R103|3fe6c0a713"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R103",
+"line": 1034,
+"src": "v : inc , $v",
+"kind": "R",
+"state": "ok",
+"actual": "断り: name-cycle: 定義 v が `$v` を通って自分を引き、値と仮置きすると関数になる輪です(不動点が無い。§4",
+"expected": "name-cycle",
+"id": "coproduct_spec.md|R103|17fe5bdb3a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R103",
+"line": 1035,
+"src": "loop : s ? loop (s + 1)",
+"kind": "R",
+"state": "ok",
+"actual": "<fn/1>",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R103|33e2cbcb76"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1053,
+"src": "0x10 + 0x20",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R62|a95166f53a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1054,
+"src": "0x10 - 0x20",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R62|b240831109"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1055,
+"src": "0x10 + 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"address-number-mix"
+],
+"id": "coproduct_spec.md|R62|202a2f5115"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1056,
+"src": "0x4 * (3 < 2)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R62|10ba42aed8"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1057,
+"src": "0x4 * 0x2",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"address-without-arrow"
+],
+"id": "coproduct_spec.md|R62|811b7592a3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1058,
+"src": "(0x4 * 0x2) + 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"address-without-arrow"
+],
+"id": "coproduct_spec.md|R62|75c47e9586"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1059,
+"src": "(0x10 + 1) * 2",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"address-number-mix"
+],
+"id": "coproduct_spec.md|R62|9b9fea0cf2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1060,
+"src": "-(0x10)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"address-without-arrow"
+],
+"id": "coproduct_spec.md|R62|36232043ac"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1061,
+"src": "|0x10|",
+"kind": "R",
+"state": "ok",
+"actual": "0x10",
+"expected": "0x10",
+"id": "coproduct_spec.md|R62|8d4d354f3b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1062,
+"src": "0x10 ;; (0x0 + 24)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"address-number-mix"
+],
+"id": "coproduct_spec.md|R62|7ea0e0c72a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1063,
+"src": "0x10 && 0xF",
+"kind": "R",
+"state": "ok",
+"actual": "0x0",
+"expected": "0x0",
+"id": "coproduct_spec.md|R62|bb03e596b0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1064,
+"src": "!!0xFFF",
+"kind": "R",
+"state": "ok",
+"actual": "0xFFFFFFFFFFFFF000",
+"expected": "0xFFFFFFFFFFFFF000",
+"id": "coproduct_spec.md|R62|67494e85c8"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1065,
+"src": "0x20 < 0x30",
+"kind": "R",
+"state": "ok",
+"actual": "0x20",
+"expected": "0x20",
+"id": "coproduct_spec.md|R62|be6578d476"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1066,
+"src": "(0x10 ' 1~) + 0x8",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R62|761c3b7f39"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1067,
+"src": "(w , 0x10) + 0x8",
+"kind": "R",
+"state": "ok",
+"actual": "0x18",
+"expected": "0x18",
+"id": "coproduct_spec.md|R62|4eafa101ab"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1068,
+"src": "p + q",
+"kind": "R",
+"state": "ok",
+"actual": "0x30",
+"expected": "0x30",
+"id": "coproduct_spec.md|R62|6d91c193ee"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1069,
+"src": "04x1000 + 0x3",
+"kind": "R",
+"state": "ng",
+"actual": "0x1003",
+"expected": "!_",
+"why": "値 '0x1003' (期待 !_)",
+"id": "coproduct_spec.md|R62|75191c7792"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1070,
+"src": "r : 04x1000 + 0x3\n@r",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R62|821fcb3405"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1071,
+"src": "04x1000 || 0x3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R62|1a5c64c783"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1072,
+"src": "p : 04x1003\n@p",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R62|6c7edcdc18"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1073,
+"src": "$vs + 0x10",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R62|b80413bd84"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1074,
+"src": "($vs + 0x10) , 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "知らせ",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R62|432be8718a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1075,
+"src": "$vs + $vs",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R62|8dc20c51f3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1076,
+"src": "0x1000 - $vs",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R62|8c8fd77d43"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1077,
+"src": "$[inc 5] + 1",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R62|d138371fa5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1078,
+"src": "($vs + 0x8) # 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R62|7512ca9ae1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1079,
+"src": "$vs == 0x10",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R62|a517353605"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1080,
+"src": "$inc + 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|e2de1020d0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1081,
+"src": "$inc + 1 + 2",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|e6fb949cbd"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1082,
+"src": "1 + ($inc + 2)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|a690198ede"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1083,
+"src": "$inc + 0x80",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|82a12f7d23"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1084,
+"src": "@($inc + 0x80)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|29deddc03f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1085,
+"src": "@($inc + 0x80 + 0x10)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|84678d4478"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1086,
+"src": "$inc + (3 < 2)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|bb7eaa10cd"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1087,
+"src": "$inc + $w",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|b1a9af8ed4"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1088,
+"src": "$inc + $vs",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"dollar-non-function",
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|da97ea7764"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1089,
+"src": "inc + $inc",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"leftover-lambda",
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|c130b53f2d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1090,
+"src": "@($inc + $w) 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|277779417e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1091,
+"src": "$inc == $inc",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "$inc",
+"id": "coproduct_spec.md|R62|628dc29baa"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1092,
+"src": "$[x ? inc x] == $inc",
+"kind": "R",
+"state": "ok",
+"actual": "$<fn/1>",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R62|fefe551d33"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1093,
+"src": "$[1 +] == $inc",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R62|fa92aa8933"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1094,
+"src": "$inc == $double",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R62|580160da41"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1095,
+"src": "$inc !== $double",
+"kind": "R",
+"state": "ok",
+"actual": "$inc",
+"expected": "$inc",
+"id": "coproduct_spec.md|R62|ea0c52ec90"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1096,
+"src": "$p == $[x ? x == 0 & 0 | p (x - 1)]",
+"kind": "R",
+"state": "ok",
+"actual": "$p",
+"expected": "$p",
+"id": "coproduct_spec.md|R62|12502fece7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1097,
+"src": "$p == $q1",
+"kind": "R",
+"state": "ok",
+"actual": "$p",
+"expected": "$p",
+"id": "coproduct_spec.md|R62|91f135d47b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1098,
+"src": "($p == $q1) , 1",
+"kind": "R",
+"state": "ok",
+"actual": "[$p, 1]",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R62|d22c8b1692"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1099,
+"src": "$f == $g",
+"kind": "R",
+"state": "ok",
+"actual": "$f",
+"expected": "$f",
+"id": "coproduct_spec.md|R62|a054360a41"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1100,
+"src": "$f == $inc",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R62|34f244493b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1101,
+"src": "$is_even == $is_odd",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R62|9c7924f528"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1102,
+"src": "$inc == $w",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R62|8851466ef0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1103,
+"src": "$inc == 0x08",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R62|ac49de5a46"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1104,
+"src": "$inc == 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"address-number-mix"
+],
+"id": "coproduct_spec.md|R62|1063ec61d3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1105,
+"src": "$inc == vs",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"address-number-mix"
+],
+"id": "coproduct_spec.md|R62|5b0f2d6f64"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1106,
+"src": "0x10 == vs",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"address-number-mix"
+],
+"id": "coproduct_spec.md|R62|61eca3f494"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1107,
+"src": "$inc = $inc",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|8f87823d39"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1108,
+"src": "($inc == $inc) + 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|ea87959e2d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1109,
+"src": "($inc == $double) + 1",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"id": "coproduct_spec.md|R62|1022bc9dbd"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1110,
+"src": "g9 + 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|98d432105a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1111,
+"src": "$g9 + 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|5d2caf45e6"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1112,
+"src": "v : $inc + 1\nv + 2",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|9298ea5601"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1113,
+"src": "t : y ? $inc + 1",
+"kind": "R",
+"state": "ok",
+"actual": "<fn/1>",
+"expected": "知らせ",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|42dd0505c5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1114,
+"src": "(t 1) + 2",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|1770125e40"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1115,
+"src": "(t 1) + 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|5b976903ba"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1116,
+"src": "-($inc)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|2d81cfbc10"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1117,
+"src": "-($inc + 1)",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|89dcdde344"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1118,
+"src": "|$inc|",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|5576c67b48"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1119,
+"src": "[+ 1] $inc",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|0e78136322"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1120,
+"src": "inc $inc",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|c404f6b567"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1121,
+"src": "tw2 : f ? $f + 1",
+"kind": "R",
+"state": "ok",
+"actual": "<fn/1>",
+"expected": "知らせ",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|0174333523"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1122,
+"src": "tw2 $inc",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|b9533ac9d1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1123,
+"src": "tw2 5",
+"kind": "R",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|cabdf7b2cd"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1124,
+"src": "($inc + 1) | 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|a05842b499"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1125,
+"src": "($inc + 1) , 3",
+"kind": "R",
+"state": "ok",
+"actual": "3",
+"expected": "3",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|e3e302f1ac"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1126,
+"src": "inc ($inc + 1) 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|1e88234e6a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1127,
+"src": "(($inc + 1) & 5) + 2",
+"kind": "R",
+"state": "ok",
+"actual": "2",
+"expected": "2",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|99fe9fe4f4"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1128,
+"src": "v : $inc + 1\nv | 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|831625ad70"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1129,
+"src": "!($inc + 1)",
+"kind": "R",
+"state": "ok",
+"actual": "_",
+"expected": "_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|8c51ef0eac"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1130,
+"src": "$($inc + 1) + 2",
+"kind": "R",
+"state": "ok",
+"actual": "2",
+"expected": "2",
+"expected_warn": [
+"dollar-non-function",
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|e9415aea85"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1131,
+"src": "($inc + 0x80) # 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|0c2038f141"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1132,
+"src": "g9 : $inc",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R62|8e70fb584b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1133,
+"src": "fs : $inc , $double , 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R62|e7e743992a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1134,
+"src": "fz3 : g9 , 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R62|60cfaf15fa"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1135,
+"src": "p : 0x10",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R62|5f4e4d4475"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1136,
+"src": "(fs ' [0 ~ 0]) # $double",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R62|89063341f4"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1137,
+"src": "(fs ' [0 ~ 0]) # 5",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R62|02a7fdf1ef"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1138,
+"src": "0x4000 # $inc",
+"kind": "R",
+"state": "ng",
+"actual": "0x4000",
+"expected": "!_",
+"why": "値 '0x4000' (期待 !_)",
+"id": "coproduct_spec.md|R62|3cf85b391b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1139,
+"src": "0x4000 # 65",
+"kind": "R",
+"state": "ok",
+"actual": "0x4000",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R62|5585d3315c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1140,
+"src": "g9 # $double",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R62|72b561aa05"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1141,
+"src": "a3 : adder 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R62|429a37429d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1142,
+"src": "p : $vs + 0x10",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "知らせ",
+"expected_warn": [
+"dollar-non-function"
+],
+"id": "coproduct_spec.md|R62|080b882dab"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R62",
+"line": 1143,
+"src": "hh $inc",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "知らせ",
+"id": "coproduct_spec.md|R62|ee063560f8"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R98",
+"line": 1149,
+"src": "(0x20 - 0x10) / 0x8",
+"kind": "R",
+"state": "ok",
+"actual": "2",
+"expected": "2",
+"id": "coproduct_spec.md|R98|3639a84a11"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R98",
+"line": 1150,
+"src": "0x1010 % 0x100",
+"kind": "R",
+"state": "ok",
+"actual": "0x10",
+"expected": "0x10",
+"id": "coproduct_spec.md|R98|45620ed403"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R98",
+"line": 1151,
+"src": "0x10 / 2",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"address-number-mix"
+],
+"id": "coproduct_spec.md|R98|a420170c9e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R138",
+"line": 1161,
+"src": "!_ 1 2",
+"kind": "R",
+"state": "ok",
+"actual": "断り: void-written: 手で書いた `!_` の項 `!_` があります。`!_`(void)は手で書きません。何も",
+"expected": "void-written",
+"id": "coproduct_spec.md|R138|47081ec7be"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R138",
+"line": 1162,
+"src": "_ : 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R138|d1c2c48bf3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R138",
+"line": 1163,
+"src": "inc _~",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R138|5c5b8ce26f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R138",
+"line": 1164,
+"src": "[!_] 1 2 3 4 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R138|d947fa2354"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R21",
+"line": 1170,
+"src": "say 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R21|a1e4b3aa85"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R21",
+"line": 1171,
+"src": "inc typo 5",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "coproduct_spec.md|R21|a4d118d38f"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R21",
+"line": 1172,
+"src": "q : typo\nq 5",
+"kind": "R",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "coproduct_spec.md|R21|6dc07f8314"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R21",
+"line": 1173,
+"src": "hh : [x] ? zz",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R21|f1554ecb75"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R21",
+"line": 1174,
+"src": "f : x ?\n\tx > 0 : typo\n\t7",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G22: 枝の値が `!_` と分かる値です(`typo`)。呼ばない定義でも断ります(§4 R128)。名前の書き間違",
+"expected": "G22",
+"id": "coproduct_spec.md|R21|934cf33fc2"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R21",
+"line": 1175,
+"src": "g :\n\t\tx\n\t\ty : typo\n\t? x + y",
+"kind": "R",
+"state": "ng",
+"actual": "<fn/1>",
+"expected": "G22",
+"why": "断りのはずが 値 <fn/1>",
+"id": "coproduct_spec.md|R21|edc996e329"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R21",
+"line": 1176,
+"src": "io@\nsay 5",
+"kind": "R",
+"state": "ng",
+"actual": "断り: 標準ライブラリの import(IO@ など)は未実装",
+"expected": "G7",
+"why": "断りのはずが 断り: 標準ライブラリの import(IO@ など)は未実装",
+"id": "coproduct_spec.md|R21|886460aee8"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R22",
+"line": 1182,
+"src": "f2 _ inc 5",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G7: 関数や撒く項が混ざった並びの _ / !_ は読みが決まりません",
+"expected": "G7",
+"id": "coproduct_spec.md|R22|2bdc44bf18"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R22",
+"line": 1183,
+"src": "f [1]",
+"kind": "R",
+"state": "ng",
+"actual": "!_",
+"expected": "G7",
+"why": "断りのはずが 値 !_",
+"id": "coproduct_spec.md|R22|f9943833fa"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R119",
+"line": 1191,
+"src": "0 <= 3 < 5",
+"kind": "R",
+"state": "ok",
+"actual": "3",
+"expected": "3",
+"id": "coproduct_spec.md|R119|533ed876e8"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R119",
+"line": 1192,
+"src": "$inc + 1",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R119|e2de1020d0"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R119",
+"line": 1193,
+"src": "1 != 2 != 3",
+"kind": "R",
+"state": "ok",
+"actual": "断り: compare-chain: 比べの連鎖で通すのは、向きの揃った3項の範囲(`a < b < c`・`a <= b < ",
+"expected": "compare-chain",
+"id": "coproduct_spec.md|R119|edeb52e373"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R119",
+"line": 1194,
+"src": "(+ 1 2)",
+"kind": "R",
+"state": "ok",
+"actual": "断り: infix-missing-operand: 前置できない演算子 '+'(中置は前後に空白が必要。点なしなら `[+ 1",
+"expected": "infix-missing-operand",
+"id": "coproduct_spec.md|R119|e3a83df3c6"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R119",
+"line": 1195,
+"src": "[:] x 20",
+"kind": "R",
+"state": "ok",
+"actual": "断り: pointfree-tree-notation: 片側の欠けた ':' の点なし(木を書く記法)は文法に無い形なので、読",
+"expected": "pointfree-tree-notation",
+"id": "coproduct_spec.md|R119|647a804aed"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R119",
+"line": 1196,
+"src": "#zq 5",
+"kind": "R",
+"state": "ok",
+"actual": "断り: export-mark-position: # は定義(名前 : 値)の前に置きます。使う所に書いた `#zq` は文法",
+"expected": "export-mark-position",
+"id": "coproduct_spec.md|R119|ac42562d5b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R119",
+"line": 1197,
+"src": "f : [#a] ? a",
+"kind": "R",
+"state": "ok",
+"actual": "断り: param-not-name: 括りの仮引数の中は名前で書きます(`#` は名前でない。§4 R119)。仮引数は外へ渡",
+"expected": "param-not-name",
+"id": "coproduct_spec.md|R119|02a7660e0b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R127",
+"line": 1203,
+"src": "p [(inc 5) (inc 5)]",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G20: `$[…]` の中に、値の上に積まれて余る関数があります(`$[add (5 inc)]`・`$[x ? x ",
+"expected": "G20",
+"id": "coproduct_spec.md|R127|f619dacbd8"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R127",
+"line": 1204,
+"src": "a : 1\na : !_",
+"kind": "R",
+"state": "ok",
+"actual": "断り: void-written: 手で書いた `!_` の項 `!_` があります。`!_`(void)は手で書きません。何も",
+"expected": "void-written",
+"id": "coproduct_spec.md|R127|4bd97bab76"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R117",
+"line": 1210,
+"src": "width : 640\n␠+ 16",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R117|566b7bc989"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R117",
+"line": 1211,
+"src": "width : 640\n+ 16",
+"kind": "R",
+"state": "ok",
+"actual": "断り: infix-missing-operand: 前置できない演算子 '+'(中置は前後に空白が必要。点なしなら `[+ 1",
+"expected": "infix-missing-operand",
+"id": "coproduct_spec.md|R117|5dc8625b55"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R117",
+"line": 1212,
+"src": "- `width : 640` ⏎ 空行 ⏎ `␠+ 16` → 構文の断り",
+"kind": "R",
+"state": "skip",
+"why": "源の形が読めない(⏎ でつながる code でない)",
+"id": "coproduct_spec.md|R117|ff706d2410"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R128",
+"line": 1220,
+"src": "h 3",
+"kind": "R",
+"state": "ok",
+"actual": "3",
+"expected": "知らせ",
+"expected_warn": [
+"leftover-lambda"
+],
+"id": "coproduct_spec.md|R128|52e71d18cd"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R128",
+"line": 1221,
+"src": "bb 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R128|8c1012d361"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R128",
+"line": 1222,
+"src": "f 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R128|878e4b95c5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R128",
+"line": 1223,
+"src": "f 3",
+"kind": "R",
+"state": "ok",
+"actual": "7",
+"expected": "知らせ",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R128|878e4b95c5"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R128",
+"line": 1224,
+"src": "f 0",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R128|a300d98380"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R128",
+"line": 1225,
+"src": "pr : x ?\n\ty : x + 1\n\ty * 2",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G22: 枝の条件が `!_` と分かる値です(`y`)。呼ばない定義でも断ります(§4 R128)。名前の書き間違いを",
+"expected": "G22",
+"id": "coproduct_spec.md|R128|ab3dd81319"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R128",
+"line": 1226,
+"src": "f : x ?\n\tx > 0 : cfg ' hieght\n\t7",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G22: 枝の値が `!_` と分かる値です(`cfg ' hieght`)。呼ばない定義でも断ります(§4 R128)",
+"expected": "G22",
+"id": "coproduct_spec.md|R128|555a0d4b49"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R128",
+"line": 1227,
+"src": "g [width : 640]",
+"kind": "R",
+"state": "ok",
+"actual": "2",
+"expected": "2",
+"id": "coproduct_spec.md|R128|27381b2b83"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R128",
+"line": 1228,
+"src": "f 0",
+"kind": "R",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "coproduct_spec.md|R128|a300d98380"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R130",
+"line": 1234,
+"src": "f : x ?\n\tx > 0 : 1\n\tx\n\tx < 0 : 2\n\t0",
+"kind": "R",
+"state": "ok",
+"actual": "断り: body-bare-row-between: 枝の行のある本体で、最後の行でない裸の行(条件の無い行)があります。枝のあ",
+"expected": "body-bare-row-between",
+"id": "coproduct_spec.md|R130|993f2c0887"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R130",
+"line": 1235,
+"src": "f : x ?\n\tx > 0 : 1\n\tx\n\t0",
+"kind": "R",
+"state": "ok",
+"actual": "断り: body-bare-row-between: 枝の行のある本体で、最後の行でない裸の行(条件の無い行)があります。枝のあ",
+"expected": "body-bare-row-between",
+"id": "coproduct_spec.md|R130|dc71158052"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R131",
+"line": 1241,
+"src": "gq : x [y : 1] ? x + y",
+"kind": "R",
+"state": "ok",
+"actual": "断り: param-default-bracket: 仮引数の括りに、既定値の行があります(`y : …`)。括りは参照の口(呼",
+"expected": "param-default-bracket",
+"id": "coproduct_spec.md|R131|b5237a8ebe"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R131",
+"line": 1242,
+"src": "f :\n\t\t[y] : 1\n\t? y",
+"kind": "R",
+"state": "ok",
+"actual": "断り: param-default-bracket: 仮引数の括りに、既定値の行があります。括りは参照の口(呼ぶ側の器を指す口)",
+"expected": "param-default-bracket",
+"id": "coproduct_spec.md|R131|450be8ca0b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R139",
+"line": 1250,
+"src": "gz 3",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G22: 既定値が `!_` と分かる値の仮引数 `y` は、呼ばない定義でも断ります(§4 R139。無い欄を引いた ",
+"expected": "G22",
+"id": "coproduct_spec.md|R139|d36cdca40b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R139",
+"line": 1251,
+"src": "gz :\n\t\tx\n\t\ty : pw ' zz\n\t? x + y",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G22: 既定値が `!_` と分かる値の仮引数 `y` は、呼ばない定義でも断ります(§4 R139。無い欄を引いた ",
+"expected": "G22",
+"id": "coproduct_spec.md|R139|6e21a019a7"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R139",
+"line": 1252,
+"src": "area 3",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G22: 既定値が `!_` と分かる値の仮引数 `h` は、呼ばない定義でも断ります(§4 R139。無い欄を引いた ",
+"expected": "G22",
+"id": "coproduct_spec.md|R139|895b9e65f4"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R139",
+"line": 1253,
+"src": "gz 3",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R139|d36cdca40b"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R139",
+"line": 1254,
+"src": "gz :\n\t\tx\n\t\ty : $inc + 1\n\t? x + y",
+"kind": "R",
+"state": "ok",
+"actual": "<fn/1>",
+"expected": "知らせ",
+"expected_warn": [
+"level-mismatch"
+],
+"id": "coproduct_spec.md|R139|7d2729c541"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R139",
+"line": 1255,
+"src": "o 3",
+"kind": "R",
+"state": "ok",
+"actual": "3",
+"expected": "3",
+"expected_warn": [
+"bare-function-return"
+],
+"id": "coproduct_spec.md|R139|053d2b32c8"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R133",
+"line": 1261,
+"src": "h 2",
+"kind": "R",
+"state": "ok",
+"actual": "[2, 5]",
+"expected": "2 5",
+"expected_warn": [
+"name-shadow"
+],
+"id": "coproduct_spec.md|R133|6096fcdc4d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R133",
+"line": 1262,
+"src": "a : 1\nf : a a ? a",
+"kind": "R",
+"state": "ok",
+"actual": "断り: name-duplicate: 仮引数 a が同じ関数で2回書かれています(2つ目を断ります。P2。§4 R133)",
+"expected": "name-duplicate",
+"id": "coproduct_spec.md|R133|50518f0b1a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R133",
+"line": 1263,
+"src": "bb ' r",
+"kind": "R",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"expected_warn": [
+"name-shadow"
+],
+"id": "coproduct_spec.md|R133|53c16f922a"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R133",
+"line": 1264,
+"src": "(shape ' cube) 3",
+"kind": "R",
+"state": "ok",
+"actual": "27",
+"expected": "27",
+"id": "coproduct_spec.md|R133|1dab9a74de"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R133",
+"line": 1265,
+"src": "obj ' r",
+"kind": "R",
+"state": "ok",
+"actual": "25",
+"expected": "25",
+"id": "coproduct_spec.md|R133|0a3ba252b3"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R133",
+"line": 1266,
+"src": "screen ' bytes",
+"kind": "R",
+"state": "ok",
+"actual": "1228800",
+"expected": "1228800",
+"id": "coproduct_spec.md|R133|a40e47af38"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R133",
+"line": 1267,
+"src": "bb ' aa",
+"kind": "R",
+"state": "ok",
+"actual": "断り: name-cycle: 欄 aa の値を求める途中で、同じ括りの欄がもう一度 aa を引きました(欄どうしの値の輪。P2",
+"expected": "name-cycle",
+"id": "coproduct_spec.md|R133|9f894b77ef"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R134",
+"line": 1273,
+"src": "f : c ?\n\tc :\n\t\t\ty : 1\n\t\t? y\n\t0",
+"kind": "R",
+"state": "ok",
+"actual": "断り: param-block-position: 字下げの仮引数のブロックで書いた関数を、`名前 :` の定義の行の下でない所",
+"expected": "param-block-position",
+"id": "coproduct_spec.md|R134|d1ea62606d"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R134",
+"line": 1274,
+"src": "mk : x ? x ,\n\t\tm :\n\t\t\t\ty : 1\n\t\t\t? y",
+"kind": "R",
+"state": "ok",
+"actual": "断り: param-block-position: 字下げの仮引数のブロックで書いた関数を、`名前 :` の定義の行の下でない所",
+"expected": "param-block-position",
+"id": "coproduct_spec.md|R134|ca60fdaccc"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R134",
+"line": 1275,
+"src": "f : x ?\n\t\ty : 1\n\t? x + y",
+"kind": "R",
+"state": "ok",
+"actual": "断り: param-block-position: 字下げの仮引数のブロックで書いた関数を、`名前 :` の定義の行の下でない所",
+"expected": "param-block-position",
+"id": "coproduct_spec.md|R134|0d153b9756"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R134",
+"line": 1276,
+"src": "obj :\n\tm :\n\t\t\ty : 2\n\t\t? y",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R134|9f2d967293"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R135",
+"line": 1282,
+"src": "[\n\t\tx\n\t? x + 1\n] 5",
+"kind": "R",
+"state": "ok",
+"actual": "断り: param-block-bracket: 複数の行に書いた括り(`[` の行で開いた括り)の中に、`?` で始まる行(T",
+"expected": "param-block-bracket",
+"id": "coproduct_spec.md|R135|60fb5f8d6c"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R135",
+"line": 1283,
+"src": "g : [\n\t\tx\n\t\ty\n]\n\t? x + y",
+"kind": "R",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "coproduct_spec.md|R135|4e44137e7e"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "(前書き)",
+"line": 1575,
+"src": "- `|f|`・`||f||`・`|_|` と、段18 の引く器の側・`#` の左・区間に書いた裸の関数（R27・R87）：仕様は `|f|`・`||f||` ",
+"kind": "R",
+"state": "skip",
+"why": "源の形が読めない(⏎ でつながる code でない)",
+"id": "coproduct_spec.md|(前書き)|1e4c3a6c62"
+},
+{
+"doc": "value_spec.md",
+"rule": "V2",
+"line": 34,
+"src": "i 5",
+"kind": "V",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "value_spec.md|V2|f59e01077d"
+},
+{
+"doc": "value_spec.md",
+"rule": "V2",
+"line": 35,
+"src": "i 1 2 3",
+"kind": "V",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "value_spec.md|V2|0d7bb31d9e"
+},
+{
+"doc": "value_spec.md",
+"rule": "V4",
+"line": 56,
+"src": "i + 1",
+"kind": "V",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"id": "value_spec.md|V4|80ab2b274c"
+},
+{
+"doc": "value_spec.md",
+"rule": "V4",
+"line": 56,
+"src": "i == 1",
+"kind": "V",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "value_spec.md|V4|b23bfb4623"
+},
+{
+"doc": "value_spec.md",
+"rule": "V4",
+"line": 59,
+"src": "(_ , _) 5",
+"kind": "V",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "value_spec.md|V4|95846920a4"
+},
+{
+"doc": "value_spec.md",
+"rule": "V4",
+"line": 59,
+"src": "_ , _ ; 7",
+"kind": "V",
+"state": "ok",
+"actual": "7",
+"expected": "7",
+"id": "value_spec.md|V4|5b3c40f49e"
+},
+{
+"doc": "value_spec.md",
+"rule": "V4",
+"line": 59,
+"src": "1 , _ , 2",
+"kind": "V",
+"state": "ok",
+"actual": "[1, 2]",
+"expected": "1 2",
+"id": "value_spec.md|V4|87e32b5349"
+},
+{
+"doc": "value_spec.md",
+"rule": "V4",
+"line": 60,
+"src": "(f3 1 , (3 < 2)) 2 3",
+"kind": "V",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "value_spec.md|V4|6a42eabe70"
+},
+{
+"doc": "value_spec.md",
+"rule": "V4",
+"line": 61,
+"src": "(inc , double) 5",
+"kind": "V",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "value_spec.md|V4|8e7a00165e"
+},
+{
+"doc": "value_spec.md",
+"rule": "V4",
+"line": 61,
+"src": "(inc , 3) 5",
+"kind": "V",
+"state": "ok",
+"actual": "[3, 5]",
+"expected": "3 5",
+"id": "value_spec.md|V4|603e27257d"
+},
+{
+"doc": "value_spec.md",
+"rule": "V4",
+"line": 61,
+"src": "(inc , (double , double)) 5",
+"kind": "V",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "value_spec.md|V4|90c19219b0"
+},
+{
+"doc": "value_spec.md",
+"rule": "V4",
+"line": 61,
+"src": "((inc , double) , double) 5",
+"kind": "V",
+"state": "ok",
+"actual": "10",
+"expected": "10",
+"id": "value_spec.md|V4|6a54f921f7"
+},
+{
+"doc": "value_spec.md",
+"rule": "V4",
+"line": 63,
+"src": "(gq 1 , w) 5",
+"kind": "V",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "value_spec.md|V4|4657ea977d"
+},
+{
+"doc": "value_spec.md",
+"rule": "V5",
+"line": 73,
+"src": "(3 < 2) - 2",
+"kind": "V",
+"state": "ok",
+"actual": "2",
+"expected": "2",
+"id": "value_spec.md|V5|f2a155530c"
+},
+{
+"doc": "value_spec.md",
+"rule": "V5",
+"line": 74,
+"src": "/",
+"kind": "V",
+"state": "skip",
+"why": "演算子の名指しで式ではない",
+"id": "value_spec.md|V5|42099b4af0"
+},
+{
+"doc": "value_spec.md",
+"rule": "V5",
+"line": 76,
+"src": "-(1 / 0)",
+"kind": "V",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "value_spec.md|V5|db8fd59ad7"
+},
+{
+"doc": "value_spec.md",
+"rule": "V5",
+"line": 76,
+"src": "neg (5 > 3)",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(neg)",
+"id": "value_spec.md|V5|0f2a7ccc81"
+},
+{
+"doc": "value_spec.md",
+"rule": "V5",
+"line": 77,
+"src": "!_",
+"kind": "V",
+"state": "skip",
+"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"id": "value_spec.md|V5|b62b556974"
+},
+{
+"doc": "value_spec.md",
+"rule": "V5",
+"line": 80,
+"src": "_! 5",
+"kind": "V",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "value_spec.md|V5|6d80c484d6"
+},
+{
+"doc": "value_spec.md",
+"rule": "V5",
+"line": 80,
+"src": "-_ 5",
+"kind": "V",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "value_spec.md|V5|39e0da3af7"
+},
+{
+"doc": "value_spec.md",
+"rule": "V5",
+"line": 80,
+"src": "[-_ 5] 3",
+"kind": "V",
+"state": "ok",
+"actual": "[5, 3]",
+"expected": "5 3",
+"id": "value_spec.md|V5|8eba45835b"
+},
+{
+"doc": "value_spec.md",
+"rule": "V5",
+"line": 81,
+"src": "[-(_)] 5",
+"kind": "V",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "value_spec.md|V5|e490113038"
+},
+{
+"doc": "value_spec.md",
+"rule": "V5",
+"line": 87,
+"src": "(MAX+2)+(0-2)",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(MAX)",
+"id": "value_spec.md|V5|73ac9618fa"
+},
+{
+"doc": "value_spec.md",
+"rule": "V6",
+"line": 93,
+"src": "0 <= 0 < 5",
+"kind": "V",
+"state": "ok",
+"actual": "0",
+"expected": "0",
+"id": "value_spec.md|V6|24dfdaa151"
+},
+{
+"doc": "value_spec.md",
+"rule": "V6",
+"line": 93,
+"src": "0 <= 5 < 5",
+"kind": "V",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "value_spec.md|V6|3313c75ec1"
+},
+{
+"doc": "value_spec.md",
+"rule": "V6",
+"line": 95,
+"src": "=",
+"kind": "V",
+"state": "skip",
+"why": "演算子の名指しで式ではない",
+"id": "value_spec.md|V6|21606782c6"
+},
+{
+"doc": "value_spec.md",
+"rule": "V6",
+"line": 96,
+"src": "1 == 1 == 1",
+"kind": "V",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"id": "value_spec.md|V6|16befb2579"
+},
+{
+"doc": "value_spec.md",
+"rule": "V6",
+"line": 96,
+"src": "2 == 3 == 3",
+"kind": "V",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "value_spec.md|V6|71793e63f8"
+},
+{
+"doc": "value_spec.md",
+"rule": "V6",
+"line": 102,
+"src": "1 < (3 < 2)",
+"kind": "V",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "value_spec.md|V6|1e7f92c6c9"
+},
+{
+"doc": "value_spec.md",
+"rule": "V6",
+"line": 102,
+"src": "[<] 1 (5 / 0) 3",
+"kind": "V",
+"state": "ok",
+"actual": "1",
+"expected": "1",
+"id": "value_spec.md|V6|b2e733abf4"
+},
+{
+"doc": "value_spec.md",
+"rule": "V6",
+"line": 102,
+"src": "[<] a b",
+"kind": "V",
+"state": "skip",
+"why": "期待が選択肢の書き方",
+"id": "value_spec.md|V6|3ee61a806b"
+},
+{
+"doc": "value_spec.md",
+"rule": "V7",
+"line": 110,
+"src": "inc ; 3",
+"kind": "V",
+"state": "ok",
+"actual": "3",
+"expected": "3",
+"id": "value_spec.md|V7|8cff737b2f"
+},
+{
+"doc": "value_spec.md",
+"rule": "V7",
+"line": 110,
+"src": "3 ; 4",
+"kind": "V",
+"state": "ok",
+"actual": "!_",
+"expected": "!_",
+"id": "value_spec.md|V7|1dc5c178a6"
+},
+{
+"doc": "value_spec.md",
+"rule": "V7",
+"line": 111,
+"src": "(inc ; (1 / 0)) 5",
+"kind": "V",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "value_spec.md|V7|a1ebb65a4a"
+},
+{
+"doc": "value_spec.md",
+"rule": "V7",
+"line": 111,
+"src": "(inc ; double) 5",
+"kind": "V",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "value_spec.md|V7|7112431274"
+},
+{
+"doc": "value_spec.md",
+"rule": "V7",
+"line": 111,
+"src": "(inc | 3) 5",
+"kind": "V",
+"state": "ok",
+"actual": "[3, 5]",
+"expected": "3 5",
+"id": "value_spec.md|V7|20d97d4371"
+},
+{
+"doc": "value_spec.md",
+"rule": "V7",
+"line": 111,
+"src": "(_ | _) 5",
+"kind": "V",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "value_spec.md|V7|661bbf0212"
+},
+{
+"doc": "value_spec.md",
+"rule": "V7",
+"line": 111,
+"src": "(_ | 3) 5",
+"kind": "V",
+"state": "ok",
+"actual": "[3, 5]",
+"expected": "3 5",
+"id": "value_spec.md|V7|105d0f42de"
+},
+{
+"doc": "value_spec.md",
+"rule": "V7",
+"line": 111,
+"src": "(_ | (3 < 2)) 5",
+"kind": "V",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "value_spec.md|V7|8752224aea"
+},
+{
+"doc": "value_spec.md",
+"rule": "V7",
+"line": 112,
+"src": ";",
+"kind": "V",
+"state": "skip",
+"why": "演算子の名指しで式ではない",
+"id": "value_spec.md|V7|2d14ab97cc"
+},
+{
+"doc": "value_spec.md",
+"rule": "V7",
+"line": 112,
+"src": "(inc ; double ; double) 5",
+"kind": "V",
+"state": "ok",
+"actual": "10",
+"expected": "10",
+"id": "value_spec.md|V7|0c8ef810b7"
+},
+{
+"doc": "value_spec.md",
+"rule": "V7",
+"line": 112,
+"src": "(inc , double , double) 5",
+"kind": "V",
+"state": "ok",
+"actual": "5",
+"expected": "5",
+"id": "value_spec.md|V7|a9edd53f93"
+},
+{
+"doc": "value_spec.md",
+"rule": "V8",
+"line": 124,
+"src": "pr 3",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(pr)",
+"id": "value_spec.md|V8|2e39c7c8d6"
+},
+{
+"doc": "value_spec.md",
+"rule": "V9",
+"line": 136,
+"src": "h 2",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(h)",
+"id": "value_spec.md|V9|6096fcdc4d"
+},
+{
+"doc": "value_spec.md",
+"rule": "V9",
+"line": 136,
+"src": "x + 1",
+"kind": "V",
+"state": "skip",
+"why": "期待が選択肢の書き方",
+"id": "value_spec.md|V9|5b1cd63937"
+},
+{
+"doc": "value_spec.md",
+"rule": "V9",
+"line": 137,
+"src": "f 3",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(f)",
+"id": "value_spec.md|V9|878e4b95c5"
+},
+{
+"doc": "value_spec.md",
+"rule": "V10",
+"line": 144,
+"src": "lc 5000",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(lc)",
+"id": "value_spec.md|V10|3e8f367a5f"
+},
+{
+"doc": "value_spec.md",
+"rule": "V10",
+"line": 145,
+"src": "(inc ; lz n) 5",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(lz,n)",
+"id": "value_spec.md|V10|a48b17e562"
+},
+{
+"doc": "value_spec.md",
+"rule": "V10",
+"line": 145,
+"src": "lr2 5000",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(lr2)",
+"id": "value_spec.md|V10|b441cbbd15"
+},
+{
+"doc": "value_spec.md",
+"rule": "V10",
+"line": 145,
+"src": ";",
+"kind": "V",
+"state": "skip",
+"why": "演算子の名指しで式ではない",
+"id": "value_spec.md|V10|2d14ab97cc"
+},
+{
+"doc": "value_spec.md",
+"rule": "V10",
+"line": 145,
+"src": "(inc ; double ; double ; lz n) 5",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(lz,n)",
+"id": "value_spec.md|V10|fdb3ed3d4b"
+},
+{
+"doc": "value_spec.md",
+"rule": "V10",
+"line": 146,
+"src": "cd 5000",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(cd)",
+"id": "value_spec.md|V10|750a4083e6"
+},
+{
+"doc": "value_spec.md",
+"rule": "V11",
+"line": 176,
+"src": "(inc , (3 < 2)) 5",
+"kind": "V",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "value_spec.md|V11|c3ab1bb67b"
+},
+{
+"doc": "value_spec.md",
+"rule": "V12",
+"line": 185,
+"src": "add 1 _ 5",
+"kind": "V",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "value_spec.md|V12|839e5c6804"
+},
+{
+"doc": "value_spec.md",
+"rule": "V12",
+"line": 222,
+"src": "pp 3",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(pp)",
+"id": "value_spec.md|V12|89be174023"
+},
+{
+"doc": "value_spec.md",
+"rule": "V12",
+"line": 222,
+"src": "inc pp 3",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(pp)",
+"id": "value_spec.md|V12|73dd4e8cee"
+},
+{
+"doc": "value_spec.md",
+"rule": "V12",
+"line": 224,
+"src": "(f3 1 , (3 < 2)) 2 3",
+"kind": "V",
+"state": "ok",
+"actual": "6",
+"expected": "6",
+"id": "value_spec.md|V12|6a42eabe70"
+},
+{
+"doc": "value_spec.md",
+"rule": "V12",
+"line": 224,
+"src": "(f3 1 , (3 < 2) , 2) 2 3",
+"kind": "V",
+"state": "ok",
+"actual": "[2, 2, 3]",
+"expected": "2 2 3",
+"id": "value_spec.md|V12|549b635651"
+},
+{
+"doc": "value_spec.md",
+"rule": "V12",
+"line": 225,
+"src": "f3 1 , 2",
+"kind": "V",
+"state": "ok",
+"actual": "2",
+"expected": "2",
+"id": "value_spec.md|V12|45ec885002"
+},
+{
+"doc": "value_spec.md",
+"rule": "V12",
+"line": 225,
+"src": "f3 1 , 2 , 3",
+"kind": "V",
+"state": "ok",
+"actual": "[2, 3]",
+"expected": "2 3",
+"id": "value_spec.md|V12|e00cf38272"
+},
+{
+"doc": "value_spec.md",
+"rule": "V12",
+"line": 264,
+"src": "lx 300",
+"kind": "V",
+"state": "skip",
+"why": "文中の定義が前提で取り込めない(lx)",
+"id": "value_spec.md|V12|281aed2c60"
+}
+]
+}

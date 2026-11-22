@@ -1,0 +1,103 @@
+"""alpha1 追従: 公式の仕様書(coproduct_spec.md の R 規則・value_spec.md の V 規則)の見本を直接取り込み、
+--strict の実際の成功・失敗・診断と突き合わせて、規則ごとに数える。読めずに省いた見本は理由別に別集計する。
+使い方: python3 spec_track.py [仕様リポジトリのパス(既定 ../sign-spec)] [--save] [--base 前回.json] [-v]
+  --save   結果を spec_track_last.json に書く(次回の比べの土台)
+  既定で spec_track_last.json があれば、前回との差(新しい見本・消えた見本・状態の変化)を出す。"""
+import sys, re, os, json, hashlib, subprocess
+here = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, here)
+import spec_audit as A
+
+args = [a for a in sys.argv[1:] if not a.startswith("-")]
+repo = args[0] if args else os.path.join(here, "..", "sign-spec")
+verbose = "-v" in sys.argv; save = "--save" in sys.argv
+base_path = os.path.join(here, "spec_track_last.json")
+if "--base" in sys.argv: base_path = sys.argv[sys.argv.index("--base") + 1]
+docs = os.path.join(repo, "alpha1", "docs")
+try: rev = subprocess.check_output(["git", "-C", repo, "rev-parse", "--short", "HEAD"], text=True).strip()
+except Exception: rev = "?"
+
+HEAD = {"coproduct_spec.md": re.compile(r"^####\s+(R\d+)\b"), "value_spec.md": re.compile(r"^###\s+(V\d+)\b")}
+VAL = re.compile(r"`([^`]+)`(?:（[^）]*）)?\s*は\s*(`[^`]+`|-?\d+(?![\d.\-])|!_)")
+def key(doc, rule, src): return f"{doc}|{rule}|{hashlib.sha1(src.encode()).hexdigest()[:10]}"
+
+def items(doc):
+    """(行, 規則, 源, 定義, 期待(right), 種別) を順に出す。種別 R=箇条書きの見本, V=文中の「X は Y」"""
+    rule = "(前書き)"
+    for n, line in enumerate(open(os.path.join(docs, doc), encoding="utf-8"), 1):
+        line = line.rstrip("\n")
+        m = HEAD[doc].match(line)
+        if m: rule = m.group(1)
+        elif re.match(r"^#{1,4}\s", line) and not re.match(r"^####\s+R", line) and doc == "coproduct_spec.md" and not line.startswith("#### "): rule = "(前書き)" if line.startswith(("# ", "## ")) else rule
+        if doc == "coproduct_spec.md":
+            if "→" in line and line.startswith("- `"):
+                p = A.parse(line)
+                if p is None: yield n, rule, line[:80], [], None, "R", "源の形が読めない(⏎ でつながる code でない)"
+                else: yield n, rule, p[0], p[1], p[2], "R", None
+        else:
+            for mv in VAL.finditer(line):
+                src = A.to_src(mv.group(1)); v = mv.group(2).strip("`")
+                why = None
+                if re.fullmatch(r"[^\w\s]+", src): why = "演算子の名指しで式ではない"
+                elif "|" in v: why = "期待が選択肢の書き方"
+                else:
+                    known = {l.split(" ")[0] for l in A.PRE.splitlines()} | {"vs"}
+                    free = {w for w in re.findall(r"[A-Za-z_]\w*", src) if w not in known and w != "_"}
+                    if free: why = "文中の定義が前提で取り込めない(" + ",".join(sorted(free))[:30] + ")"
+                yield n, rule, src, [], "値 `" + v + "`", "V", why
+
+res = []; skips = {}
+for doc in HEAD:
+    for n, rule, src, defs, right, kind, pre_skip in items(doc):
+        rec = {"doc": doc, "rule": rule, "line": n, "src": src[:100], "kind": kind}
+        if pre_skip: rec["state"] = "skip"; rec["why"] = pre_skip
+        else:
+            exp, warns, none_w = A.expect(right)
+            if exp is None and not warns and not none_w:
+                rec["state"] = "skip"
+                rec["why"] = "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)"
+            else:
+                names = {re.match(r"#?([\w']+)", d).group(1) for d in defs if re.match(r"#?([\w']+)", d)}
+                pre = "".join(l + "\n" for l in A.PRE.splitlines() if l.split(" ")[0] not in names)
+                prog = A.fixblank(pre + "\n\n".join(defs) + ("\n\n" if defs else "") + src) + "\n"
+                out, err, ws = A.run(prog)
+                why = A.judge(exp, warns, none_w, out, err, ws)
+                rec["state"] = "ng" if why else "ok"
+                rec["actual"] = ("断り: " + err[:60]) if err else out[:60]
+                rec["expected"] = (exp[1] if exp and exp[0] == "val" and isinstance(exp[1], str) else (" ".join(exp[1]) if exp and exp[0] == "val" else (exp[1] if exp else "知らせ"))) 
+                if warns: rec["expected_warn"] = sorted(warns)
+                if why: rec["why"] = why
+        rec["id"] = key(rec["doc"], rec["rule"], rec["src"])
+        res.append(rec)
+
+def rule_key(r):
+    m = re.match(r"([RV])(\d+)", r); return (m.group(1), int(m.group(2))) if m else ("0", 0)
+print(f"仕様リポジトリ HEAD {rev}  ({docs})")
+tot = {"ok": 0, "ng": 0, "skip": 0}
+for r in res: tot[r["state"]] += 1
+print(f"合計: 一致 {tot['ok']} / 食い違い {tot['ng']} / 省略 {tot['skip']}  (見本 {len(res)})\n")
+print("規則    一致 食い違い 省略")
+byrule = {}
+for r in res: byrule.setdefault(r["rule"], {"ok": 0, "ng": 0, "skip": 0})[r["state"]] += 1
+for rl in sorted(byrule, key=rule_key):
+    c = byrule[rl]
+    if verbose or c["ng"]: print(f"{rl:9}{c['ok']:4} {c['ng']:6} {c['skip']:6}")
+print("\n省略の内訳(別集計):")
+cls = lambda w: re.sub(r"\(.*", "", w)
+for why in sorted({cls(r["why"]) for r in res if r["state"] == "skip"}):
+    print(f"  {sum(1 for r in res if r['state']=='skip' and cls(r['why'])==why):4}  {why}")
+print("\n食い違い:")
+for r in res:
+    if r["state"] == "ng": print(f"  {r['doc'].split('_')[0]} {r['rule']} L{r['line']}: `{r['src'][:70]}`\n        {r['why']}")
+
+if os.path.exists(base_path):
+    old = {r["id"]: r for r in json.load(open(base_path, encoding="utf-8"))["items"]}
+    new = {r["id"]: r for r in res}
+    added = [k for k in new if k not in old]; gone = [k for k in old if k not in new]
+    chg = [k for k in new if k in old and new[k]["state"] != old[k]["state"]]
+    print(f"\n前回との差: 新しい見本 {len(added)} / 消えた見本 {len(gone)} / 状態が変わった {len(chg)}")
+    for k in chg: print(f"  {new[k]['rule']} `{new[k]['src'][:50]}`: {old[k]['state']} → {new[k]['state']}  {new[k].get('why','')}")
+    for k in added:
+        if new[k]["state"] == "ng": print(f"  新規の食い違い {new[k]['rule']} `{new[k]['src'][:50]}`: {new[k]['why']}")
+if save:
+    json.dump({"rev": rev, "items": res}, open(os.path.join(here, "spec_track_last.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=0)
+    print("\nspec_track_last.json に保存")
