@@ -121,7 +121,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R35|7d4c06711a"
 },
 {
@@ -298,7 +298,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R121|e00cf38272"
 },
 {
@@ -684,7 +684,7 @@
 "dollar-non-function",
 "leftover-lambda"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R81|07d411a046"
 },
 {
@@ -851,7 +851,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R136|c4f59a4eab"
 },
 {
@@ -1445,7 +1445,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R112|9ce949ccc0"
 },
 {
@@ -1456,7 +1456,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R112|2066ba5b27"
 },
 {
@@ -1471,7 +1471,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R112|cd683554aa"
 },
 {
@@ -1487,7 +1487,7 @@
 "dollar-non-function",
 "leftover-lambda"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R112|3e3dd1b788"
 },
 {
@@ -1510,7 +1510,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R61|3628b87e26"
 },
 {
@@ -1522,7 +1522,7 @@
 "state": "ok",
 "actual": "[1, 2]",
 "expected": "1 2",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R61|87e32b5349"
 },
 {
@@ -1585,7 +1585,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R61|edb6521708"
 },
 {
@@ -1635,7 +1635,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R61|9ba641d242"
 },
 {
@@ -1661,7 +1661,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R61|1a146dbe3b"
 },
 {
@@ -1801,7 +1801,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R137|2a084a6f70"
 },
 {
@@ -1837,7 +1837,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R137|8163a73abc"
 },
 {
@@ -1948,7 +1948,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R42|a8450e35fe"
 },
 {
@@ -2056,7 +2056,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R48|aae8059245"
 },
 {
@@ -2359,7 +2359,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R87|c17cd3dbd7"
 },
 {
@@ -2701,7 +2701,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R31|465bb8a1ab"
 },
 {
@@ -2725,7 +2725,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R31|15e2ae6a68"
 },
 {
@@ -2750,7 +2750,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R31|e006dec66a"
 },
 {
@@ -2765,7 +2765,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R31|ac916df9e0"
 },
 {
@@ -2791,7 +2791,7 @@
 "expected_warn": [
 "pointfree-not-folded"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R32|5f44f412d4"
 },
 {
@@ -2824,7 +2824,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R77|6b9a776370"
 },
 {
@@ -2847,7 +2847,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R77|45fb9dfd3f"
 },
 {
@@ -2859,7 +2859,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "知らせ",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R77|fa812e1e10"
 },
 {
@@ -2912,7 +2912,7 @@
 "state": "ok",
 "actual": "_",
 "expected": "知らせ",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R95|eff8fdde09"
 },
 {
@@ -2939,7 +2939,7 @@
 "state": "ok",
 "actual": "5",
 "expected": "5",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R95|af32bcc525"
 },
 {
@@ -3319,7 +3319,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R66|1cd7b8abf3"
 },
 {
@@ -3334,7 +3334,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R66|8a16363040"
 },
 {
@@ -4169,7 +4169,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R56|924054d70f"
 },
 {
@@ -4191,7 +4191,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R56|9400568ab6"
 },
 {
@@ -4440,7 +4440,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R102|65cfae9698"
 },
 {
@@ -4452,7 +4452,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R102|651b48f742"
 },
 {
@@ -4677,7 +4677,7 @@
 "state": "ok",
 "actual": "<fn/1>",
 "expected": "知らせ",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R103|33e2cbcb76"
 },
 {
@@ -4944,7 +4944,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|b80413bd84"
 },
 {
@@ -4974,7 +4974,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|8dc20c51f3"
 },
 {
@@ -4989,7 +4989,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|8c8fd77d43"
 },
 {
@@ -5034,7 +5034,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|a517353605"
 },
 {
@@ -5064,7 +5064,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|e6fb949cbd"
 },
 {
@@ -5152,7 +5152,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|b1a9af8ed4"
 },
 {
@@ -5168,7 +5168,7 @@
 "dollar-non-function",
 "level-mismatch"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|da97ea7764"
 },
 {
@@ -5343,7 +5343,7 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|8851466ef0"
 },
 {
@@ -5472,7 +5472,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|5d2caf45e6"
 },
 {
@@ -5502,7 +5502,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|42dd0505c5"
 },
 {
@@ -5589,7 +5589,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|0e78136322"
 },
 {
@@ -5619,7 +5619,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|0174333523"
 },
 {
@@ -5780,7 +5780,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|8e70fb584b"
 },
 {
@@ -5813,7 +5813,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|5f4e4d4475"
 },
 {
@@ -5889,7 +5889,7 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|429a37429d"
 },
 {
@@ -5904,7 +5904,7 @@
 "expected_warn": [
 "dollar-non-function"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|080b882dab"
 },
 {

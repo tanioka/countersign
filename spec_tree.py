@@ -92,6 +92,11 @@ def _classify(tok, env):
     if tok[0] in "([":
         inner = tokens(tok[1:-1])
         if inner is None or any(t in TIGHT + ROOT for t in inner) is False and False: return None
+        if tok[0] == "(" and inner and len(inner) > 1 and not _plain(inner, env):
+            cs = [_classify(t, env) if not (t in TIGHT or t in ROOT) else "op" for t in inner]
+            if all(c is not None and c != "op" and c[0] != "V" for c in cs) and any(c[0] == "F" for c in cs):
+                r = resolve_seq(inner, env)
+                if r and r.startswith(("(apply", "(construct")) and "(unit" not in r: return ("A", leaf_text(tok))
         if tok[0] == "(" and len(inner) == 1 and not re.fullmatch(r"[^\w\s]+", inner[0]): return classify(inner[0], env) if inner[0][0] not in "([" else None
         if any(re.fullmatch(r"[^\w\s$\[\]()'\"~]+", t) or t in ("'",) for t in inner): return ("A", leaf_text(tok)) if _plain(inner, env) else None
         return ("A", leaf_text(tok)) if _plain(inner, env) else None
@@ -223,25 +228,66 @@ def build(terms):
         i = n
     return out[0] if len(out) == 1 else "(construct " + " ".join(out) + ")"
 
+def fold_chain(g, env):
+    """畳んだ中置が 3 つ以上の語(同じ演算子の連なり)なら左結合の入れ子 `(+ (+ a b) c)`"""
+    if len(g) < 3 or len(set(g[1::2])) != 1: return None
+    ops = [operand(x, env, True) for x in g[::2]]
+    if any(o is None for o in ops): return None
+    t = ops[0]
+    for o in ops[1:]: t = f"({g[1]} {t} {o})"
+    return t
+
 def tree_of(src, defs=()):
     """源(1 行)の木。出せない形は None"""
     if "\n" in src.strip(): return None
     env = kinds_from(list(defs))
     toks = tokens(src.strip())
     if not toks: return None
-    # 根の演算子で切る(1 つだけ)
     seps = [i for i, t in enumerate(toks) if t in ROOT_SEP]
-    if len(seps) > 1: return None
+    if seps and toks[seps[0]] == ":":
+        return def_tree(toks, seps, env)
     if seps:
-        i = seps[0]; op = toks[i]
-        if i == 0 or i == len(toks) - 1: return None
-        if op == ":":
-            return None                                                        # 定義の行の木(: 名前 右辺)は未対応(右辺が関数なら ? の節)
-        l = resolve_seq(toks[:i], env, root_alone=True); r = resolve_seq(toks[i + 1:], env, root_alone=True)
-        if l is None or r is None: return None
-        if op == "," and ("(apply" in l or "(unit" in l or "(compose" in l): return None      # 辺の中で畳む(R19)
-        return f"({op} {l} {r})"
-    return resolve_seq(toks, env, root_alone=True)
+        if any(toks[i] != toks[seps[0]] for i in seps) or seps[0] == 0 or seps[-1] == len(toks) - 1: return None
+        op = toks[seps[0]]
+        parts, prev = [], 0
+        for i in seps + [len(toks)]: parts.append(toks[prev:i]); prev = i + 1
+        if any(not p for p in parts): return None
+        sides = [resolve_seq(p, env, root_alone=True) for p in parts]
+        if any(x is None for x in sides): return None
+        if op == "," and any(_absorbs(p, env) for p in parts[:-1]): return None     # 辺の中で畳む(R19)
+        t = sides[-1]
+        for x in reversed(sides[:-1]): t = f"({op} {x} {t})"                   # `,` は右へ入れ子
+        return t
+    r = resolve_seq(toks, env, root_alone=True)
+    if r is None:
+        items = fold_tight(toks, env)
+        if items and len(items) == 1 and items[0][0] == "fold": return fold_chain(items[0][1], env)
+    return r
+
+def _absorbs(p, env):
+    """`,` の左の並びが、口の数の決まらない関数(残りを受ける・不明)を頭に持てば、右の辺まで受ける(R19・R66)"""
+    for t in p:
+        k = env.get(t) if re.fullmatch(r"[\w']+", t) else None
+        if k and k[0] == "F" and (isinstance(k[1], tuple) or not k[2]): return True
+        if t.startswith("["): return True
+    return False
+def def_tree(toks, seps, env):
+    """`名前 : 右辺`。右辺が `仮引数 ? 本体`(仮引数は名前だけ)なら (? [仮引数] 本体)、値なら右辺の木"""
+    if seps != [1] or len(toks) < 3: return None
+    name, rhs = toks[0], toks[2:]
+    if "?" in rhs:
+        q = rhs.index("?")
+        ps, body = rhs[:q], rhs[q + 1:]
+        if not ps or not body or any(not re.fullmatch(r"[a-z][\w']*", p) for p in ps): return None
+        e2 = dict(env)
+        for p in ps: e2[p] = ("A",)
+        if name in env and env[name] and env[name][0] == "F": e2[name] = env[name]
+        else: e2[name] = ("F", len(ps), True)
+        b = resolve_seq(body, e2, root_alone=True)
+        if b is None: return None
+        return f"(: {name} (? [{' '.join(ps)}] {b}))"
+    r = resolve_seq(rhs, env, root_alone=True)
+    return None if r is None else f"(: {name} {r})"
 
 if __name__ == "__main__":
     import sys
