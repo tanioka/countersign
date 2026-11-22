@@ -6,6 +6,7 @@
 import sys, re, os, json, hashlib, subprocess
 here = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, here)
 import spec_audit as A
+import spec_tree as T
 
 args = [a for a in sys.argv[1:] if not a.startswith("-")]
 repo = args[0] if args else os.path.join(here, "..", "sign-spec")
@@ -66,6 +67,13 @@ for doc in HEAD:
                 rec["expected"] = (exp[1] if exp and exp[0] == "val" and isinstance(exp[1], str) else (" ".join(exp[1]) if exp and exp[0] == "val" else (exp[1] if exp else "知らせ"))) 
                 if warns: rec["expected_warn"] = sorted(warns)
                 if why: rec["why"] = why
+        mt = re.match(r"\s*`(\([^`]*)`", right or "") if kind == "R" and right else None
+        if mt:
+            exp_t = re.sub(r"\s+", " ", mt.group(1)).strip()
+            names_ = {re.match(r"#?([\w']+)", d).group(1) for d in defs if re.match(r"#?([\w']+)", d)}
+            got = T.tree_of(src, [l for l in A.PRE.splitlines() if l.split(" ")[0] not in names_] + list(defs))
+            rec["tree"] = "unsupported" if got is None else ("match" if got == exp_t else "mismatch")
+            if got is not None and got != exp_t: rec["tree_got"] = got; rec["tree_exp"] = exp_t
         rec["id"] = key(rec["doc"], rec["rule"], rec["src"])
         res.append(rec)
 
@@ -99,6 +107,14 @@ print("\n省略の内訳(別集計):")
 cls = lambda w: re.sub(r"\(.*", "", w)
 for why in sorted({cls(r["why"]) for r in res if r["state"] == "skip"}):
     print(f"  {sum(1 for r in res if r['state']=='skip' and cls(r['why'])==why):4}  {why}")
+tr = [r for r in res if "tree" in r]
+if tr:
+    import collections as _c
+    c = _c.Counter(r["tree"] for r in tr)
+    print(f"\n木の突き合わせ(spec_tree.py。仕様の見本 {len(tr)} 件): 一致 {c['match']} / 不一致 {c['mismatch']} / 未対応 {c['unsupported']}")
+    if verbose:
+        for r in tr:
+            if r["tree"] == "mismatch": print(f"  {r['rule']} L{r['line']} `{r['src'][:40]}`: 出した {r['tree_got']} / 仕様 {r['tree_exp']}")
 print("\n既知の食い違い(切り分け済み):")
 for r in res:
     if r["state"] == "known": print(f"  {r['rule']} L{r['line']} `{r['src'][:30]!s}`: {r['known']}")
