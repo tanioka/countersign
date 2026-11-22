@@ -31,10 +31,24 @@ def lower(nodes):
         if n[0] == "def":
             if isinstance(n[2], tuple) and n[2][0] == "lam":
                 lam = n[2]; ps = [p[1] for p in lam[1]]
-                funcs[n[1]] = (ps, expr(lam[2], set(ps), arity))
+                INFUNC[0] = True
+                try: funcs[n[1]] = (ps, expr(lam[2], set(ps), arity))
+                finally: INFUNC[0] = False
             else: funcs[n[1]] = ([], expr(n[2], set(), arity))
         else: body_top = expr(n, set(), arity)
     return funcs, body_top
+
+INFUNC = [False]
+
+def lit_list(items):
+    """整数の字面だけの並び(2 つ以上)は整数のリスト値。"""
+    out = []
+    for x in items:
+        x = unblock(x)
+        if x[0] == "lit" and isinstance(x[1], int) and not isinstance(x[1], bool): out.append(x[1])
+        elif x[0] == "neg" and unblock(x[1])[0] == "lit" and isinstance(unblock(x[1])[1], int): out.append(-unblock(x[1])[1])
+        else: return None
+    return ("list", tuple(out)) if len(out) >= 2 and all(I64_MIN <= v <= I64_MAX for v in out) else None
 
 def unblock(n):
     while isinstance(n, tuple) and n and n[0] == "block": n = n[1]
@@ -61,8 +75,12 @@ def expr(n, params, arity):
         if op in ("+", "-", "*", "/", "%"): return ("op", op, expr(n[2], params, arity), expr(n[3], params, arity))
         if op == "&": return ("and", expr(n[2], params, arity), expr(n[3], params, arity))
         if op == "|": return ("or", expr(n[2], params, arity), expr(n[3], params, arity))
+        if op == "'":
+            if INFUNC[0]: raise Unsup("関数の中の添字(R24・R81 の形の見え方が未モデル)")
+            return ("idx", expr(n[2], params, arity), expr(n[3], params, arity))
         if op in ("==", "!==", "!="): return ("cmp", op, expr(n[2], params, arity), expr(n[3], params, arity))
         raise Unsup("演算子 " + op)
+    if k == "norm": return ("len", expr(n[1], params, arity))
     if k == "cmp":
         xs = [expr(x, params, arity) for x in n[1]]
         if len(xs) == 2: return ("cmp", n[2][0], xs[0], xs[1])
@@ -82,6 +100,8 @@ def expr(n, params, arity):
             call = ("call", h[1], args)
             rest = [expr(x, params, arity) for x in items[1 + a:]]
             return call if not rest else ("flow", [call] + rest)
+        li = lit_list(items)
+        if li is not None: return li
         return ("flow", [expr(x, params, arity) for x in items])
     raise Unsup("節 " + k)
 
@@ -101,6 +121,7 @@ def evaluate(funcs, top, fuel=200000):
         if k == "var": return env[e[1]]
         if k == "op":
             a, b = ev(e[2], env), ev(e[3], env)
+            if isinstance(a, tuple) or isinstance(b, tuple): raise Unsup("リストの算術")
             if a is None or b is None: return b if a is None else a
             op = e[1]
             if op == "+": return clamp(a + b)
@@ -111,18 +132,33 @@ def evaluate(funcs, top, fuel=200000):
             return clamp(q) if op == "/" else clamp(a - q * b)
         if k == "cmp":
             a, b = ev(e[2], env), ev(e[3], env)
+            if isinstance(a, tuple) or isinstance(b, tuple): raise Unsup("リストの比べ")
             if a is None or b is None: return None
             op = e[1]
             ok = {"<": a < b, ">": a > b, "<=": a <= b, ">=": a >= b, "=": a == b, "==": a == b, "!=": a != b, "!==": a != b}[op]
             return a if ok else None
+        if k == "list": return e[1]
+        if k == "len":
+            a = ev(e[1], env)
+            if a is None: return None
+            if not isinstance(a, tuple): raise Unsup("整数の長さ")
+            return len(a)
+        if k == "idx":
+            a, i = ev(e[1], env), ev(e[2], env)
+            if a is None or i is None: return None
+            if not isinstance(a, tuple) or isinstance(i, tuple): raise Unsup("添字の型")
+            if i < 0: i += len(a)
+            return a[i] if 0 <= i < len(a) else None
         if k == "neg":
             a = ev(e[1], env)
+            if isinstance(a, tuple): raise Unsup("リストの符号")
             return None if a is None else clamp(-a)
         if k == "chain":
             ts, ops = e[2], e[1]
             vals = []
             for i, t in enumerate(ts):
                 v = ev(t, env)
+                if isinstance(v, tuple): raise Unsup("リストの比べ")
                 if v is None: return None
                 vals.append(v)
                 if i:
@@ -155,4 +191,5 @@ def evaluate(funcs, top, fuel=200000):
     except Partial: return ("partial",)
     except Fuel: return ("fuel",)
     except RecursionError: return ("fuel",)
+    if isinstance(v, tuple): raise Unsup("リストの値")
     return ("void",) if v is None else ("val", v)
