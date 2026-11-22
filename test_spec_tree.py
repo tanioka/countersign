@@ -22,6 +22,10 @@ OK += [("~1 2 3", "(construct ~1 2 3)"), ("-_ 5", "(construct -_ 5)"), ("!inc 5"
 for src_, defs_, want_ in [("f -x", ["f : a ? a", "x : 3"], "(apply f -x)")]:
     g_ = T.tree_of(src_, P + defs_)
     if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 値の名前に前置 `-` は値(R2)
+OK += [("inc ~$w 5", "(apply inc 5)"), ("inc ~5~", "(apply inc ~5~)"), ("inc ~w~ 5", "(apply inc 5)")]     # 前置 `~` は後置 `~` より先に結ぶ: `~x~` は `[x]~`、`~$x` は `[$x]`(R79、2026-11-22 の仕様)
+for src_, defs_, want_ in [("fp 1 , 2 , 3", ["fp : [a b c] ? a"], "(, (apply fp 1) (, 2 3))"), ("fp 1 2 , 3", ["fp : [a b c] ? a"], "(, (apply fp (construct 1 2)) 3)"), ("fp [1 , 2 , 3]", ["fp : [a b c] ? a"], "(apply fp [1 , 2 , 3])")]:
+    g_ = T.tree_of(src_, P + defs_)                                        # `,` は口の種類に依らず適用の外(R121、片 r66-drop)
+    if g_ != want_: bad += 1; print("NG", src_, g_, want_)
 OK += [("[!_] 1 2 3 4 5", "(apply [!_] (construct 1 2 3 4 5))")]     # 前置・後置の点なしの席は口が並び全体(R35・R138)
 OK += [("(5 inc) 3", "(construct [5 inc] 3)"), ("(3 | inc) 5", "(construct [3 | inc] 5)")]     # 字面の数に続く関数は余る(R52・R136)
 OK += [("gd 3 (3 < 2) 7", "(apply gd (construct 3 [3 < 2] 7))")]     # 既定値のある関数に口より多く、`!_` でありうる括りを混ぜて渡す(R83)

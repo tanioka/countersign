@@ -219,6 +219,13 @@ def _classify(tok, env):
                 r = resolve_seq(inner, env)
                 if r and r.startswith(("(apply", "(construct")) and "(unit" not in r: return ("A", leaf_text(tok))
         if tok[0] == "(" and len(inner) == 1 and not re.fullmatch(r"[^\w\s]+", inner[0]): return classify(inner[0], env) if inner[0][0] not in "([" else None
+        if tok[0] == "[" and inner and "," in inner:                                  # `[1 , 2 , 3]`: `,` で切った辺が、どれも値だけなら括りは値の葉(R121・R64)
+            grp_, cur_ = [], []
+            for t in inner + [","]:
+                if t == ",": grp_.append(cur_); cur_ = []
+                else: cur_.append(t)
+            if all(g and _plain(g, env) for g in grp_): return ("A", leaf_text(tok))
+            return None
         if any(re.fullmatch(r"[^\w\s$\[\]()'\"~]+", t) or t in ("'",) for t in inner): return ("A", leaf_text(tok)) if _plain(inner, env) else None
         return ("A", leaf_text(tok)) if _plain(inner, env) else None
     if tok == "_": return ("I", "_")
@@ -540,6 +547,15 @@ def tree_of(src, defs=(), kinds="eval"):
         lines = ml_lines(src)
         if lines is None or len(lines) < 2: return tree_of(lines[0], defs, kinds) if lines else None
         return tree_of(lines[-1], list(defs) + lines[:-1], kinds)             # 複数行の見本: 木は最後の行のもの、前の行は定義(読めない形は None)
+    # R79: 前置 `~` は後置 `~` より先に結ぶ。`~x~` は `[x]~`、`~$x` は `[$x]` と同じ項(2026-11-22 の仕様)。数の字面の `~5~` だけは木の葉も `~5~` と書く
+    lit_spread = re.findall(r"(?<![\w~\]\)])~(\d+)~(?![\w~])", src)
+    src = re.sub(r"(?<![\w~\]\)])~(\$?[A-Za-z_][\w']*|\d+)~(?![\w~])", r"[\1]~", src)
+    src = re.sub(r"(?<![\w~\]\)])~(\$[A-Za-z_][\w']*)(?![\w~'])", r"[\1]", src)
+    if lit_spread:
+        r_ = tree_of(src, defs, kinds)
+        if r_ is None: return None
+        for n_ in lit_spread: r_ = r_.replace("[%s]~" % n_, "~%s~" % n_)
+        return r_
     if re.search(r"[A-Za-z_]\w*\s+~-?\d", src): return None                          # 先頭でない `~数` の読みは仕様が言わない(`inc ~1 5`)ので読まない
     env = kinds_from(list(defs)) if kinds == "text" else kinds_from_eval(list(defs))
     if env is None: return None
@@ -575,8 +591,7 @@ def root_tree(toks, seps, env):
     sides = [resolve_seq(p, env, root_alone=True) for p in parts]
     if any(x is None for x in sides): return None
     if op == ",":
-        ab = fold_comma(parts, env)                                           # 最後の口が参照の口なら `F … x , R` は `F … (x , R)`(R66・R93)
-        if ab is not None: return ab if ab else None
+        # 2026-11-22 の仕様(片 r66-drop): `,` は口の種類に依らず適用の外で、`F … x , R` は `[F … x] , R`。以前の `F … (x , R)` への吸い込み(fold_comma)はやめた
         if any(_absorbs(p, env) for p in parts[:-1]): return None             # 辺の中で畳む(R19)
     t = sides[-1]
     for x in reversed(sides[:-1]): t = f"({op} {x} {t})"                   # `,` は右へ入れ子
