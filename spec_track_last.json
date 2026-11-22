@@ -2524,8 +2524,8 @@
 "actual": "5",
 "expected": "5",
 "tree_want": "(construct -_ 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R87|39e0da3af7"
 },
 {
@@ -2537,8 +2537,8 @@
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
 "tree_want": "(construct !inc 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R87|84979526ab"
 },
 {
@@ -3880,8 +3880,8 @@
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
 "tree_want": "(construct ~1 2 3)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R79|c25735b0b0"
 },
 {

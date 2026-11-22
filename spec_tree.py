@@ -102,6 +102,9 @@ def _classify(tok, env):
     mb = re.fullmatch(r"\[([a-z][\w']*)\]", tok)
     if mb and (env.get(mb.group(1)) or ("",))[0] == "F" and isinstance(env[mb.group(1)][1], int) and env[mb.group(1)][2]:
         return ("F", env[mb.group(1)][1], tok)                                  # 素の関数 1 つの括り `[add]` は、その関数と同じ口の関数(R16)
+    if re.fullmatch(r"~-?\d+", tok): return ("A", tok)                          # 前置 `~` は書いた `[x]` と同じ項で、値(R77・R79)
+    mp_ = re.fullmatch(r"[-!](_|[a-z][\w']*)", tok)
+    if mp_ and (mp_.group(1) == "_" or (env.get(mp_.group(1)) or ("",))[0] in ("F", "I")): return ("A", tok)      # 値の印(前置 `-`・`!`)を関数・恒等射に直接当てた形は解なしの葉(R87)
     mm_ = re.fullmatch(r"\[([a-z][\w']*),\]", tok)
     if mm_ and (env.get(mm_.group(1)) or ("",))[0] == "F" and env[mm_.group(1)][1] == 1 and env[mm_.group(1)][2]:
         return ("F", ("var", 1), tok)                                           # `[F,]` の写像は F が口 1 つの時(R50)。可変長の口を持つ並びの関数
@@ -425,6 +428,7 @@ def tree_of(src, defs=(), kinds="eval"):
         lines = ml_lines(src)
         if lines is None or len(lines) < 2: return tree_of(lines[0], defs, kinds) if lines else None
         return tree_of(lines[-1], list(defs) + lines[:-1], kinds)             # 複数行の見本: 木は最後の行のもの、前の行は定義(読めない形は None)
+    if re.search(r"[A-Za-z_]\w*\s+~-?\d", src): return None                          # 先頭でない `~数` の読みは仕様が言わない(`inc ~1 5`)ので読まない
     env = kinds_from(list(defs)) if kinds == "text" else kinds_from_eval(list(defs))
     if env is None: return None
     env_defaults.clear()
