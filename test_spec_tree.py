@@ -30,6 +30,7 @@ for src_, defs_, want_ in [("(q 1) ' g 4", ["inc : x ? x + 1", "q : x ? [g : inc
     g_ = T.tree_of(src_, P + defs_)
     if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 呼んだ答えを欄の名前で引いた物は種類が未知で値を受けない(R125)
 OK += [("io@\n$say + 1", "(+ $say 1)"), ("io@\n$say == 1", "(== $say 1)"), ("io@\nx : $say\nx + 1", "(+ x 1)")]     # 取り込み宣言の行は木に出ず、取り込んだ名前は未定義の名前と同じ読み(R99)
+OK += [("tk : f ? $@f + 1", "(: tk (? [f] (+ $@f 1)))"), ("tw : f ? $f", "(: tw (? [f] $f))")]     # 裸の仮引数の持ち上げは値の葉のまま(R99・R100)
 NONE = ["gd 3 4 7", "inc ~1 5", "[add,] vs", "v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc", "inc i [* 2,] 1 2"]
 for s, t in OK:
     g = T.tree_of(s, P)

@@ -4066,8 +4066,8 @@
 "level-mismatch"
 ],
 "tree_want": "(: tk (? [f] (+ $@f 1)))",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R99|6c409fb1c1"
 },
 {
@@ -4160,8 +4160,8 @@
 "actual": "<fn/1>",
 "expected": "知らせ",
 "tree_want": "(: tw (? [f] $f))",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R100|79d62c36a6"
 },
 {

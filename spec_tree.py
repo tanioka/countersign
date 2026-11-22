@@ -88,6 +88,8 @@ def _balanced(t):
     return False
 
 def classify(tok, env):
+    mp = re.fullmatch(r"\$@?([a-z][\w']*)", tok)
+    if mp and mp.group(1) in env.get("\0params", ()): return ("A", tok)      # 裸の仮引数の `$f`・`$@f` は先の種類が分からない持ち上げで、値の葉のまま(R99・R100)
     c = _classify(tok, env)
     if c and c[0] == "A" and re.fullmatch(r"\$[\w']+", tok) and tok != "$_":
         k = env.get(tok[1:])
@@ -527,6 +529,7 @@ def def_tree(toks, seps, env):
         if not ps or not body or any(not re.fullmatch(r"[a-z][\w']*", p) for p in ps): return None
         e2 = dict(env)
         for p in ps: e2[p] = ("A",)
+        e2["\0params"] = set(ps)
         if name in env and env[name] and env[name][0] == "F": e2[name] = env[name]
         else: e2[name] = ("F", len(ps), True)
         b = resolve_seq(body, e2, root_alone=True)
