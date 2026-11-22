@@ -1,0 +1,30 @@
+# alpha1 追従: 設計者の仕様(tanioka/Sign)の R 規則・V 規則の見本を strict と突き合わせ、前回との差を出す。
+# 仕様リポジトリが非公開なら、リポジトリの secret SPEC_TOKEN(読み取りの token)を設定する。
+name: spec-track
+on:
+  schedule: [{cron: "17 21 * * *"}]   # 毎日 06:17 JST
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: tanioka/Sign
+          path: sign-spec
+          token: ${{ secrets.SPEC_TOKEN || github.token }}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: 見本を突き合わせる
+        run: python3 spec_track.py sign-spec | tee spec_track.txt
+      - name: 未切り分けの食い違い・前回との差があれば失敗にする
+        run: |
+          grep -q "食い違い(未切り分け) 0 " spec_track.txt || { echo "未切り分けの食い違いがある"; exit 1; }
+          grep -E "新しい見本 0 / 消えた見本 0 / 状態が変わった 0" spec_track.txt >/dev/null || { echo "::warning::仕様の見本に差がある(spec_track_last.json を更新して確認)"; }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: spec-track, path: spec_track.txt}
