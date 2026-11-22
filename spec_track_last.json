@@ -857,8 +857,8 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R136|566efa2cc9"
 },
 {
@@ -1788,8 +1788,8 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R61|c3ab1bb67b"
 },
 {
@@ -3536,8 +3536,8 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R66|1cd7b8abf3"
 },
 {
@@ -3552,8 +3552,8 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R66|8a16363040"
 },
 {
@@ -6375,8 +6375,8 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R21|a4d118d38f"
 },
 {

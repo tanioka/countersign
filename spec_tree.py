@@ -127,6 +127,17 @@ def _classify(tok, env):
     if tok[0] == "(" and re.search(r"['@~]", tok):
         g = _eval_group(tok, env)
         if g is not None: return g
+    if tok[0] == "(" and "," in (tokens(tok[1:-1]) or []):
+        inner = tokens(tok[1:-1]); parts, cur = [], []
+        for x in inner:
+            if x == ",": parts.append(cur); cur = []
+            else: cur.append(x)
+        parts.append(cur)
+        if all(parts):
+            cs = [[classify(x, env) for x in p] for p in parts]
+            if all(c is not None for p in cs for c in p):
+                if all(all(c[0] == "V" for c in p) for p in cs): return ("V", leaf_text(tok))      # `!_` ばかりの積は空(R84・R61)
+                return ("A", leaf_text(tok))
     if tok[0] in "([":
         inner = tokens(tok[1:-1])
         if inner is None or any(t in TIGHT + ROOT for t in inner) is False and False: return None
@@ -142,7 +153,14 @@ def _classify(tok, env):
     m = re.fullmatch(r"[\w']+", tok)
     if m:
         k = env.get(tok)
-        if k is None: return None
+        if k is None:
+            e_ = env.get("\0env")
+            if e_ is not None and tok not in env and tok[0].isalpha():
+                import sign_interp as S
+                try:
+                    if S.undefined_plain(e_, tok): return ("V", tok)            # R21: 定義の無い名前は `!_` と分かる値
+                except BaseException: pass
+            return None
         if k[0] == "V": return ("V", tok)
         if k[0] == "F": return ("F", k[1], tok)
         if k[0] == "I": return ("I", tok)
@@ -377,7 +395,7 @@ def _absorbs(p, env):
     """`,` の左の並びが、口の数の決まらない関数(残りを受ける・不明)を頭に持てば、右の辺まで受ける(R19・R66)"""
     for t in p:
         k = env.get(t) if re.fullmatch(r"[\w']+", t) else None
-        if k and k[0] == "F" and (isinstance(k[1], tuple) or not k[2]): return True
+        if k and k[0] == "F" and len(k) < 4 and (isinstance(k[1], tuple) or not k[2]): return True
         if t.startswith("["): return True
     return False
 def def_tree(toks, seps, env):
