@@ -103,11 +103,11 @@ add("ネット", "3000 バイトの送受信", NETH + ns2["BIG"] + (
  "t 0\n"), flags=["--net=local"])
 # ---- SQLite ----
 add("DB", "sqlite_demo.sn", read_sn("sqlite_demo.sn"), kind="db", flags=["--db=@DIR"])
-add("DB", "日本語と 4294967295・ファイルの DB(utf32)", "`sqlite.sn`@~\nseq9x : a b c d e f g h i ? i\n"
+add("DB", "32 ビットの境(4294967295)・ファイルの DB(utf32。sqlite.sn は ASCII の文だけ)", "`sqlite.sn`@~\nseq9x : a b c d e f g h i ? i\n"
     "t : z ? t1 (db_open `jp.db` 0)\n"
-    "t1 : h ? seq9x (db_exec h `create table w(id integer primary key, s text, n integer)`) (db_exec h `insert into w(s,n) values ('こんにちは', 4294967295), ('abc', -5)`) (t2 h (db_prep h `select s, n from w order by id`)) 0 0 0 0 0 0\n"
+    "t1 : h ? seq9x (db_exec h `create table w(id integer primary key, s text, n integer)`) (db_exec h `insert into w(s,n) values ('konnichiwa', 4294967295), ('abc', -5)`) (t2 h (db_prep h `select s, n from w order by id`)) 0 0 0 0 0 0\n"
     "t2 : h s ? seq5 (db_step s) (db_print_row s) (db_step s) (db_print_row s) (db_close h)\n"
-    "t 0\n", kind="db", flags=["--db=@DIR"], charset="utf32", rx=r"(?s).*", expect="~", group="info")
+    "t 0\n", kind="db", flags=["--db=@DIR"], charset="utf32")
 # ---- 並列 ----
 FIB = "fib : n ?\n\tn < 2 : n\n\t(fib (n - 1)) + (fib (n - 2))\n"
 PAR = [
@@ -191,7 +191,7 @@ def compare(d):
             if r["strip_zero"] and got.endswith("0\n"): got = got[:-2]
             ok = bool(re.search(r["rx"], got)) if r["rx"] else got == want
             if ok and r["fs"] is not None:
-                fsout = rd(i + ".fs")
+                fsout = open(os.path.join(out, i + ".fs"), "rb").read().decode("latin-1") if os.path.exists(os.path.join(out, i + ".fs")) else ""
                 ok = all(("== %s\n%s\n" % (n, b)) in fsout for n, b in r["fs"].items()) if r["fs"] else True
             st = "一致" if ok else ("差(時間)" if r["timing"] else "誤答")
             if not ok: detail.append((i, r["name"], rc, repr(want)[:200], repr(got)[:200]))
