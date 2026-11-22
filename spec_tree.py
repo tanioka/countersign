@@ -229,12 +229,10 @@ def hole_rewrite(terms):
     return out
 def build(terms):
     terms = hole_rewrite(terms)
-    if len(terms) > 1 and any(t[0] == "I" and t[1] == "_" for t in terms): return None    # 並びの中の `_` は穴か恒等射か(R16・R44)で未対応
     out, i, n = [], 0, len(terms)
     while i < n:
         t = terms[i]
         if t[0] == "A": out.append(t[1]); i += 1; continue
-        if i > 0 and t[0] == "I" and t[1] == "_": return None                 # 並びの途中の `_` は穴(R16)
         j = i
         while j < n and terms[j][0] in ("F", "I"): j += 1                      # 関数の連なり(合成)
         run = terms[i:j]
@@ -242,15 +240,15 @@ def build(terms):
         k = j
         while k < n and terms[k][0] == "A": args.append(terms[k][1]); k += 1
         tail = terms[k:]
-        if any(x[0] == "A" for x in tail): return None                         # 適用の後ろにまた関数と値: 部分適用・畳みは未対応
         if not args:
             out += [f"(unit {r[-1]})" for r in run] if len(run) == 1 else [f"(unit (compose {' '.join(r[-1] for r in run)}))"]
             i = j; continue
-        if run[0][0] == "I": return None                                     # 恒等射が頭の適用は R44・R74 の読みで未対応
+        if any(r[0] == "I" and r[1] == "_" for r in run) and (len(run) > 1 or len(args) != 1): return None      # `_` の恒等射は 1 つの実引数だけ受ける形(R44)に限る
+        if run[0][0] == "I" and run[0][1] != "_": return None                 # 恒等射の名前が頭の適用は R29・R74 の読みで未対応
         if len(run) > 1:
             if any(r[0] != "F" or isinstance(r[1], tuple) for r in run if r[0] == "F"): return None
             mouth = 1 + sum((r[1] if r[0] == "F" else 1) - 1 for r in run)
-        else: mouth = run[0][1]
+        else: mouth = run[0][1] if run[0][0] == "F" else 1
         head = run[0][-1] if len(run) == 1 else "(compose " + " ".join(r[-1] for r in run) + ")"
         spread = any(x.endswith("~") for x in args)
         if isinstance(mouth, tuple):
@@ -264,8 +262,8 @@ def build(terms):
         app = f"(apply {head} {a[0] if len(a) == 1 else '(construct ' + ' '.join(a) + ')'})"
         if not isinstance(mouth, tuple) and not spread and len(args) < mouth: app = f"(unit {app})"          # 部分適用は口の開いた関数として残る(R136)
         out.append(app); out += rest
-        out += [f"(unit {x[-1]})" for x in tail]
-        i = n
+        if tail and (isinstance(mouth, tuple) or spread or len(args) < mouth): return None     # 口の足りない・残りを受ける関数の後ろの関数と値は、結果を受けるので未対応(R40・R11)
+        i = k
     return out[0] if len(out) == 1 else "(construct " + " ".join(out) + ")"
 
 def fold_chain(g, env):
