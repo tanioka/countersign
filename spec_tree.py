@@ -238,10 +238,11 @@ def resolve_seq(toks, env, root_alone=False):
             if c is None: return None
             terms.append(c)
     if any(t[0] == "V" for t in terms) and any(t[0] == "F" and not _plain_head(t[-1], env) for t in terms):
-        named = [t for t in terms if t[0] == "F" and not _plain_head(t[-1], env) and not t[-1].startswith(("[", "@"))]
+        named = [t for t in terms if t[0] == "F" and not _plain_head(t[-1], env) and not t[-1].startswith(("[", "@", "|"))]
         if named:
             terms = ref_mouths(terms, env, named)                                # 名前のある関数の括りの口(R122・R64): 口に入る位置の `!_` は空の器として残り、口の外は消える
             if terms is None: return None
+        elif any(t[0] == "F" and t[-1] == "||_||" for t in terms) and any(t[0] == "A" for t in terms): pass     # `||_|| w 5`: 混ざれば `!_` は積の単位で消える、`!_` だけなら受ける(R27)
         else: terms = [("A", t[1]) if t[0] == "V" else t for t in terms]               # 点なしの括りは `!_` と分かる値も受けるので木に残る(R95・R137)。参照の口・点なしの括りは `!_` と分かる値も受けるので木に残る(R95・R122)
     terms = [t for t in terms if t[0] != "V"]                                   # `!_` と分かる値は積の単位で消える(R49・R137)
     if not terms: return None

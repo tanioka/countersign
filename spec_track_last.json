@@ -3248,8 +3248,8 @@
 "state": "ok",
 "actual": "0",
 "expected": "知らせ",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R27|bb38751978"
 },
 {
@@ -3261,8 +3261,8 @@
 "state": "ok",
 "actual": "0",
 "expected": "0",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R27|5b84142b1b"
 },
 {
@@ -3287,8 +3287,8 @@
 "state": "ok",
 "actual": "1",
 "expected": "1",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R27|7b975febee"
 },
 {
@@ -3300,8 +3300,8 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R27|3b0f7435e7"
 },
 {
