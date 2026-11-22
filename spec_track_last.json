@@ -4032,8 +4032,8 @@
 "level-mismatch"
 ],
 "tree_want": "(+ $say 1)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R99|cd3c058baa"
 },
 {
@@ -4049,8 +4049,8 @@
 "level-mismatch"
 ],
 "tree_want": "(+ x 1)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R99|7187d2e62a"
 },
 {
@@ -4081,8 +4081,8 @@
 "expected": "!_",
 "why": "断り: 標準ライブラリの import(IO@ など)は未実装",
 "tree_want": "(== $say 1)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R99|51eaa50845",
 "known": "未実装: 標準ライブラリの取り込み(io@)。仕様も実装は G21 と注記"
 },

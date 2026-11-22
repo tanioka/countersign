@@ -91,7 +91,14 @@ def classify(tok, env):
     c = _classify(tok, env)
     if c and c[0] == "A" and re.fullmatch(r"\$[\w']+", tok) and tok != "$_":
         k = env.get(tok[1:])
-        if k is None: return None
+        if k is None:
+            e_ = env.get("\0env")
+            if e_ is not None and tok[1:] not in env and tok[1] .isalpha():
+                import sign_interp as S
+                try:
+                    if S.undefined_plain(e_, tok[1:]): return ("V", tok)        # 定義の無い名前(取り込んだ名前も同じ読み)への `$` は `!_` と分かる値(R21・R99)
+                except BaseException: pass
+            return None
         if k[0] in ("A", "V"): return ("V", tok)                                # `$` の先が値: `!_` と分かる値(R99)
     return c
 def _classify(tok, env):
@@ -431,7 +438,8 @@ def ml_lines(src):
     out = []
     for ln in src.split("\n"):
         if not ln.strip(): continue
-        if ln.startswith("\t") or ln.strip() == "io@" or ln.strip().endswith("@"): return None
+        if ln.strip() == "io@": continue                                     # 取り込み宣言の行は木に出ない(R99)。取り込んだ名前は未定義の名前と同じ読み(木の種類では `!_` と分かる値か値で、根の被演算子は綴りのまま)
+        if ln.startswith("\t") or ln.strip().endswith("@"): return None
         if ln[0] in " ␠": 
             if not out: return None
             out[-1] += " " + ln.lstrip(" ␠")
