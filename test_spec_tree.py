@@ -11,4 +11,9 @@ for s, t in OK:
 for s in NONE:
     g = T.tree_of(s, P)
     if g is not None: bad += 1; print("NG(未対応のはず)", s, g)
+import subprocess, sys, tempfile, os
+with tempfile.NamedTemporaryFile("w", suffix=".sn", delete=False, encoding="utf-8") as f: f.write("inc : x ? x + 1\ninc 3 4\nzz 1 2\n"); fn = f.name
+out = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "sign.py"), "--tree", fn], capture_output=True, text=True).stdout.split("\n")
+os.unlink(fn)
+if out[:3] != ["1: (: inc (? [x] (+ x 1)))", "2: (construct (apply inc 3) 4)", "3: 未対応"]: bad += 1; print("NG --tree", out)
 print("全部 ok" if not bad else f"{bad} 件 NG"); raise SystemExit(1 if bad else 0)

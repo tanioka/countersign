@@ -24,7 +24,7 @@ jobs:
       - name: 未切り分けの食い違い・前回との差があれば失敗にする
         run: |
           grep -q "食い違い(未切り分け) 0 " spec_track.txt || { echo "未切り分けの食い違いがある"; exit 1; }
-          grep -q "不一致 0 /" spec_track.txt || { echo "出した木が仕様と違う見本がある"; exit 1; }
+          ! grep -qE "不一致 [1-9]" spec_track.txt || { echo "出した木が仕様と違う見本がある"; exit 1; }
           grep -E "新しい見本 0 / 消えた見本 0 / 状態が変わった 0" spec_track.txt >/dev/null || { echo "::warning::仕様の見本に差がある(spec_track_last.json を更新して確認)"; }
       - uses: actions/upload-artifact@v4
         if: always()

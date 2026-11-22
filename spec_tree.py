@@ -255,10 +255,11 @@ def fold_chain(g, env):
     for o in ops[1:]: t = f"({g[1]} {t} {o})"
     return t
 
-def tree_of(src, defs=()):
-    """源(1 行)の木。出せない形は None"""
+def tree_of(src, defs=(), kinds="eval"):
+    """源(1 行)の木。出せない形は None。kinds: "text"(綴りから)/ "eval"(評価器に聞く、P1)"""
     if "\n" in src.strip(): return None
-    env = kinds_from(list(defs))
+    env = kinds_from(list(defs)) if kinds == "text" else kinds_from_eval(list(defs))
+    if env is None: return None
     toks = tokens(src.strip())
     if not toks: return None
     seps = [i for i, t in enumerate(toks) if t in ROOT_SEP]
@@ -307,8 +308,71 @@ def def_tree(toks, seps, env):
     r = resolve_seq(rhs, env, root_alone=True)
     return None if r is None else f"(: {name} {r})"
 
+def kinds_from_eval(defs):
+    """P1: 名前の種類を評価器に聞く。定義を strict で評価した Env から、Closure → F(口)、恒等射 → I、`!_` と分かる値(unit_like) → V、ほかの値 → A。
+    評価に失敗した定義の名前は載せない(None=未対応。誤った木を出さない)。"""
+    import sign_interp as S
+    from fixblank import fix
+    old = S.STRICT_GATES; S.STRICT_GATES = True
+    env = {}
+    try:
+        e = S.Env(None)
+        names = []
+        try:
+            nodes = S.parse_source(fix("\n\n".join(defs)) + "\n")
+        except BaseException: return None
+        for n in nodes:
+            try: S.ev(n, e)
+            except BaseException:
+                if n and n[0] == "def": names.append((n[1], False)); continue
+            if n and n[0] == "def": names.append((n[1], True))
+        bad = {nm for nm, ok in names if not ok}
+        for nm, ok in names:
+            if nm in bad: env[nm] = None; continue
+            v = e.vars.get(nm)
+            if isinstance(v, S.Closure):
+                ps = v.params
+                if not isinstance(ps, (list, tuple)): env[nm] = None; continue
+                dn = (e.__dict__.get("defnodes") or {}).get(nm)
+                has_def = any((p[0] == "name" and p[2] is not None) or (p[0] == "destr" and len(p) > 3 and p[3]) for p in ps)
+                if has_def or not (isinstance(dn, tuple) and dn and dn[0] == "lam"): env[nm] = None; continue     # 既定値のある口・括りでない定義(`z : @$inc`)の種類は仕様が「未知」
+                last = ps[-1] if ps else None
+                var = last is not None and last[0] == "destr" and (len(last[1]) > 1 or last[2])
+                env[nm] = ("F", ("var", len(ps)) if var else len(ps), all(p[0] == "name" for p in ps))
+            elif v is S.ID or type(v).__name__ == "_Id": env[nm] = ("I",)
+            else:
+                dn = (e.__dict__.get("defnodes") or {}).get(nm)
+                try: vv = S.unit_like(("id", nm), e, set()) or (isinstance(dn, tuple) and dn and dn[0] == "addr" and S.unit_like(dn, e, set()))     # R49: `q : $w` のように `!_` と分かる値を右辺に持つ名前も(評価器の zeronames はまだ持たない→ OPEN_QUESTIONS)
+                except BaseException: vv = False
+                env[nm] = ("V",) if vv else ("A",)
+    finally: S.STRICT_GATES = old
+    return env
+
+def items_of(text):
+    """ファイルを、字下げの無い行で始まる項目(行番号, 本文の行の列)に分ける。空行と `--` の注釈だけの行は飛ばす"""
+    out = []
+    for no, ln in enumerate(text.split("\n"), 1):
+        if not ln.strip(): continue
+        if ln[0] in " \t" and out: out[-1][1].append(ln)
+        elif not ln[0] in " \t": out.append([no, [ln]])
+    return out
+
+def main(argv):
+    """`sign.py --tree ファイル.sn`: 定義を先に集め(P2)、各項目の木を出す。出せない形は理由を添えて「未対応」"""
+    files = [a for a in argv if not a.startswith("-")]
+    if not files: print("使い方: sign.py --tree ファイル.sn", file=__import__("sys").stderr); return 2
+    try: text = open(files[0], encoding="utf-8").read()
+    except OSError as e: print(f"エラー: {files[0]} を読めません({e})", file=__import__("sys").stderr); return 1
+    its = items_of(text)
+    defs = ["\n".join(b) for _, b in its if re.match(r"^#?[\w']+\s*:", b[0])]
+    for no, b in its:
+        t = None
+        if len(b) == 1:
+            try: t = tree_of(b[0], defs)
+            except Exception: t = None
+        print(f"{no}: {t if t is not None else '未対応'}")
+    return 0
+
 if __name__ == "__main__":
     import sys
-    for ln in open(sys.argv[1], encoding="utf-8"):
-        ln = ln.rstrip("\n")
-        if ln.strip() and not ln.startswith(" ") and not ln.startswith("\t"): print(ln, "=>", tree_of(ln) or "未対応")
+    sys.exit(main(sys.argv[1:]))
