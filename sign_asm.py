@@ -481,7 +481,7 @@ class FnGen:
             if done: self.lines.append("%s:" % done)
             return
         if k == "cmp": return self.gen_cmp(n, None)
-        if k == "bin": return self.gen_bin(n)
+        if k == "bin": return self.gen_bin(n, tail)
         if k == "seq": return self.gen_call(n, tail)
         raise AsmError("まだ出せない形です(%s)" % k)
 
@@ -802,9 +802,38 @@ class FnGen:
             self.bin_tail(ops[j - 1], (leaves[0][0] if j == 1 else subs[j - 2]), leaves[j][0])
         for _ in vals: self.free()
 
-    def gen_bin(self, n):
+    def gen_bin_tail(self, op, l, r):
+        """`|` と `&` の右(と、`(c & v) | r` の v)は関数の最後の仕事: ここの呼びも末尾呼び出しにできる(strict の行の連なりが `(c & v) | 次` に書き換わる形)。"""
+        ls = l
+        while ls[0] == "block": ls = ls[1]
+        done = self.prog.label()
+        if op == "|":
+            if ls[0] == "bin" and ls[1] == "&" and self.prog.kind(ls[2], self.kinds) == "I" and self.prog.kind(ls[3], self.kinds) == "I" and not self.mu(ls[3]):
+                nxt = self.prog.label()                 # `(c & v) | r`: v は __ にならないので、c が成り立てば v が答え(末尾)、外れれば r
+                self.gen(ls[2])
+                if self.mu(ls[2]):
+                    self.niche(); self.emit("cmp x0, x13"); self.emit("b.eq %s" % nxt, "条件が __ なら次の枝へ")
+                self.gen(ls[3], True)
+                self.emit("b %s" % done)
+                self.lines.append("%s:" % nxt)
+                self.gen(r, True)
+                self.lines.append("%s:" % done); return
+            self.gen(l)
+            if not self.mu(l): return
+            self.niche(); self.emit("cmp x0, x13"); self.emit("b.ne %s" % done, "左が __ でなければ左が答え")
+            self.gen(r, True)
+            self.lines.append("%s:" % done); return
+        self.gen(l)                                     # `&`
+        if self.mu(l):
+            self.niche(); self.emit("cmp x0, x13"); self.emit("b.eq %s" % done, "左が __ なら __")
+        self.gen(r, True)
+        self.lines.append("%s:" % done)
+
+    def gen_bin(self, n, tail=False):
         _, op, l, r = n
         if op == "'": return self.gen_index(l, r)
+        if tail and op in ("|", "&") and self.entry and PAR[0] is None and self.prog.kind(l, self.kinds) == "I" and self.prog.kind(r, self.kinds) == "I":
+            return self.gen_bin_tail(op, l, r)
         if op in ("==", "!=="):
             # 数と文字では `=`/`!=` と同じ意味(operator_table.md: 左が零射なら零射、`!==` は非 Unit 側の値)
             return self.gen_cmp(("cmp", [l, r], [op]), None)
@@ -1493,6 +1522,21 @@ class FnGen:
                 self.lines.append("%s:" % ovf_l); self.emit("bl _sign_overflow", "作業領域に入らない伸び: 原因を 1 行出す(結果は __)")
             if unit_l:
                 self.lines.append("%s:" % unit_l); self.unit_result(rk)
+            return
+        sib = (tail and f != self.name and self.entry and not gws and not unit_l and not fl_relay and not fl_mask and not ringcall
+               and not self.sret and not self.alloca and not self.pre_alloca and self.name not in self.prog.maskfns
+               and rk == "I" and all(kd == "I" and len(ts) == 1 for ts, kd in tmps) and len(tmps) <= len(ARG_REGS)
+               and not self.prog.bound.get(f) and not (f == self.name and self.prog.grow.get(f)) and not self.prog.grow.get(f)
+               and all(k_ == "I" for k_ in self.prog.pkind[f]))
+        if sib:
+            # 兄弟への末尾呼び出し: 実引数を x0.. に置き、自分のフレームを戻してから呼び先へ飛ぶ(戻り先は自分の呼び元のまま。呼びが積み上がらない)
+            for (ts, kd), reg in zip(tmps, ARG_REGS):
+                t = ts[0]
+                if t in late: emit_imm(self.lines, reg, late[t], "実引数(字面)")
+                else: self.emit("ldr %s, [x29, #%d]" % (reg, self.off(t)))
+            for _ in range(nslots): self.free()
+            self.emit("@@EPILOGUE", "フレームを戻す")
+            self.emit("b %s" % symbol_of(f), "兄弟への末尾呼び出し")
             return
         for gw in gws: self.commit_grow(gw)
         r = 0; extra = []
@@ -2538,6 +2582,8 @@ class FnGen:
         if looped and self.alloca:
             raise AsmError("%s: 自分への末尾呼び出し(ループ)と、器の置き場を取る呼びが同じ関数にあります(回るたびに sub sp が積み上がるため、まだ出せません)" % label.lstrip("_."))
         tail = (["\tmov sp, x29  // sub sp で取った置き場を捨てる"] if (self.alloca or self.pre_alloca) else []) + ["\tldp x29, x30, [sp], #%d  // フレームを戻す" % frame, "\tret"]
+        epi = [l_ for l_ in tail if not l_.strip().startswith("ret")]
+        lines = [x for y in lines for x in (epi if y.strip().startswith("@@EPILOGUE") else [y])]
         out = head + lines + tail
         if PEEP[0] and os.environ.get("SIGN_PEEP", "1") != "0":
             import sign_opt
