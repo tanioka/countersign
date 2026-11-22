@@ -6,6 +6,7 @@ import sign_interp as S, sign_sir as R
 from fixblank import fix
 
 LIST_RATE = [0.0]
+FLOW_RATE = [0.0]
 NOVOID = [False]
 def num(r):
     return str(r.choice([0, 1, 2, 3, 5, 7, 10, 100, 9223372036854775807]))
@@ -28,6 +29,24 @@ def expr(r, ps, d):
         xs = [atom(r, ps) if r.random() < .7 else "(" + expr(r, ps, d-1) + ")" for _ in range(r.randint(1, 4))]
         return f"([{op}] {' '.join(xs)})"
     return f"({a} = {b} = {expr(r, ps, d-1)})"
+FLOW_G = "g : x ? x + 1\nk : x y ? x + y\nm : a b c ? a + b + c\np : x ? g (x > 5)\n"
+def vexp(r, ps):
+    return r.choice(["__", "__", "(x > 5)", "(3 > 5)", "(7 > 5)"]) if ps else r.choice(["__", "(3 > 5)", "(7 > 5)", "4"])
+def fitem(r, ps):
+    c = r.random()
+    if c < .35: return atom(r, ps) if ps and r.random() < .3 else str(r.choice([1, 2, 5, 7, 8, 100]))
+    if c < .55: return f"(g {vexp(r, ps)})"
+    if c < .72: return f"(k {r.choice(['4', vexp(r, ps)])} {vexp(r, ps)})"
+    if c < .85: return f"(m {vexp(r, ps)} {r.choice(['1', vexp(r, ps)])} {r.choice(['2', vexp(r, ps)])})"
+    if c < .92: return f"(m {vexp(r, ps)})"
+    return f"(p {r.choice(ps) if ps else '3'})"
+def flow_program(r):
+    n = r.randint(1, 6)
+    top = " ".join(fitem(r, []) for _ in range(n))
+    if r.random() < .5:
+        body = " ".join(fitem(r, ["x"]) for _ in range(r.randint(1, 6)))
+        return FLOW_G + f"f : x ? {body}\n" + (f"f {r.choice([3, 9])}\n" if r.random() < .8 else top + "\n")
+    return FLOW_G + top + "\n"
 def lst(r):
     return " ".join(r.choice(["0","1","-5","7","100","9223372036854775807","-9223372036854775807"]) for _ in range(r.randint(2, 5)))
 def lexpr(r, names, d):
@@ -43,6 +62,7 @@ def list_program(r):
     names = ["la", "lb"][:r.randint(1, 2)]
     return "\n".join(f"{n} : {lst(r)}" for n in names) + "\n" + lexpr(r, names, 3) + "\n"
 def program(r):
+    if FLOW_RATE[0] and r.random() < FLOW_RATE[0]: return flow_program(r)
     if r.random() < LIST_RATE[0]: return list_program(r)
     out, fs = [], []
     for i in range(r.randint(0, 2)):
@@ -70,6 +90,9 @@ def obs_strict(t):
         v = S.show(r[-1]) if r else "!_"
     except BaseException as e: return ("refuse", type(e).__name__)
     finally: S.STRICT_GATES = False
+    if v.startswith("[") and v.endswith("]"):
+        try: return ("flow", tuple(int(x) for x in v[1:-1].split(",")))
+        except ValueError: pass
     return ("void",) if v == "!_" else (("val", int(v)) if v.lstrip("-").isdigit() else ("other", v[:20]))
 def obs_sir(t):
     try:
@@ -79,7 +102,19 @@ def obs_sir(t):
     except R.Unsup as e: return ("unsup", str(e))
     except BaseException as e: return ("crash", type(e).__name__ + str(e)[:40])
 _ns = {}
-def obs_asm(t):
+def _got(got):
+    if got[0] == "trap": return ("trap",)
+    if got[0] == "ok": return ("void",) if got[1] == "__" else ("val", got[1])
+    if got[0] == "exit":                                                       # linux: 出力の文字
+        v = got[1].strip()
+        if v == "__": return ("void",)
+        if v.lstrip("-").isdigit(): return ("val", int(v))
+        if v.startswith("[") and v.endswith("]"):
+            try: return ("flow", tuple(int(x) for x in v[1:-1].split(",")))
+            except ValueError: pass
+    return ("refuse", str(got)[:30])
+
+def obs_asm(t, linux=False):
     """機械語(strict_rewrite + generate + エミュレータ)の観測。断り・罠は答えを出さない観測。"""
     import sign_asm
     if not _ns:
@@ -91,14 +126,12 @@ def obs_asm(t):
     try:
         tree, rest = sign_asm.strict_rewrite(S.parse_source(t))
         if rest: return ("refuse", "strict_rewrite")
-        got = _ns["run_asm"](sign_asm.generate(tree))
-    except sign_asm.AsmError as e: return ("refuse", str(e)[:30])
+        got = _ns["run_asm"](sign_asm.generate(tree, "linux"), linux=True) if linux else _ns["run_asm"](sign_asm.generate(tree))
+    except (sign_asm.AsmError, sign_asm.StrictRefusal) as e: return ("refuse", str(e)[:30])
     except Exception as e: return ("refuse", "例外 " + type(e).__name__)
-    if got[0] == "trap": return ("trap",)
-    if got[0] != "ok": return ("refuse", str(got)[:30])
-    return ("void",) if got[1] == "__" else ("val", got[1])
+    return _got(got)
 
-def obs_asm_sir(t):
+def obs_asm_sir(t, linux=False):
     """SIR を旧 AST に戻し、strict_rewrite を通さずに generate へ。戻せない形は ("unsup",)。"""
     import sign_asm
     obs_asm("0\n")                                                     # エミュレータの準備
@@ -106,16 +139,15 @@ def obs_asm_sir(t):
         f, top = R.lower(S.parse_source(t))
         nodes = R.raise_ast(f, top)
     except R.Unsup as e: return ("unsup", str(e)[:30])
-    try: got = _ns["run_asm"](sign_asm.generate(nodes))
-    except sign_asm.AsmError as e: return ("refuse", str(e)[:30])
+    try: got = _ns["run_asm"](sign_asm.generate(nodes, "linux"), linux=True) if linux else _ns["run_asm"](sign_asm.generate(nodes))
+    except (sign_asm.AsmError, sign_asm.StrictRefusal) as e: return ("refuse", str(e)[:30])
     except Exception as e: return ("refuse", "例外 " + type(e).__name__)
-    if got[0] == "trap": return ("trap",)
-    if got[0] != "ok": return ("refuse", str(got)[:30])
-    return ("void",) if got[1] == "__" else ("val", got[1])
+    return _got(got)
 
 def main():
     av = [x for x in sys.argv[1:] if not x.startswith('--')]
     n = int(av[0]) if av else 2000; r = random.Random(int(av[1]) if len(av) > 1 else 1)
+    FLOW_RATE[0] = 1.0 if '--flows' in sys.argv else 0.0
     NOVOID[0] = '--novoid' in sys.argv
     LIST_RATE[0] = 0.5 if '--lists' in sys.argv else 0.0
     tally, bad = {}, []
@@ -127,12 +159,13 @@ def main():
         if a[0] in ("refuse", "other") or b == ("partial",) or b == ("fuel",): k = "比べない: " + ("評価器が断る" if a[0]=="refuse" else "評価器の値が整数でない" if a[0]=="other" else "部分適用" if b==("partial",) else "燃料"); tally[k] = tally.get(k, 0) + 1; continue
         if a == b: tally["一致"] = tally.get("一致", 0) + 1
         else: bad.append((t, a, b))
+        lx = FLOW_RATE[0] > 0 or b[0] == "flow"
         if "--asm" in sys.argv:
-            c = obs_asm(t)
+            c = obs_asm(t, lx)
             k = "後段 一致" if c == b else ("後段 断り" if c[0] == "refuse" else "後段 罠" if c[0] == "trap" else "後段 誤答")
             tally[k] = tally.get(k, 0) + 1
             if k == "後段 誤答": bad.append((t, "機械語 " + str(c), b))
-            d = obs_asm_sir(t)
+            d = obs_asm_sir(t, lx)
             k2 = "SIR経由 戻せない" if d[0] == "unsup" else "SIR経由 一致" if d == b else ("SIR経由 断り" if d[0] == "refuse" else "SIR経由 罠" if d[0] == "trap" else "SIR経由 誤答")
             tally[k2] = tally.get(k2, 0) + 1
             if k2 == "SIR経由 誤答": bad.append((t, "SIR経由の機械語 " + str(d), b))

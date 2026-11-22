@@ -109,7 +109,6 @@ def expr(n, params, arity):
         if h[0] == "id" and h[1] in arity and h[1] not in params:
             a = arity[h[1]]
             args = [expr(x, params, arity) for x in items[1:1 + a]]
-            if len(args) < a: raise Unsup("部分適用(口が足りない)")
             call = ("call", h[1], args)
             rest = [expr(x, params, arity) for x in items[1 + a:]]
             return call if not rest else ("flow", [call] + rest)
@@ -123,8 +122,18 @@ def clamp(v): return v if I64_MIN <= v <= I64_MAX else None
 def evaluate(funcs, top, fuel=200000):
     """SIR の評価。戻り値: ("val", 整数) / ("void",) / ("partial",)(呼びの実引数が void) / ("fuel",)"""
     steps = [0]
-    class Partial(Exception): pass
     class Fuel(Exception): pass
+    class PF:                                                                   # 部分適用: 実引数が void で消えて、まだ足りない関数(後ろの値を受け取る。R83・R84)
+        def __init__(self, f, args, need): self.f, self.args, self.need = f, args, need
+    class Flow(list): pass                                                      # 2 つ以上の値の並び
+    def one(v):                                                                 # 演算の項に置く: 部分適用は `!_` と同じ。複数の並びは断る
+        if isinstance(v, PF): return None
+        if isinstance(v, Flow): raise Unsup("複数の値の並びを演算の項に置く")
+        return v
+    def run_call(name, args):
+        ps, body = funcs[name]
+        v = ev(body, dict(zip(ps, args)))
+        return None if isinstance(v, PF) else v                                 # 余った関数は関数の境界を越えない
     def ev(e, env):
         steps[0] += 1
         if steps[0] > fuel: raise Fuel()
@@ -133,7 +142,7 @@ def evaluate(funcs, top, fuel=200000):
         if k == "void": return None
         if k == "var": return env[e[1]]
         if k == "op":
-            a, b = ev(e[2], env), ev(e[3], env)
+            a, b = one(ev(e[2], env)), one(ev(e[3], env))
             if isinstance(a, tuple) or isinstance(b, tuple): raise Unsup("リストの算術")
             if a is None or b is None: return b if a is None else a
             op = e[1]
@@ -144,14 +153,14 @@ def evaluate(funcs, top, fuel=200000):
             q = abs(a) // abs(b) * (1 if (a >= 0) == (b >= 0) else -1)         # 0 へ丸める(value_spec の除算)
             return clamp(q) if op == "/" else clamp(a - q * b)
         if k == "cmp":
-            a, b = ev(e[2], env), ev(e[3], env)
+            a, b = one(ev(e[2], env)), one(ev(e[3], env))
             if isinstance(a, tuple) or isinstance(b, tuple): raise Unsup("リストの比べ")
             if a is None or b is None: return None
             op = e[1]
             ok = {"<": a < b, ">": a > b, "<=": a <= b, ">=": a >= b, "=": a == b, "==": a == b, "!=": a != b, "!==": a != b}[op]
             return a if ok else None
         if k == "fold":
-            vs = [v for v in (ev(x, env) for x in e[2]) if v is not None]
+            vs = [v for v in (one(ev(x, env)) for x in e[2]) if v is not None]
             if any(isinstance(v, tuple) for v in vs): raise Unsup("リストの畳み")
             if not vs: return None
             op = e[1]
@@ -162,25 +171,25 @@ def evaluate(funcs, top, fuel=200000):
             return acc
         if k == "list": return e[1]
         if k == "len":
-            a = ev(e[1], env)
+            a = one(ev(e[1], env))
             if a is None: return None
             if not isinstance(a, tuple): raise Unsup("整数の長さ")
             return len(a)
         if k == "idx":
-            a, i = ev(e[1], env), ev(e[2], env)
+            a, i = one(ev(e[1], env)), one(ev(e[2], env))
             if a is None or i is None: return None
             if not isinstance(a, tuple) or isinstance(i, tuple): raise Unsup("添字の型")
             if i < 0: i += len(a)
             return a[i] if 0 <= i < len(a) else None
         if k == "neg":
-            a = ev(e[1], env)
+            a = one(ev(e[1], env))
             if isinstance(a, tuple): raise Unsup("リストの符号")
             return None if a is None else clamp(-a)
         if k == "chain":
             ts, ops = e[2], e[1]
             vals = []
             for i, t in enumerate(ts):
-                v = ev(t, env)
+                v = one(ev(t, env))
                 if isinstance(v, tuple): raise Unsup("リストの比べ")
                 if v is None: return None
                 vals.append(v)
@@ -191,32 +200,53 @@ def evaluate(funcs, top, fuel=200000):
             return vals[1] if len(ts) == 3 and ops[0] in ("<", "<=", ">", ">=") else vals[0]
         if k == "and":
             a = ev(e[1], env)
+            if isinstance(a, (PF, Flow)): raise Unsup("部分適用・並びを & の左に置く")
             return None if a is None else ev(e[2], env)
         if k == "or":
             a = ev(e[1], env)
+            if isinstance(a, (PF, Flow)): raise Unsup("部分適用・並びを | の左に置く")
             return a if a is not None else ev(e[2], env)
         if k == "rows":
             for c, v in e[1]:                                                  # 行は `c & v | 次の行`(value_spec V10)。v が void なら次の行へ落ちる
-                if c is None or ev(c, env) is not None:
+                if c is None or one(ev(c, env)) is not None:
                     r = ev(v, env)
+                    if isinstance(r, PF): raise Unsup("行の値が部分適用")
                     if r is not None: return r
             return None
         if k == "call":
-            args = [ev(x, env) for x in e[2]]
-            if any(x is None for x in args): raise Partial()
-            ps, body = funcs[e[1]]
-            return ev(body, dict(zip(ps, args)))
+            args = []
+            for x in e[2]:
+                v = ev(x, env)
+                if isinstance(v, (PF, Flow)): raise Unsup("実引数が部分適用・並び")
+                args.append(v)
+            have = [v for v in args if v is not None]
+            n = len(funcs[e[1]][0])
+            if len(have) < n: return PF(e[1], have, n - len(have))                    # void の実引数が消えた・口が足りない: 後ろの値を待つ
+            return run_call(e[1], args)
         if k == "flow":
-            vs = [v for v in (ev(x, env) for x in e[1]) if v is not None]
-            if len(vs) > 1: raise Unsup("複数の値の並び")
-            return vs[0] if vs else None
+            items = []
+            for x in e[1]:
+                v = ev(x, env)
+                if v is None: continue
+                if isinstance(v, tuple): raise Unsup("流れの中のリスト")
+                items.extend(v) if isinstance(v, Flow) else items.append(v)
+            out = []
+            for it in reversed(items):                                          # 右から左へ。部分適用は後ろの値を受け取る(足りなければ全部受けて消える)
+                if isinstance(it, PF):
+                    if len(out) >= it.need:
+                        v = run_call(it.f, it.args + out[:it.need]); rest = out[it.need:]
+                        out = (list(v) if isinstance(v, Flow) else [] if v is None else [v]) + rest
+                    else: out = []
+                else: out.insert(0, it)
+            return None if not out else out[0] if len(out) == 1 else Flow(out)
         raise Unsup("SIR " + k)
     try:
         v = ev(top, {})
-    except Partial: return ("partial",)
     except Fuel: return ("fuel",)
     except RecursionError: return ("fuel",)
-    if isinstance(v, tuple): raise Unsup("リストの値")
+    if isinstance(v, PF): v = None                                              # 余った関数は消える
+    if isinstance(v, Flow): return ("flow", tuple(v))
+    if isinstance(v, tuple): return ("flow", v)                                 # 整数の並び(リスト)は流れと同じ字で出る
     return ("void",) if v is None else ("val", v)
 
 # ---- SIR → 旧 AST(段階 C の試作): strict_rewrite を通さずに generate へ渡せる木を、SIR から作る ----
@@ -295,7 +325,9 @@ def raise_ast(funcs, top):
             acc = r(xs[0], False)
             for x in xs[1:]: acc = ("block", ("bin", "|", ("cmp", [acc, r(x, False)], [op]), r(x, False)))      # `a op b` は成り立てば a、外れれば void。`|` で右
             return acc
-        if k == "flow" and len(e[1]) == 1: return r(e[1][0], in_flow)
+        if k == "flow":
+            if len(e[1]) == 1: return r(e[1][0], in_flow)
+            return ("seq", [blk(r(x, True)) for x in e[1]])                          # 流れ: 部分適用は asm の strict_call_check が枝を分けるか罠にする
         raise Unsup("旧 AST に戻せない形 " + k)
     out = []
     for name, (ps, body) in funcs.items():
