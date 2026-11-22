@@ -1,10 +1,10 @@
 {
-"rev": "8f0d60c4",
+"rev": "3d91c456",
 "items": [
 {
 "doc": "coproduct_spec.md",
 "rule": "R1",
-"line": 291,
+"line": 292,
 "src": "f x + 1 y",
 "kind": "R",
 "state": "ok",
@@ -18,7 +18,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R1",
-"line": 292,
+"line": 293,
 "src": "inc 1 & inc 2",
 "kind": "R",
 "state": "skip",
@@ -31,7 +31,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R2",
-"line": 298,
+"line": 299,
 "src": "f -x",
 "kind": "R",
 "state": "skip",
@@ -44,7 +44,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R8",
-"line": 304,
+"line": 305,
 "src": "inc double inc 5",
 "kind": "R",
 "state": "skip",
@@ -57,7 +57,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R8",
-"line": 305,
+"line": 306,
 "src": "(inc double) inc 5",
 "kind": "R",
 "state": "skip",
@@ -70,7 +70,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R11",
-"line": 311,
+"line": 312,
 "src": "double inc 5",
 "kind": "R",
 "state": "skip",
@@ -80,7 +80,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R11",
-"line": 312,
+"line": 313,
 "src": "inc add 5 g 3",
 "kind": "R",
 "state": "skip",
@@ -93,7 +93,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R19",
-"line": 318,
+"line": 319,
 "src": "1 2 , 3 4",
 "kind": "R",
 "state": "skip",
@@ -106,7 +106,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R19",
-"line": 319,
+"line": 320,
 "src": "inc 1 , inc 2",
 "kind": "R",
 "state": "ok",
@@ -120,7 +120,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R35",
-"line": 325,
+"line": 326,
 "src": "inc 3 4",
 "kind": "R",
 "state": "ok",
@@ -134,7 +134,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R35",
-"line": 326,
+"line": 327,
 "src": "[+ 1] 1 2 3",
 "kind": "R",
 "state": "skip",
@@ -147,7 +147,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R35",
-"line": 327,
+"line": 328,
 "src": "[!_] 1 2 3 4 5",
 "kind": "R",
 "state": "skip",
@@ -160,7 +160,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R40",
-"line": 333,
+"line": 334,
 "src": "5 inc 3",
 "kind": "R",
 "state": "ok",
@@ -174,7 +174,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R40",
-"line": 334,
+"line": 335,
 "src": "f2 3 f2 5 6",
 "kind": "R",
 "state": "ok",
@@ -188,7 +188,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R41",
-"line": 340,
+"line": 341,
 "src": "[+] 1 2 inc 3",
 "kind": "R",
 "state": "skip",
@@ -201,7 +201,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R41",
-"line": 341,
+"line": 342,
 "src": "inc [+] 5 6",
 "kind": "R",
 "state": "skip",
@@ -214,7 +214,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R47",
-"line": 353,
+"line": 354,
 "src": "1 2",
 "kind": "R",
 "state": "skip",
@@ -227,7 +227,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R47",
-"line": 354,
+"line": 355,
 "src": "double inc 5",
 "kind": "R",
 "state": "ok",
@@ -241,7 +241,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R47",
-"line": 355,
+"line": 356,
 "src": "d 1 2",
 "kind": "R",
 "state": "skip",
@@ -254,7 +254,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R47",
-"line": 356,
+"line": 357,
 "src": "1 2 inc",
 "kind": "R",
 "state": "ok",
@@ -271,7 +271,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R47",
-"line": 357,
+"line": 358,
 "src": "5 f2 _ 3",
 "kind": "R",
 "state": "skip",
@@ -284,7 +284,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R118",
-"line": 363,
+"line": 364,
 "src": "sub (3 < 2) 1 2",
 "kind": "R",
 "state": "ok",
@@ -295,7 +295,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R120",
-"line": 369,
+"line": 370,
 "src": "use 7 8 9",
 "kind": "R",
 "state": "skip",
@@ -308,7 +308,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R120",
-"line": 370,
+"line": 371,
 "src": "z 1 2",
 "kind": "R",
 "state": "skip",
@@ -321,7 +321,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R121",
-"line": 376,
+"line": 377,
 "src": "inc 1 , 2",
 "kind": "R",
 "state": "ok",
@@ -335,7 +335,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R121",
-"line": 377,
+"line": 378,
 "src": "f3 1 , 2 , 3",
 "kind": "R",
 "state": "ok",
@@ -351,8 +351,96 @@
 },
 {
 "doc": "coproduct_spec.md",
+"rule": "R121",
+"line": 379,
+"src": "fp 1 , 2 , 3",
+"kind": "R",
+"state": "ng",
+"actual": "[1, 2, 3]",
+"expected": "1 , 2 , 3",
+"why": "値 '[1, 2, 3]' (期待 1 , 2 , 3)",
+"tree_want": "(, (apply fp 1) (, 2 3))",
+"tree_eval": "match",
+"tree": "match",
+"id": "coproduct_spec.md|R121|9903bb1449"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R121",
+"line": 380,
+"src": "fp [1 , 2 , 3]",
+"kind": "R",
+"state": "skip",
+"why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply fp [1 , 2 , 3])",
+"tree_eval": "match",
+"tree": "match",
+"id": "coproduct_spec.md|R121|010d103402"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R121",
+"line": 381,
+"src": "fp 1 2 , 3",
+"kind": "R",
+"state": "ng",
+"actual": "[1, 3]",
+"expected": "1 , 3",
+"why": "値 '[1, 3]' (期待 1 , 3)",
+"tree_want": "(, (apply fp (construct 1 2)) 3)",
+"tree_eval": "match",
+"tree": "match",
+"id": "coproduct_spec.md|R121|aff30dbf07"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R121",
+"line": 382,
+"src": "fp _ , 1 , 2",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G5: 括りの関数の口(名前 3 個)に書いた `_` は、括りの口の穴で読みが決まりません(`fp 1 _`。R46・",
+"expected": "G5",
+"id": "coproduct_spec.md|R121|ccb4a06956"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R121",
+"line": 383,
+"src": "pb 1 , 2",
+"kind": "R",
+"state": "ok",
+"actual": "2",
+"expected": "2",
+"expected_warn": [
+"leftover-lambda"
+],
+"tree_want": "(, (unit (apply pb 1)) 2)",
+"tree_eval": "match",
+"tree": "match",
+"id": "coproduct_spec.md|R121|8a16363040"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R121",
+"line": 384,
+"src": "fp i , 1 , 2",
+"kind": "R",
+"state": "ok",
+"actual": "[1, 2]",
+"expected": "知らせ",
+"expected_warn": [
+"leftover-lambda"
+],
+"tree_want": "(, (unit (compose fp i)) (, 1 2))",
+"tree_eval": "match",
+"tree": "match",
+"id": "coproduct_spec.md|R121|1cd7b8abf3"
+},
+{
+"doc": "coproduct_spec.md",
 "rule": "R24",
-"line": 387,
+"line": 394,
 "src": "tl 1 2 3",
 "kind": "R",
 "state": "skip",
@@ -365,7 +453,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R24",
-"line": 388,
+"line": 395,
 "src": "p3 1 [2 3] 4 5",
 "kind": "R",
 "state": "skip",
@@ -378,7 +466,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R24",
-"line": 389,
+"line": 396,
 "src": "f 1 2 3 4",
 "kind": "R",
 "state": "skip",
@@ -391,7 +479,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R25",
-"line": 395,
+"line": 402,
 "src": "pb : [x] ? x + 1",
 "kind": "R",
 "state": "skip",
@@ -404,7 +492,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 405,
+"line": 412,
 "src": "p ' a 5",
 "kind": "R",
 "state": "skip",
@@ -417,7 +505,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 406,
+"line": 413,
 "src": "5 ' 0",
 "kind": "R",
 "state": "ok",
@@ -431,7 +519,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 407,
+"line": 414,
 "src": "[5] ' 0",
 "kind": "R",
 "state": "ok",
@@ -445,7 +533,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 408,
+"line": 415,
 "src": "(5 ' 0) + 1",
 "kind": "R",
 "state": "ok",
@@ -459,7 +547,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 409,
+"line": 416,
 "src": "(3 < 2) ' 0",
 "kind": "R",
 "state": "ok",
@@ -473,7 +561,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 410,
+"line": 417,
 "src": "inc (5 ' 1) 5",
 "kind": "R",
 "state": "ok",
@@ -487,7 +575,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 411,
+"line": 418,
 "src": "inc ([1 2] ' 5) 5",
 "kind": "R",
 "state": "ok",
@@ -501,7 +589,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 412,
+"line": 419,
 "src": "inc n8 5",
 "kind": "R",
 "state": "ok",
@@ -515,7 +603,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 413,
+"line": 420,
 "src": "5 ' -1",
 "kind": "R",
 "state": "ok",
@@ -529,7 +617,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 414,
+"line": 421,
 "src": "5 ' ~-1",
 "kind": "R",
 "state": "ok",
@@ -543,7 +631,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 415,
+"line": 422,
 "src": "inc (5 ' a) 5",
 "kind": "R",
 "state": "ok",
@@ -557,7 +645,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 416,
+"line": 423,
 "src": "inc (vs ' _) 5",
 "kind": "R",
 "state": "ok",
@@ -571,7 +659,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 417,
+"line": 424,
 "src": "inc (5 ' [1 ~ 3]) 5",
 "kind": "R",
 "state": "ok",
@@ -585,7 +673,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 418,
+"line": 425,
 "src": "[1 2 3] ' ~1",
 "kind": "R",
 "state": "skip",
@@ -598,7 +686,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 419,
+"line": 426,
 "src": "pw ' 0",
 "kind": "R",
 "state": "ok",
@@ -612,7 +700,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 420,
+"line": 427,
 "src": "a @ pw",
 "kind": "R",
 "state": "skip",
@@ -625,7 +713,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 421,
+"line": 428,
 "src": "inc (b @ pw) 5",
 "kind": "R",
 "state": "ok",
@@ -639,7 +727,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 422,
+"line": 429,
 "src": "pt ' 1~",
 "kind": "R",
 "state": "skip",
@@ -652,7 +740,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 423,
+"line": 430,
 "src": "0x10 ' 0",
 "kind": "R",
 "state": "skip",
@@ -665,7 +753,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 424,
+"line": 431,
 "src": "0x10 ' 1~",
 "kind": "R",
 "state": "skip",
@@ -678,7 +766,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 425,
+"line": 432,
 "src": "0x10 ' [1 ~ 3]",
 "kind": "R",
 "state": "skip",
@@ -691,7 +779,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 426,
+"line": 433,
 "src": "(0x10 ' [1 ~ 3]) # [7 8 9]",
 "kind": "R",
 "state": "ok",
@@ -705,7 +793,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 427,
+"line": 434,
 "src": "inc (0x10 ' 1) 5",
 "kind": "R",
 "state": "skip",
@@ -718,7 +806,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 428,
+"line": 435,
 "src": "inc (0x10 ' a) 5",
 "kind": "R",
 "state": "ok",
@@ -732,7 +820,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 429,
+"line": 436,
 "src": "([0x10 0x20] ' 1~) ' 0",
 "kind": "R",
 "state": "ok",
@@ -746,7 +834,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 430,
+"line": 437,
 "src": "inc (([0x10 0x20] ' 1~) ' 1) 5",
 "kind": "R",
 "state": "ok",
@@ -760,7 +848,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R26",
-"line": 431,
+"line": 438,
 "src": "f [0x10]",
 "kind": "R",
 "state": "skip",
@@ -773,7 +861,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R81",
-"line": 441,
+"line": 448,
 "src": "use $inc 5",
 "kind": "R",
 "state": "skip",
@@ -786,7 +874,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R81",
-"line": 442,
+"line": 449,
 "src": "sh $vs",
 "kind": "R",
 "state": "ok",
@@ -804,7 +892,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R81",
-"line": 443,
+"line": 450,
 "src": "tg : q ? @q vs~",
 "kind": "R",
 "state": "ok",
@@ -818,7 +906,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R81",
-"line": 444,
+"line": 451,
 "src": "tg $add",
 "kind": "R",
 "state": "ok",
@@ -832,7 +920,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R81",
-"line": 445,
+"line": 452,
 "src": "tg $f3",
 "kind": "R",
 "state": "ok",
@@ -843,7 +931,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R81",
-"line": 446,
+"line": 453,
 "src": "gq vs~",
 "kind": "R",
 "state": "skip",
@@ -853,7 +941,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R81",
-"line": 447,
+"line": 454,
 "src": "cnt $inc 5",
 "kind": "R",
 "state": "ok",
@@ -867,7 +955,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R81",
-"line": 448,
+"line": 455,
 "src": "r2 $inc",
 "kind": "R",
 "state": "skip",
@@ -880,7 +968,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R136",
-"line": 456,
+"line": 463,
 "src": "h : f x ? @f x inc",
 "kind": "R",
 "state": "ok",
@@ -894,7 +982,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R136",
-"line": 457,
+"line": 464,
 "src": "t 5 inc",
 "kind": "R",
 "state": "ok",
@@ -911,7 +999,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R136",
-"line": 458,
+"line": 465,
 "src": "(inc , (3 < 4)) 5",
 "kind": "R",
 "state": "ok",
@@ -928,7 +1016,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R136",
-"line": 459,
+"line": 466,
 "src": "inc (3 < 2)",
 "kind": "R",
 "state": "ok",
@@ -945,7 +1033,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R136",
-"line": 460,
+"line": 467,
 "src": "fz 3",
 "kind": "R",
 "state": "ok",
@@ -962,7 +1050,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R136",
-"line": 461,
+"line": 468,
 "src": "g1 3",
 "kind": "R",
 "state": "ok",
@@ -976,7 +1064,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R136",
-"line": 462,
+"line": 469,
 "src": "inc , (3 < 2)",
 "kind": "R",
 "state": "ok",
@@ -993,7 +1081,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R136",
-"line": 463,
+"line": 470,
 "src": "(3 | inc) 5",
 "kind": "R",
 "state": "ok",
@@ -1010,7 +1098,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R136",
-"line": 464,
+"line": 471,
 "src": "g6 1 (3 < 2)",
 "kind": "R",
 "state": "ok",
@@ -1024,7 +1112,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R136",
-"line": 465,
+"line": 472,
 "src": "g7 (3 < 2) 5",
 "kind": "R",
 "state": "ok",
@@ -1038,7 +1126,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R136",
-"line": 466,
+"line": 473,
 "src": "g2 (3 < 2)",
 "kind": "R",
 "state": "ok",
@@ -1055,7 +1143,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R16",
-"line": 474,
+"line": 481,
 "src": "add _ 10",
 "kind": "R",
 "state": "skip",
@@ -1068,7 +1156,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R16",
-"line": 475,
+"line": 482,
 "src": "add 3 _",
 "kind": "R",
 "state": "skip",
@@ -1081,7 +1169,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R16",
-"line": 476,
+"line": 483,
 "src": "p _ 2",
 "kind": "R",
 "state": "skip",
@@ -1094,7 +1182,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R16",
-"line": 477,
+"line": 484,
 "src": "[add] _ 2",
 "kind": "R",
 "state": "skip",
@@ -1107,7 +1195,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R16",
-"line": 478,
+"line": 485,
 "src": "q _ 2",
 "kind": "R",
 "state": "skip",
@@ -1120,7 +1208,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R16",
-"line": 479,
+"line": 486,
 "src": "go _ vs~",
 "kind": "R",
 "state": "ok",
@@ -1131,7 +1219,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R29",
-"line": 485,
+"line": 492,
 "src": "i 1 2 3",
 "kind": "R",
 "state": "skip",
@@ -1144,7 +1232,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R29",
-"line": 486,
+"line": 493,
 "src": "i inc 1 2",
 "kind": "R",
 "state": "skip",
@@ -1157,7 +1245,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R29",
-"line": 487,
+"line": 494,
 "src": "1 & _",
 "kind": "R",
 "state": "ok",
@@ -1174,7 +1262,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R29",
-"line": 488,
+"line": 495,
 "src": "_ ' 0",
 "kind": "R",
 "state": "ok",
@@ -1191,7 +1279,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R29",
-"line": 489,
+"line": 496,
 "src": "pp 1",
 "kind": "R",
 "state": "ok",
@@ -1208,7 +1296,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R29",
-"line": 490,
+"line": 497,
 "src": "fb 1",
 "kind": "R",
 "state": "ok",
@@ -1225,7 +1313,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R44",
-"line": 505,
+"line": 512,
 "src": "_ 5",
 "kind": "R",
 "state": "skip",
@@ -1238,7 +1326,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R44",
-"line": 506,
+"line": 513,
 "src": "5 _ 3",
 "kind": "R",
 "state": "skip",
@@ -1251,7 +1339,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R46",
-"line": 512,
+"line": 519,
 "src": "inc _ inc",
 "kind": "R",
 "state": "skip",
@@ -1264,7 +1352,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R46",
-"line": 513,
+"line": 520,
 "src": "[<<] _ 2",
 "kind": "R",
 "state": "ok",
@@ -1275,7 +1363,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R46",
-"line": 514,
+"line": 521,
 "src": "5 io1 _",
 "kind": "R",
 "state": "ok",
@@ -1286,7 +1374,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R69",
-"line": 520,
+"line": 527,
 "src": "inc 5 _",
 "kind": "R",
 "state": "skip",
@@ -1299,7 +1387,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R69",
-"line": 521,
+"line": 528,
 "src": "fp 1 _",
 "kind": "R",
 "state": "ok",
@@ -1310,17 +1398,18 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R69",
-"line": 522,
+"line": 529,
 "src": "fp 1 _ , 2",
 "kind": "R",
-"state": "skip",
-"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
+"state": "ok",
+"actual": "断り: G5: 括りの関数の口(名前 3 個)に書いた `_` は、括りの口の穴で読みが決まりません(`fp 1 _`。R46・",
+"expected": "G5",
 "id": "coproduct_spec.md|R69|a2dad574e9"
 },
 {
 "doc": "coproduct_spec.md",
 "rule": "R74",
-"line": 528,
+"line": 535,
 "src": "i inc 1 2",
 "kind": "R",
 "state": "skip",
@@ -1333,7 +1422,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R74",
-"line": 529,
+"line": 536,
 "src": "i 5 inc",
 "kind": "R",
 "state": "ok",
@@ -1350,7 +1439,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R74",
-"line": 530,
+"line": 537,
 "src": "inc i inc 5",
 "kind": "R",
 "state": "skip",
@@ -1363,7 +1452,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R74",
-"line": 531,
+"line": 538,
 "src": "inc i [* 2,] 1 2",
 "kind": "R",
 "state": "skip",
@@ -1376,7 +1465,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R89",
-"line": 537,
+"line": 544,
 "src": "inc 5 _ 6",
 "kind": "R",
 "state": "skip",
@@ -1389,7 +1478,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R89",
-"line": 538,
+"line": 545,
 "src": "pq 1 2 _ 5",
 "kind": "R",
 "state": "skip",
@@ -1402,7 +1491,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R89",
-"line": 539,
+"line": 546,
 "src": "add _ 1 _",
 "kind": "R",
 "state": "ok",
@@ -1413,7 +1502,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R126",
-"line": 545,
+"line": 552,
 "src": "inc i add 5 6",
 "kind": "R",
 "state": "skip",
@@ -1423,7 +1512,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R126",
-"line": 546,
+"line": 553,
 "src": "inc i inc vs~",
 "kind": "R",
 "state": "skip",
@@ -1433,7 +1522,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R83",
-"line": 554,
+"line": 561,
 "src": "f2 (3 < 2) 1 2",
 "kind": "R",
 "state": "ok",
@@ -1447,7 +1536,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R83",
-"line": 555,
+"line": 562,
 "src": "(add (3 < 2) 1) 5",
 "kind": "R",
 "state": "skip",
@@ -1457,7 +1546,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R83",
-"line": 556,
+"line": 563,
 "src": "gd 3 (3 < 2) 7",
 "kind": "R",
 "state": "skip",
@@ -1470,7 +1559,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R83",
-"line": 557,
+"line": 564,
 "src": "second (3 < 2) 1",
 "kind": "R",
 "state": "skip",
@@ -1480,7 +1569,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R122",
-"line": 563,
+"line": 570,
 "src": "seven (3 < 2)",
 "kind": "R",
 "state": "skip",
@@ -1490,7 +1579,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R122",
-"line": 564,
+"line": 571,
 "src": "fq w",
 "kind": "R",
 "state": "ok",
@@ -1504,7 +1593,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R122",
-"line": 565,
+"line": 572,
 "src": "fq $w",
 "kind": "R",
 "state": "ok",
@@ -1518,7 +1607,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R122",
-"line": 566,
+"line": 573,
 "src": "fq $vs",
 "kind": "R",
 "state": "ok",
@@ -1535,7 +1624,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R122",
-"line": 567,
+"line": 574,
 "src": "fq (3 < 2)",
 "kind": "R",
 "state": "ok",
@@ -1552,7 +1641,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R122",
-"line": 568,
+"line": 575,
 "src": "fm w 5",
 "kind": "R",
 "state": "ok",
@@ -1566,7 +1655,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R84",
-"line": 574,
+"line": 581,
 "src": "inc w~ 5",
 "kind": "R",
 "state": "skip",
@@ -1579,7 +1668,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R84",
-"line": 575,
+"line": 582,
 "src": "inc q~ 5",
 "kind": "R",
 "state": "skip",
@@ -1592,7 +1681,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R84",
-"line": 576,
+"line": 583,
 "src": "inc [$w]~ 5",
 "kind": "R",
 "state": "skip",
@@ -1605,7 +1694,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R84",
-"line": 577,
+"line": 584,
 "src": "inc p~ 5",
 "kind": "R",
 "state": "ok",
@@ -1622,7 +1711,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R84",
-"line": 578,
+"line": 585,
 "src": "fz 1 2",
 "kind": "R",
 "state": "ok",
@@ -1639,7 +1728,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R84",
-"line": 579,
+"line": 586,
 "src": "g (3 < 2)",
 "kind": "R",
 "state": "ok",
@@ -1650,7 +1739,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R112",
-"line": 585,
+"line": 592,
 "src": "inc w 5",
 "kind": "R",
 "state": "skip",
@@ -1663,7 +1752,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R112",
-"line": 586,
+"line": 593,
 "src": "inc q 5",
 "kind": "R",
 "state": "skip",
@@ -1676,7 +1765,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R112",
-"line": 587,
+"line": 594,
 "src": "inc $vs 5",
 "kind": "R",
 "state": "ok",
@@ -1693,7 +1782,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R112",
-"line": 588,
+"line": 595,
 "src": "inc $vs",
 "kind": "R",
 "state": "ok",
@@ -1711,7 +1800,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R115",
-"line": 594,
+"line": 601,
 "src": "pw ' zz",
 "kind": "R",
 "state": "ok",
@@ -1722,7 +1811,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 607,
+"line": 614,
 "src": "_ , 5",
 "kind": "R",
 "state": "ok",
@@ -1736,7 +1825,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 608,
+"line": 615,
 "src": "1 , _ , 2",
 "kind": "R",
 "state": "ok",
@@ -1750,7 +1839,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 609,
+"line": 616,
 "src": "w , _",
 "kind": "R",
 "state": "ok",
@@ -1764,7 +1853,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 610,
+"line": 617,
 "src": "(3 < 2) , 5",
 "kind": "R",
 "state": "ok",
@@ -1775,7 +1864,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 611,
+"line": 618,
 "src": "$vs , 1",
 "kind": "R",
 "state": "ok",
@@ -1789,7 +1878,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 612,
+"line": 619,
 "src": "@[$w] , 1",
 "kind": "R",
 "state": "ok",
@@ -1800,7 +1889,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 613,
+"line": 620,
 "src": "inc , 2",
 "kind": "R",
 "state": "ok",
@@ -1817,7 +1906,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 614,
+"line": 621,
 "src": "(inc , double) 5",
 "kind": "R",
 "state": "ok",
@@ -1831,7 +1920,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 615,
+"line": 622,
 "src": "(inc , double , double) 5",
 "kind": "R",
 "state": "ok",
@@ -1845,7 +1934,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 616,
+"line": 623,
 "src": "(inc , (double , double)) 5",
 "kind": "R",
 "state": "skip",
@@ -1855,7 +1944,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 617,
+"line": 624,
 "src": "i i , 5",
 "kind": "R",
 "state": "ok",
@@ -1869,7 +1958,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 618,
+"line": 625,
 "src": "(i i , inc) 5",
 "kind": "R",
 "state": "ok",
@@ -1883,7 +1972,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 619,
+"line": 626,
 "src": "i i , i",
 "kind": "R",
 "state": "ok",
@@ -1897,7 +1986,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 620,
+"line": 627,
 "src": "(inc , (3 < 2)) 5",
 "kind": "R",
 "state": "ok",
@@ -1911,7 +2000,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 621,
+"line": 628,
 "src": "(_ , _) 5",
 "kind": "R",
 "state": "ok",
@@ -1922,7 +2011,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 622,
+"line": 629,
 "src": "x : _ , _",
 "kind": "R",
 "state": "skip",
@@ -1935,7 +2024,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R61",
-"line": 623,
+"line": 630,
 "src": "_ , _ ; 7",
 "kind": "R",
 "state": "skip",
@@ -1945,7 +2034,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 629,
+"line": 636,
 "src": "w | 5",
 "kind": "R",
 "state": "skip",
@@ -1955,7 +2044,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 630,
+"line": 637,
 "src": "$w | 5",
 "kind": "R",
 "state": "skip",
@@ -1965,7 +2054,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 631,
+"line": 638,
 "src": "$vs | 5",
 "kind": "R",
 "state": "ok",
@@ -1979,7 +2068,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 632,
+"line": 639,
 "src": "_ | 5",
 "kind": "R",
 "state": "skip",
@@ -1992,7 +2081,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 633,
+"line": 640,
 "src": "inc | 5",
 "kind": "R",
 "state": "ok",
@@ -2009,7 +2098,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 634,
+"line": 641,
 "src": "(inc | 1 & inc) 5",
 "kind": "R",
 "state": "ok",
@@ -2026,7 +2115,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 635,
+"line": 642,
 "src": "w 5",
 "kind": "R",
 "state": "skip",
@@ -2036,7 +2125,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 636,
+"line": 643,
 "src": "5 w 3",
 "kind": "R",
 "state": "skip",
@@ -2049,7 +2138,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 637,
+"line": 644,
 "src": "[w 5]",
 "kind": "R",
 "state": "skip",
@@ -2059,7 +2148,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 638,
+"line": 645,
 "src": "pc [w 1] 5",
 "kind": "R",
 "state": "ok",
@@ -2076,7 +2165,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 639,
+"line": 646,
 "src": "v : w 5",
 "kind": "R",
 "state": "skip",
@@ -2089,7 +2178,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 640,
+"line": 647,
 "src": "i w 5",
 "kind": "R",
 "state": "skip",
@@ -2102,7 +2191,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 641,
+"line": 648,
 "src": "[* 2,] 1 w 3",
 "kind": "R",
 "state": "skip",
@@ -2112,7 +2201,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 642,
+"line": 649,
 "src": "[+] 5 w 3",
 "kind": "R",
 "state": "ok",
@@ -2126,7 +2215,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 643,
+"line": 650,
 "src": "$vs 5",
 "kind": "R",
 "state": "ok",
@@ -2140,7 +2229,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 644,
+"line": 651,
 "src": "(1 & inc) 5",
 "kind": "R",
 "state": "ok",
@@ -2154,7 +2243,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 645,
+"line": 652,
 "src": "fq w 1 2",
 "kind": "R",
 "state": "ok",
@@ -2168,7 +2257,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 646,
+"line": 653,
 "src": "w w",
 "kind": "R",
 "state": "skip",
@@ -2178,7 +2267,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R137",
-"line": 647,
+"line": 654,
 "src": "inc [w w] 5",
 "kind": "R",
 "state": "skip",
@@ -2191,7 +2280,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R42",
-"line": 653,
+"line": 660,
 "src": "inc add 5",
 "kind": "R",
 "state": "ok",
@@ -2208,7 +2297,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R42",
-"line": 654,
+"line": 661,
 "src": "c1 5",
 "kind": "R",
 "state": "skip",
@@ -2218,7 +2307,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 660,
+"line": 667,
 "src": "5 inc",
 "kind": "R",
 "state": "ok",
@@ -2235,7 +2324,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 661,
+"line": 668,
 "src": "5 i i",
 "kind": "R",
 "state": "ok",
@@ -2246,7 +2335,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 662,
+"line": 669,
 "src": "7 ; i",
 "kind": "R",
 "state": "ok",
@@ -2260,7 +2349,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 663,
+"line": 670,
 "src": "1 & i",
 "kind": "R",
 "state": "ok",
@@ -2277,7 +2366,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 664,
+"line": 671,
 "src": "0x10 + i",
 "kind": "R",
 "state": "ok",
@@ -2294,7 +2383,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 665,
+"line": 672,
 "src": "f 0x10",
 "kind": "R",
 "state": "ok",
@@ -2311,7 +2400,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 666,
+"line": 673,
 "src": "f : x ? 0x10 + i",
 "kind": "R",
 "state": "ok",
@@ -2328,7 +2417,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 667,
+"line": 674,
 "src": "i == 1",
 "kind": "R",
 "state": "ok",
@@ -2345,7 +2434,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 668,
+"line": 675,
 "src": "i ' 0",
 "kind": "R",
 "state": "ok",
@@ -2362,7 +2451,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 669,
+"line": 676,
 "src": "(1 & _) | 5",
 "kind": "R",
 "state": "ok",
@@ -2376,7 +2465,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 670,
+"line": 677,
 "src": "1 ~ i",
 "kind": "R",
 "state": "ok",
@@ -2393,7 +2482,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 671,
+"line": 678,
 "src": "i # 5",
 "kind": "R",
 "state": "ok",
@@ -2410,7 +2499,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R48",
-"line": 672,
+"line": 679,
 "src": "f 3",
 "kind": "R",
 "state": "ok",
@@ -2427,7 +2516,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R52",
-"line": 678,
+"line": 685,
 "src": "(5 inc) 3",
 "kind": "R",
 "state": "ok",
@@ -2441,7 +2530,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R52",
-"line": 679,
+"line": 686,
 "src": "v 3",
 "kind": "R",
 "state": "ok",
@@ -2455,7 +2544,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R76",
-"line": 685,
+"line": 692,
 "src": "inc == 5",
 "kind": "R",
 "state": "ok",
@@ -2472,7 +2561,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R76",
-"line": 686,
+"line": 693,
 "src": "pp 1",
 "kind": "R",
 "state": "ok",
@@ -2489,7 +2578,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R87",
-"line": 692,
+"line": 699,
 "src": "inc + 1",
 "kind": "R",
 "state": "ok",
@@ -2503,7 +2592,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R87",
-"line": 693,
+"line": 700,
 "src": "_ + 1",
 "kind": "R",
 "state": "ok",
@@ -2517,7 +2606,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R87",
-"line": 694,
+"line": 701,
 "src": "-_ 5",
 "kind": "R",
 "state": "ok",
@@ -2531,7 +2620,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R87",
-"line": 695,
+"line": 702,
 "src": "!inc 5",
 "kind": "R",
 "state": "skip",
@@ -2544,7 +2633,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R87",
-"line": 696,
+"line": 703,
 "src": "inc ' 0",
 "kind": "R",
 "state": "ok",
@@ -2561,7 +2650,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R87",
-"line": 697,
+"line": 704,
 "src": "0 @ inc",
 "kind": "R",
 "state": "ok",
@@ -2578,7 +2667,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R87",
-"line": 698,
+"line": 705,
 "src": "[+ inc] 5",
 "kind": "R",
 "state": "ok",
@@ -2595,7 +2684,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R87",
-"line": 699,
+"line": 706,
 "src": "s : [+ inc]\ns 5",
 "kind": "R",
 "state": "ok",
@@ -2612,7 +2701,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R87",
-"line": 700,
+"line": 707,
 "src": "[+ i] 5",
 "kind": "R",
 "state": "ok",
@@ -2626,7 +2715,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R87",
-"line": 701,
+"line": 708,
 "src": "[< _] 5",
 "kind": "R",
 "state": "ok",
@@ -2643,7 +2732,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R87",
-"line": 702,
+"line": 709,
 "src": "inc # 5",
 "kind": "R",
 "state": "ok",
@@ -2660,7 +2749,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R87",
-"line": 703,
+"line": 710,
 "src": "[' 0] inc 5",
 "kind": "R",
 "state": "skip",
@@ -2673,7 +2762,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R116",
-"line": 709,
+"line": 716,
 "src": "box # inc",
 "kind": "R",
 "state": "ok",
@@ -2690,7 +2779,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R116",
-"line": 710,
+"line": 717,
 "src": "box # _",
 "kind": "R",
 "state": "ok",
@@ -2704,7 +2793,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R107",
-"line": 716,
+"line": 723,
 "src": "gq 1",
 "kind": "R",
 "state": "skip",
@@ -2717,7 +2806,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R107",
-"line": 717,
+"line": 724,
 "src": "gq 1 _",
 "kind": "R",
 "state": "skip",
@@ -2730,7 +2819,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R124",
-"line": 723,
+"line": 730,
 "src": "[3 (gq 1)]",
 "kind": "R",
 "state": "skip",
@@ -2740,7 +2829,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R124",
-"line": 724,
+"line": 731,
 "src": "[gq 1] 5",
 "kind": "R",
 "state": "skip",
@@ -2750,7 +2839,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R124",
-"line": 725,
+"line": 732,
 "src": "(gq 1 , w) 5",
 "kind": "R",
 "state": "ok",
@@ -2764,7 +2853,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 733,
+"line": 740,
 "src": "k 1 5",
 "kind": "R",
 "state": "ok",
@@ -2781,7 +2870,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 734,
+"line": 741,
 "src": "adder 5",
 "kind": "R",
 "state": "ok",
@@ -2795,7 +2884,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 735,
+"line": 742,
 "src": "(q 1) ' g 4",
 "kind": "R",
 "state": "ok",
@@ -2809,7 +2898,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 736,
+"line": 743,
 "src": "(f 1) ' g 4",
 "kind": "R",
 "state": "ok",
@@ -2826,7 +2915,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 737,
+"line": 744,
 "src": "(q 1) ' g 4",
 "kind": "R",
 "state": "ok",
@@ -2843,7 +2932,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 738,
+"line": 745,
 "src": "adder2 5",
 "kind": "R",
 "state": "ok",
@@ -2860,7 +2949,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 739,
+"line": 746,
 "src": "q 1",
 "kind": "R",
 "state": "ok",
@@ -2877,7 +2966,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 740,
+"line": 747,
 "src": "(f 5) ' g 4",
 "kind": "R",
 "state": "ok",
@@ -2894,7 +2983,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 741,
+"line": 748,
 "src": "q 1",
 "kind": "R",
 "state": "ok",
@@ -2908,7 +2997,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 742,
+"line": 749,
 "src": "q 1",
 "kind": "R",
 "state": "ok",
@@ -2925,7 +3014,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 743,
+"line": 750,
 "src": "q 1",
 "kind": "R",
 "state": "known",
@@ -2944,7 +3033,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 744,
+"line": 751,
 "src": "q 1",
 "kind": "R",
 "state": "ok",
@@ -2961,7 +3050,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 745,
+"line": 752,
 "src": "pq 1",
 "kind": "R",
 "state": "ok",
@@ -2978,7 +3067,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 746,
+"line": 753,
 "src": "t 1",
 "kind": "R",
 "state": "ok",
@@ -2995,7 +3084,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 747,
+"line": 754,
 "src": "pp 1",
 "kind": "R",
 "state": "ok",
@@ -3012,7 +3101,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 748,
+"line": 755,
 "src": "f 3",
 "kind": "R",
 "state": "ok",
@@ -3029,7 +3118,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R125",
-"line": 749,
+"line": 756,
 "src": "f 0",
 "kind": "R",
 "state": "known",
@@ -3045,7 +3134,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R31",
-"line": 757,
+"line": 764,
 "src": "[-] 10 3 2",
 "kind": "R",
 "state": "ok",
@@ -3059,7 +3148,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R31",
-"line": 758,
+"line": 765,
 "src": "[&] 1 w 3",
 "kind": "R",
 "state": "ok",
@@ -3073,7 +3162,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R31",
-"line": 759,
+"line": 766,
 "src": "[+] 0x10 (3 < 2)",
 "kind": "R",
 "state": "ok",
@@ -3087,7 +3176,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R31",
-"line": 760,
+"line": 767,
 "src": "[<] 1 (5 / 0) 3",
 "kind": "R",
 "state": "skip",
@@ -3097,7 +3186,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R31",
-"line": 761,
+"line": 768,
 "src": "[<] ($inc + 1) 3",
 "kind": "R",
 "state": "ok",
@@ -3114,7 +3203,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R31",
-"line": 762,
+"line": 769,
 "src": "[|] ($inc + 1) 5",
 "kind": "R",
 "state": "ok",
@@ -3131,7 +3220,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R31",
-"line": 763,
+"line": 770,
 "src": "[+] 5 g 3",
 "kind": "R",
 "state": "skip",
@@ -3144,7 +3233,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R32",
-"line": 769,
+"line": 776,
 "src": "[<<] 1 4 2",
 "kind": "R",
 "state": "ok",
@@ -3161,7 +3250,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R50",
-"line": 775,
+"line": 782,
 "src": "[inc,] 1 2 3",
 "kind": "R",
 "state": "skip",
@@ -3174,7 +3263,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R50",
-"line": 776,
+"line": 783,
 "src": "[add,] vs",
 "kind": "R",
 "state": "skip",
@@ -3187,7 +3276,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R77",
-"line": 782,
+"line": 789,
 "src": "[' 0] [1 2] 5",
 "kind": "R",
 "state": "skip",
@@ -3200,7 +3289,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R77",
-"line": 783,
+"line": 790,
 "src": "[' 0] [1 2 3] inc 4",
 "kind": "R",
 "state": "skip",
@@ -3213,7 +3302,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R77",
-"line": 784,
+"line": 791,
 "src": "[' 0] 5",
 "kind": "R",
 "state": "ok",
@@ -3227,7 +3316,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R77",
-"line": 785,
+"line": 792,
 "src": "[' 0] $inc",
 "kind": "R",
 "state": "ok",
@@ -3241,7 +3330,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R77",
-"line": 786,
+"line": 793,
 "src": "@([' 0] $inc) 5",
 "kind": "R",
 "state": "ok",
@@ -3255,7 +3344,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R77",
-"line": 787,
+"line": 794,
 "src": "([' 0] $inc) + 1",
 "kind": "R",
 "state": "ok",
@@ -3272,7 +3361,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R95",
-"line": 793,
+"line": 800,
 "src": "fe 1 2",
 "kind": "R",
 "state": "ok",
@@ -3286,7 +3375,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R95",
-"line": 794,
+"line": 801,
 "src": "i w",
 "kind": "R",
 "state": "ok",
@@ -3300,7 +3389,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R95",
-"line": 795,
+"line": 802,
 "src": "[* 2,] w",
 "kind": "R",
 "state": "ok",
@@ -3317,7 +3406,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R95",
-"line": 796,
+"line": 803,
 "src": "i w , 5",
 "kind": "R",
 "state": "ok",
@@ -3331,7 +3420,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R95",
-"line": 797,
+"line": 804,
 "src": "1 & (i w)",
 "kind": "R",
 "state": "ok",
@@ -3348,7 +3437,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R95",
-"line": 798,
+"line": 805,
 "src": "v 5",
 "kind": "R",
 "state": "ok",
@@ -3362,7 +3451,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R95",
-"line": 799,
+"line": 806,
 "src": "$x",
 "kind": "R",
 "state": "ok",
@@ -3373,7 +3462,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R95",
-"line": 800,
+"line": 807,
 "src": "f 1",
 "kind": "R",
 "state": "ok",
@@ -3390,7 +3479,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R95",
-"line": 801,
+"line": 808,
 "src": "[+] w~",
 "kind": "R",
 "state": "skip",
@@ -3403,7 +3492,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R95",
-"line": 802,
+"line": 809,
 "src": "[+] w",
 "kind": "R",
 "state": "skip",
@@ -3416,7 +3505,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R95",
-"line": 803,
+"line": 810,
 "src": "[+] inc w~",
 "kind": "R",
 "state": "skip",
@@ -3429,7 +3518,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 809,
+"line": 816,
 "src": "||_|| 1 2 inc",
 "kind": "R",
 "state": "skip",
@@ -3442,7 +3531,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 810,
+"line": 817,
 "src": "||_|| w",
 "kind": "R",
 "state": "ok",
@@ -3456,7 +3545,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 811,
+"line": 818,
 "src": "||_|| w~",
 "kind": "R",
 "state": "ok",
@@ -3470,7 +3559,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 812,
+"line": 819,
 "src": "v 1 2",
 "kind": "R",
 "state": "ok",
@@ -3484,7 +3573,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 813,
+"line": 820,
 "src": "||_|| w 5",
 "kind": "R",
 "state": "ok",
@@ -3498,7 +3587,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 814,
+"line": 821,
 "src": "|_| w",
 "kind": "R",
 "state": "ok",
@@ -3512,7 +3601,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 815,
+"line": 822,
 "src": "||_||",
 "kind": "R",
 "state": "ok",
@@ -3529,7 +3618,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 816,
+"line": 823,
 "src": "|_| (0 - 5)",
 "kind": "R",
 "state": "skip",
@@ -3542,7 +3631,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 817,
+"line": 824,
 "src": "inc |_| (0 - 5)",
 "kind": "R",
 "state": "skip",
@@ -3555,7 +3644,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 818,
+"line": 825,
 "src": "|_| inc (0 - 5)",
 "kind": "R",
 "state": "skip",
@@ -3568,7 +3657,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 819,
+"line": 826,
 "src": "|_| (0 - 5) inc",
 "kind": "R",
 "state": "skip",
@@ -3581,7 +3670,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 820,
+"line": 827,
 "src": "|$w|",
 "kind": "R",
 "state": "ok",
@@ -3592,7 +3681,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 821,
+"line": 828,
 "src": "||0x10||",
 "kind": "R",
 "state": "skip",
@@ -3602,7 +3691,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 822,
+"line": 829,
 "src": "|inc| 5",
 "kind": "R",
 "state": "ok",
@@ -3619,7 +3708,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R27",
-"line": 823,
+"line": 830,
 "src": "||inc|| 1 2",
 "kind": "R",
 "state": "ok",
@@ -3636,7 +3725,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R64",
-"line": 831,
+"line": 838,
 "src": "f 1 2 3 4",
 "kind": "R",
 "state": "skip",
@@ -3649,7 +3738,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R64",
-"line": 832,
+"line": 839,
 "src": "f vs~",
 "kind": "R",
 "state": "skip",
@@ -3662,7 +3751,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R64",
-"line": 833,
+"line": 840,
 "src": "f 1 2 3 w",
 "kind": "R",
 "state": "ok",
@@ -3676,7 +3765,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R91",
-"line": 839,
+"line": 846,
 "src": "fe 1 2",
 "kind": "R",
 "state": "ok",
@@ -3690,7 +3779,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R91",
-"line": 840,
+"line": 847,
 "src": "fe 1 w 2",
 "kind": "R",
 "state": "ok",
@@ -3700,98 +3789,8 @@
 },
 {
 "doc": "coproduct_spec.md",
-"rule": "R66",
-"line": 846,
-"src": "f 1 , 2 , 3",
-"kind": "R",
-"state": "skip",
-"why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_want": "(apply f [1 , 2 , 3])",
-"tree_eval": "match",
-"tree": "match",
-"id": "coproduct_spec.md|R66|41fa36329a"
-},
-{
-"doc": "coproduct_spec.md",
-"rule": "R66",
-"line": 847,
-"src": "fp _ , 1 , 2",
-"kind": "R",
-"state": "skip",
-"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
-"id": "coproduct_spec.md|R66|ccb4a06956"
-},
-{
-"doc": "coproduct_spec.md",
-"rule": "R66",
-"line": 848,
-"src": "pb 1 _ , 2",
-"kind": "R",
-"state": "skip",
-"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
-"id": "coproduct_spec.md|R66|4872ead7a8"
-},
-{
-"doc": "coproduct_spec.md",
-"rule": "R66",
-"line": 849,
-"src": "fp _ , _",
-"kind": "R",
-"state": "skip",
-"why": "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)",
-"id": "coproduct_spec.md|R66|6abcae76a1"
-},
-{
-"doc": "coproduct_spec.md",
-"rule": "R66",
-"line": 850,
-"src": "fp i , 1 , 2",
-"kind": "R",
-"state": "ok",
-"actual": "[1, 2]",
-"expected": "知らせ",
-"expected_warn": [
-"leftover-lambda"
-],
-"tree_want": "(, (unit (compose fp i)) (, 1 2))",
-"tree_eval": "match",
-"tree": "match",
-"id": "coproduct_spec.md|R66|1cd7b8abf3"
-},
-{
-"doc": "coproduct_spec.md",
-"rule": "R66",
-"line": 851,
-"src": "pb 1 , 2",
-"kind": "R",
-"state": "ok",
-"actual": "2",
-"expected": "知らせ",
-"expected_warn": [
-"leftover-lambda"
-],
-"tree_want": "(, (unit (apply pb 1)) 2)",
-"tree_eval": "match",
-"tree": "match",
-"id": "coproduct_spec.md|R66|8a16363040"
-},
-{
-"doc": "coproduct_spec.md",
-"rule": "R93",
-"line": 857,
-"src": "fp 1 2 , 3",
-"kind": "R",
-"state": "skip",
-"why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_want": "(apply fp [1 2 , 3])",
-"tree_eval": "match",
-"tree": "match",
-"id": "coproduct_spec.md|R93|aff30dbf07"
-},
-{
-"doc": "coproduct_spec.md",
 "rule": "R51",
-"line": 863,
+"line": 853,
 "src": "add vs~",
 "kind": "R",
 "state": "ok",
@@ -3805,7 +3804,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R51",
-"line": 864,
+"line": 854,
 "src": "inc vs~",
 "kind": "R",
 "state": "skip",
@@ -3818,7 +3817,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R51",
-"line": 865,
+"line": 855,
 "src": "inc add vs~",
 "kind": "R",
 "state": "ok",
@@ -3832,7 +3831,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R51",
-"line": 866,
+"line": 856,
 "src": "f3 vs~",
 "kind": "R",
 "state": "ok",
@@ -3843,7 +3842,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R51",
-"line": 867,
+"line": 857,
 "src": "inc f3 vs~",
 "kind": "R",
 "state": "ok",
@@ -3854,7 +3853,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R51",
-"line": 868,
+"line": 858,
 "src": "inc i add vs~",
 "kind": "R",
 "state": "skip",
@@ -3864,7 +3863,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R51",
-"line": 869,
+"line": 859,
 "src": "inc i f3 vs~",
 "kind": "R",
 "state": "skip",
@@ -3874,7 +3873,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R79",
-"line": 875,
+"line": 865,
 "src": "~1 2 3",
 "kind": "R",
 "state": "skip",
@@ -3887,7 +3886,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R79",
-"line": 876,
+"line": 866,
 "src": "inc ~_ 5",
 "kind": "R",
 "state": "skip",
@@ -3896,8 +3895,58 @@
 },
 {
 "doc": "coproduct_spec.md",
+"rule": "R79",
+"line": 867,
+"src": "inc ~$w 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc 5)",
+"tree_eval": "match",
+"tree": "match",
+"id": "coproduct_spec.md|R79|90009798a8"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R79",
+"line": 868,
+"src": "inc ~5~",
+"kind": "R",
+"state": "skip",
+"why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc ~5~)",
+"tree_eval": "match",
+"tree": "match",
+"id": "coproduct_spec.md|R79|69e81bc4f1"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R79",
+"line": 869,
+"src": "inc ~w~ 5",
+"kind": "R",
+"state": "skip",
+"why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
+"tree_want": "(apply inc 5)",
+"tree_eval": "match",
+"tree": "match",
+"id": "coproduct_spec.md|R79|11c0c5bb11"
+},
+{
+"doc": "coproduct_spec.md",
+"rule": "R79",
+"line": 870,
+"src": "~inc~",
+"kind": "R",
+"state": "ok",
+"actual": "断り: G7: 関数を撒けません(`[inc]~`・`~inc~`。`~x~` は `[x]~` と同じ読みで、R79)",
+"expected": "G7",
+"id": "coproduct_spec.md|R79|0aefab875d"
+},
+{
+"doc": "coproduct_spec.md",
 "rule": "R67",
-"line": 882,
+"line": 876,
 "src": "gx : a ~y ? a",
 "kind": "R",
 "state": "ok",
@@ -3908,7 +3957,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 890,
+"line": 884,
 "src": "$inc",
 "kind": "R",
 "state": "ok",
@@ -3919,7 +3968,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 891,
+"line": 885,
 "src": "$[add 1]",
 "kind": "R",
 "state": "ok",
@@ -3930,7 +3979,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 892,
+"line": 886,
 "src": "$$inc",
 "kind": "R",
 "state": "ok",
@@ -3941,7 +3990,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 893,
+"line": 887,
 "src": "$[$inc]",
 "kind": "R",
 "state": "ok",
@@ -3952,7 +4001,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 894,
+"line": 888,
 "src": "$vs",
 "kind": "R",
 "state": "ok",
@@ -3966,7 +4015,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 895,
+"line": 889,
 "src": "$p",
 "kind": "R",
 "state": "ok",
@@ -3980,7 +4029,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 896,
+"line": 890,
 "src": "tw $inc",
 "kind": "R",
 "state": "ok",
@@ -3994,7 +4043,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 897,
+"line": 891,
 "src": "tw (t 1)",
 "kind": "R",
 "state": "ok",
@@ -4008,7 +4057,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 898,
+"line": 892,
 "src": "tm $inc (t 1)",
 "kind": "R",
 "state": "ok",
@@ -4022,7 +4071,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 899,
+"line": 893,
 "src": "io@\n$say + 1",
 "kind": "R",
 "state": "ok",
@@ -4039,7 +4088,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 900,
+"line": 894,
 "src": "io@\nx : $say\nx + 1",
 "kind": "R",
 "state": "ok",
@@ -4056,7 +4105,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 901,
+"line": 895,
 "src": "tk : f ? $@f + 1",
 "kind": "R",
 "state": "ok",
@@ -4073,7 +4122,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 902,
+"line": 896,
 "src": "io@\n$say == 1",
 "kind": "R",
 "state": "known",
@@ -4089,7 +4138,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 903,
+"line": 897,
 "src": "[sq : z ? z * z\n$sq]",
 "kind": "R",
 "state": "ok",
@@ -4100,7 +4149,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R99",
-"line": 904,
+"line": 898,
 "src": "$[5 inc]",
 "kind": "R",
 "state": "ok",
@@ -4111,7 +4160,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R100",
-"line": 910,
+"line": 904,
 "src": "$vs",
 "kind": "R",
 "state": "ok",
@@ -4125,7 +4174,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R100",
-"line": 911,
+"line": 905,
 "src": "$$vs",
 "kind": "R",
 "state": "ok",
@@ -4139,7 +4188,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R100",
-"line": 912,
+"line": 906,
 "src": "$[heavy 5]",
 "kind": "R",
 "state": "ok",
@@ -4153,7 +4202,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R100",
-"line": 913,
+"line": 907,
 "src": "tw : f ? $f",
 "kind": "R",
 "state": "ok",
@@ -4167,7 +4216,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R100",
-"line": 914,
+"line": 908,
 "src": "tw 5",
 "kind": "R",
 "state": "ok",
@@ -4184,7 +4233,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R100",
-"line": 915,
+"line": 909,
 "src": "$_",
 "kind": "R",
 "state": "ok",
@@ -4195,7 +4244,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R101",
-"line": 921,
+"line": 915,
 "src": "$[v , 1]",
 "kind": "R",
 "state": "ok",
@@ -4209,7 +4258,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R101",
-"line": 922,
+"line": 916,
 "src": "$[inc , double]",
 "kind": "R",
 "state": "ok",
@@ -4224,7 +4273,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R101",
-"line": 923,
+"line": 917,
 "src": "$[inc , 1]",
 "kind": "R",
 "state": "ok",
@@ -4239,7 +4288,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R101",
-"line": 924,
+"line": 918,
 "src": "tk : f ? $[@f , 1]",
 "kind": "R",
 "state": "ok",
@@ -4256,7 +4305,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R101",
-"line": 925,
+"line": 919,
 "src": "$[inc , _]",
 "kind": "R",
 "state": "ok",
@@ -4271,7 +4320,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R101",
-"line": 926,
+"line": 920,
 "src": "$[_ , _]",
 "kind": "R",
 "state": "ok",
@@ -4285,7 +4334,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R101",
-"line": 927,
+"line": 921,
 "src": "$_ , $inc",
 "kind": "R",
 "state": "ok",
@@ -4299,7 +4348,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R101",
-"line": 928,
+"line": 922,
 "src": "$[1 , $vs]",
 "kind": "R",
 "state": "ok",
@@ -4313,7 +4362,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R101",
-"line": 929,
+"line": 923,
 "src": "$[w , w]",
 "kind": "R",
 "state": "ok",
@@ -4324,7 +4373,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R101",
-"line": 930,
+"line": 924,
 "src": "$pq9",
 "kind": "R",
 "state": "ok",
@@ -4338,7 +4387,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 936,
+"line": 930,
 "src": "map $inc vs",
 "kind": "R",
 "state": "skip",
@@ -4351,7 +4400,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 937,
+"line": 931,
 "src": "map $p vs",
 "kind": "R",
 "state": "skip",
@@ -4364,7 +4413,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 938,
+"line": 932,
 "src": "@[$_] 1 2",
 "kind": "R",
 "state": "skip",
@@ -4377,7 +4426,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 939,
+"line": 933,
 "src": "@q 1 2",
 "kind": "R",
 "state": "skip",
@@ -4390,7 +4439,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 940,
+"line": 934,
 "src": "@[$[x ? x]] 1 2",
 "kind": "R",
 "state": "skip",
@@ -4403,7 +4452,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 941,
+"line": 935,
 "src": "@[$_] inc 1 2",
 "kind": "R",
 "state": "skip",
@@ -4416,7 +4465,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 942,
+"line": 936,
 "src": "@[$_] _",
 "kind": "R",
 "state": "ok",
@@ -4427,7 +4476,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 943,
+"line": 937,
 "src": "@[$_] w~",
 "kind": "R",
 "state": "ok",
@@ -4441,7 +4490,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 944,
+"line": 938,
 "src": "(@[$_] , inc) 5",
 "kind": "R",
 "state": "ok",
@@ -4455,7 +4504,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 945,
+"line": 939,
 "src": "$g9",
 "kind": "R",
 "state": "skip",
@@ -4465,7 +4514,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 946,
+"line": 940,
 "src": "h [s : $inc]",
 "kind": "R",
 "state": "ok",
@@ -4479,7 +4528,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 947,
+"line": 941,
 "src": "h [s : w]",
 "kind": "R",
 "state": "ok",
@@ -4493,7 +4542,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 948,
+"line": 942,
 "src": "h [s : 5]",
 "kind": "R",
 "state": "ok",
@@ -4507,7 +4556,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 949,
+"line": 943,
 "src": "@(fs ' 0) 5",
 "kind": "R",
 "state": "ok",
@@ -4521,7 +4570,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 950,
+"line": 944,
 "src": "@(ws ' 1) 5",
 "kind": "R",
 "state": "ok",
@@ -4535,7 +4584,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 951,
+"line": 945,
 "src": "(inc ' 0) , 1",
 "kind": "R",
 "state": "ok",
@@ -4549,7 +4598,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 952,
+"line": 946,
 "src": "(w < 3) , 5",
 "kind": "R",
 "state": "ok",
@@ -4560,7 +4609,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 953,
+"line": 947,
 "src": "(w != 3) , 5",
 "kind": "R",
 "state": "known",
@@ -4576,7 +4625,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 954,
+"line": 948,
 "src": "$(1 & inc)",
 "kind": "R",
 "state": "ok",
@@ -4590,7 +4639,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R49",
-"line": 955,
+"line": 949,
 "src": "($inc == $double) , 1",
 "kind": "R",
 "state": "ok",
@@ -4601,7 +4650,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R56",
-"line": 961,
+"line": 955,
 "src": "$w",
 "kind": "R",
 "state": "ok",
@@ -4612,7 +4661,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R56",
-"line": 962,
+"line": 956,
 "src": "$w~",
 "kind": "R",
 "state": "ok",
@@ -4623,7 +4672,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R56",
-"line": 963,
+"line": 957,
 "src": "$[w]",
 "kind": "R",
 "state": "ok",
@@ -4634,7 +4683,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R56",
-"line": 964,
+"line": 958,
 "src": "$q",
 "kind": "R",
 "state": "ok",
@@ -4645,7 +4694,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R56",
-"line": 965,
+"line": 959,
 "src": "$$w",
 "kind": "R",
 "state": "ok",
@@ -4656,7 +4705,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R56",
-"line": 966,
+"line": 960,
 "src": "inc $w 5",
 "kind": "R",
 "state": "skip",
@@ -4669,7 +4718,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R56",
-"line": 967,
+"line": 961,
 "src": "$w , 1",
 "kind": "R",
 "state": "skip",
@@ -4679,7 +4728,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R56",
-"line": 968,
+"line": 962,
 "src": "$w == $w",
 "kind": "R",
 "state": "ok",
@@ -4693,7 +4742,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R56",
-"line": 969,
+"line": 963,
 "src": "||$w||",
 "kind": "R",
 "state": "ok",
@@ -4704,7 +4753,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R57",
-"line": 975,
+"line": 969,
 "src": "$inc~",
 "kind": "R",
 "state": "ok",
@@ -4715,7 +4764,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R59",
-"line": 981,
+"line": 975,
 "src": "$[add (5 inc)]",
 "kind": "R",
 "state": "ok",
@@ -4726,7 +4775,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R59",
-"line": 982,
+"line": 976,
 "src": "$[add (5 _)]",
 "kind": "R",
 "state": "skip",
@@ -4736,7 +4785,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R59",
-"line": 983,
+"line": 977,
 "src": "$[5 _]",
 "kind": "R",
 "state": "ok",
@@ -4750,7 +4799,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R59",
-"line": 984,
+"line": 978,
 "src": "$[[x] ? f2 (5 inc) 1]",
 "kind": "R",
 "state": "ok",
@@ -4761,7 +4810,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R59",
-"line": 985,
+"line": 979,
 "src": "$[[x] ? x inc]",
 "kind": "R",
 "state": "ok",
@@ -4772,7 +4821,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R59",
-"line": 986,
+"line": 980,
 "src": "use $bq 5",
 "kind": "R",
 "state": "ok",
@@ -4783,7 +4832,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R59",
-"line": 987,
+"line": 981,
 "src": "bq 5",
 "kind": "R",
 "state": "ok",
@@ -4800,7 +4849,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 993,
+"line": 987,
 "src": "$inc ' 0",
 "kind": "R",
 "state": "ok",
@@ -4814,7 +4863,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 994,
+"line": 988,
 "src": "($inc ' 0) 5",
 "kind": "R",
 "state": "skip",
@@ -4827,7 +4876,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 995,
+"line": 989,
 "src": "@($inc ' 0) 5",
 "kind": "R",
 "state": "ok",
@@ -4841,7 +4890,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 996,
+"line": 990,
 "src": "($$inc ' 0) 5",
 "kind": "R",
 "state": "ok",
@@ -4855,7 +4904,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 997,
+"line": 991,
 "src": "(fs1 ' 0) 5",
 "kind": "R",
 "state": "skip",
@@ -4868,7 +4917,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 998,
+"line": 992,
 "src": "use ($inc ' 0) 5",
 "kind": "R",
 "state": "skip",
@@ -4881,7 +4930,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 999,
+"line": 993,
 "src": "t 1",
 "kind": "R",
 "state": "ok",
@@ -4895,7 +4944,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 1000,
+"line": 994,
 "src": "$inc ' 1",
 "kind": "R",
 "state": "ok",
@@ -4909,7 +4958,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 1001,
+"line": 995,
 "src": "$inc ' -1",
 "kind": "R",
 "state": "ok",
@@ -4923,7 +4972,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 1002,
+"line": 996,
 "src": "@($inc ' -1) 5",
 "kind": "R",
 "state": "ok",
@@ -4937,7 +4986,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 1003,
+"line": 997,
 "src": "inc ($inc ' a) 5",
 "kind": "R",
 "state": "ok",
@@ -4951,7 +5000,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 1004,
+"line": 998,
 "src": "$vs ' 0",
 "kind": "R",
 "state": "ok",
@@ -4968,7 +5017,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 1005,
+"line": 999,
 "src": "$w ' 0",
 "kind": "R",
 "state": "ok",
@@ -4982,7 +5031,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 1006,
+"line": 1000,
 "src": "inc n8 5",
 "kind": "R",
 "state": "skip",
@@ -4995,7 +5044,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R102",
-"line": 1007,
+"line": 1001,
 "src": "inc n9 5",
 "kind": "R",
 "state": "ok",
@@ -5012,7 +5061,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R78",
-"line": 1013,
+"line": 1007,
 "src": "5 @[$inc] 3",
 "kind": "R",
 "state": "skip",
@@ -5025,7 +5074,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R78",
-"line": 1014,
+"line": 1008,
 "src": "inc @[$inc] 5",
 "kind": "R",
 "state": "skip",
@@ -5038,7 +5087,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R78",
-"line": 1015,
+"line": 1009,
 "src": "5 @p 3",
 "kind": "R",
 "state": "skip",
@@ -5051,7 +5100,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R78",
-"line": 1016,
+"line": 1010,
 "src": "@[$w] 5",
 "kind": "R",
 "state": "ok",
@@ -5062,7 +5111,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R78",
-"line": 1017,
+"line": 1011,
 "src": "inc @[$w] 5",
 "kind": "R",
 "state": "ok",
@@ -5076,7 +5125,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R78",
-"line": 1018,
+"line": 1012,
 "src": "inc @w 5",
 "kind": "R",
 "state": "ok",
@@ -5090,7 +5139,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R78",
-"line": 1019,
+"line": 1013,
 "src": "@[$vs]",
 "kind": "R",
 "state": "ok",
@@ -5104,7 +5153,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R78",
-"line": 1020,
+"line": 1014,
 "src": "@(0x10 + 0x8)",
 "kind": "R",
 "state": "skip",
@@ -5114,7 +5163,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R103",
-"line": 1028,
+"line": 1022,
 "src": "v : 1 , $[v + 1]",
 "kind": "R",
 "state": "ok",
@@ -5128,7 +5177,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R103",
-"line": 1029,
+"line": 1023,
 "src": "v : 1 , $[v + $inc]",
 "kind": "R",
 "state": "ok",
@@ -5143,7 +5192,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R103",
-"line": 1030,
+"line": 1024,
 "src": "$[inc + 1]",
 "kind": "R",
 "state": "ok",
@@ -5158,7 +5207,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R103",
-"line": 1031,
+"line": 1025,
 "src": "v",
 "kind": "R",
 "state": "ok",
@@ -5172,7 +5221,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R103",
-"line": 1032,
+"line": 1026,
 "src": "v",
 "kind": "R",
 "state": "ok",
@@ -5183,7 +5232,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R103",
-"line": 1033,
+"line": 1027,
 "src": "v : 1 , $v",
 "kind": "R",
 "state": "ok",
@@ -5200,7 +5249,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R103",
-"line": 1034,
+"line": 1028,
 "src": "v : inc , $v",
 "kind": "R",
 "state": "ok",
@@ -5211,7 +5260,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R103",
-"line": 1035,
+"line": 1029,
 "src": "loop : s ? loop (s + 1)",
 "kind": "R",
 "state": "ok",
@@ -5225,7 +5274,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1053,
+"line": 1047,
 "src": "0x10 + 0x20",
 "kind": "R",
 "state": "skip",
@@ -5238,7 +5287,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1054,
+"line": 1048,
 "src": "0x10 - 0x20",
 "kind": "R",
 "state": "ok",
@@ -5252,7 +5301,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1055,
+"line": 1049,
 "src": "0x10 + 1",
 "kind": "R",
 "state": "ok",
@@ -5269,7 +5318,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1056,
+"line": 1050,
 "src": "0x4 * (3 < 2)",
 "kind": "R",
 "state": "ok",
@@ -5283,7 +5332,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1057,
+"line": 1051,
 "src": "0x4 * 0x2",
 "kind": "R",
 "state": "ok",
@@ -5300,7 +5349,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1058,
+"line": 1052,
 "src": "(0x4 * 0x2) + 1",
 "kind": "R",
 "state": "ok",
@@ -5317,7 +5366,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1059,
+"line": 1053,
 "src": "(0x10 + 1) * 2",
 "kind": "R",
 "state": "ok",
@@ -5334,7 +5383,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1060,
+"line": 1054,
 "src": "-(0x10)",
 "kind": "R",
 "state": "ok",
@@ -5348,7 +5397,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1061,
+"line": 1055,
 "src": "|0x10|",
 "kind": "R",
 "state": "ok",
@@ -5359,7 +5408,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1062,
+"line": 1056,
 "src": "0x10 ;; (0x0 + 24)",
 "kind": "R",
 "state": "ok",
@@ -5376,7 +5425,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1063,
+"line": 1057,
 "src": "0x10 && 0xF",
 "kind": "R",
 "state": "ok",
@@ -5390,7 +5439,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1064,
+"line": 1058,
 "src": "!!0xFFF",
 "kind": "R",
 "state": "ok",
@@ -5401,7 +5450,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1065,
+"line": 1059,
 "src": "0x20 < 0x30",
 "kind": "R",
 "state": "ok",
@@ -5415,7 +5464,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1066,
+"line": 1060,
 "src": "(0x10 ' 1~) + 0x8",
 "kind": "R",
 "state": "skip",
@@ -5428,7 +5477,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1067,
+"line": 1061,
 "src": "(w , 0x10) + 0x8",
 "kind": "R",
 "state": "ok",
@@ -5442,7 +5491,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1068,
+"line": 1062,
 "src": "p + q",
 "kind": "R",
 "state": "ok",
@@ -5456,7 +5505,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1069,
+"line": 1063,
 "src": "04x1000 + 0x3",
 "kind": "R",
 "state": "known",
@@ -5472,7 +5521,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1070,
+"line": 1064,
 "src": "r : 04x1000 + 0x3\n@r",
 "kind": "R",
 "state": "ok",
@@ -5483,7 +5532,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1071,
+"line": 1065,
 "src": "04x1000 || 0x3",
 "kind": "R",
 "state": "skip",
@@ -5496,7 +5545,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1072,
+"line": 1066,
 "src": "p : 04x1003\n@p",
 "kind": "R",
 "state": "ok",
@@ -5507,7 +5556,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1073,
+"line": 1067,
 "src": "$vs + 0x10",
 "kind": "R",
 "state": "ok",
@@ -5524,7 +5573,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1074,
+"line": 1068,
 "src": "($vs + 0x10) , 5",
 "kind": "R",
 "state": "ok",
@@ -5541,7 +5590,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1075,
+"line": 1069,
 "src": "$vs + $vs",
 "kind": "R",
 "state": "ok",
@@ -5558,7 +5607,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1076,
+"line": 1070,
 "src": "0x1000 - $vs",
 "kind": "R",
 "state": "ok",
@@ -5575,7 +5624,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1077,
+"line": 1071,
 "src": "$[inc 5] + 1",
 "kind": "R",
 "state": "ok",
@@ -5592,7 +5641,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1078,
+"line": 1072,
 "src": "($vs + 0x8) # 5",
 "kind": "R",
 "state": "ok",
@@ -5609,7 +5658,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1079,
+"line": 1073,
 "src": "$vs == 0x10",
 "kind": "R",
 "state": "ok",
@@ -5626,7 +5675,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1080,
+"line": 1074,
 "src": "$inc + 1",
 "kind": "R",
 "state": "ok",
@@ -5643,7 +5692,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1081,
+"line": 1075,
 "src": "$inc + 1 + 2",
 "kind": "R",
 "state": "ok",
@@ -5660,7 +5709,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1082,
+"line": 1076,
 "src": "1 + ($inc + 2)",
 "kind": "R",
 "state": "ok",
@@ -5677,7 +5726,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1083,
+"line": 1077,
 "src": "$inc + 0x80",
 "kind": "R",
 "state": "ok",
@@ -5694,7 +5743,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1084,
+"line": 1078,
 "src": "@($inc + 0x80)",
 "kind": "R",
 "state": "ok",
@@ -5708,7 +5757,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1085,
+"line": 1079,
 "src": "@($inc + 0x80 + 0x10)",
 "kind": "R",
 "state": "ok",
@@ -5722,7 +5771,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1086,
+"line": 1080,
 "src": "$inc + (3 < 2)",
 "kind": "R",
 "state": "ok",
@@ -5739,7 +5788,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1087,
+"line": 1081,
 "src": "$inc + $w",
 "kind": "R",
 "state": "ok",
@@ -5756,7 +5805,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1088,
+"line": 1082,
 "src": "$inc + $vs",
 "kind": "R",
 "state": "ok",
@@ -5774,7 +5823,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1089,
+"line": 1083,
 "src": "inc + $inc",
 "kind": "R",
 "state": "ok",
@@ -5792,7 +5841,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1090,
+"line": 1084,
 "src": "@($inc + $w) 5",
 "kind": "R",
 "state": "ok",
@@ -5809,7 +5858,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1091,
+"line": 1085,
 "src": "$inc == $inc",
 "kind": "R",
 "state": "ok",
@@ -5823,7 +5872,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1092,
+"line": 1086,
 "src": "$[x ? inc x] == $inc",
 "kind": "R",
 "state": "ok",
@@ -5837,7 +5886,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1093,
+"line": 1087,
 "src": "$[1 +] == $inc",
 "kind": "R",
 "state": "ok",
@@ -5851,7 +5900,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1094,
+"line": 1088,
 "src": "$inc == $double",
 "kind": "R",
 "state": "ok",
@@ -5865,7 +5914,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1095,
+"line": 1089,
 "src": "$inc !== $double",
 "kind": "R",
 "state": "ok",
@@ -5879,7 +5928,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1096,
+"line": 1090,
 "src": "$p == $[x ? x == 0 & 0 | p (x - 1)]",
 "kind": "R",
 "state": "ok",
@@ -5893,7 +5942,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1097,
+"line": 1091,
 "src": "$p == $q1",
 "kind": "R",
 "state": "ok",
@@ -5907,7 +5956,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1098,
+"line": 1092,
 "src": "($p == $q1) , 1",
 "kind": "R",
 "state": "ok",
@@ -5921,7 +5970,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1099,
+"line": 1093,
 "src": "$f == $g",
 "kind": "R",
 "state": "ok",
@@ -5935,7 +5984,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1100,
+"line": 1094,
 "src": "$f == $inc",
 "kind": "R",
 "state": "ok",
@@ -5949,7 +5998,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1101,
+"line": 1095,
 "src": "$is_even == $is_odd",
 "kind": "R",
 "state": "ok",
@@ -5963,7 +6012,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1102,
+"line": 1096,
 "src": "$inc == $w",
 "kind": "R",
 "state": "ok",
@@ -5977,7 +6026,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1103,
+"line": 1097,
 "src": "$inc == 0x08",
 "kind": "R",
 "state": "ok",
@@ -5991,7 +6040,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1104,
+"line": 1098,
 "src": "$inc == 5",
 "kind": "R",
 "state": "ok",
@@ -6008,7 +6057,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1105,
+"line": 1099,
 "src": "$inc == vs",
 "kind": "R",
 "state": "ok",
@@ -6025,7 +6074,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1106,
+"line": 1100,
 "src": "0x10 == vs",
 "kind": "R",
 "state": "ok",
@@ -6042,7 +6091,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1107,
+"line": 1101,
 "src": "$inc = $inc",
 "kind": "R",
 "state": "ok",
@@ -6059,7 +6108,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1108,
+"line": 1102,
 "src": "($inc == $inc) + 1",
 "kind": "R",
 "state": "ok",
@@ -6076,7 +6125,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1109,
+"line": 1103,
 "src": "($inc == $double) + 1",
 "kind": "R",
 "state": "ok",
@@ -6090,7 +6139,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1110,
+"line": 1104,
 "src": "g9 + 1",
 "kind": "R",
 "state": "ok",
@@ -6107,7 +6156,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1111,
+"line": 1105,
 "src": "$g9 + 1",
 "kind": "R",
 "state": "ok",
@@ -6124,7 +6173,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1112,
+"line": 1106,
 "src": "v : $inc + 1\nv + 2",
 "kind": "R",
 "state": "ok",
@@ -6141,7 +6190,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1113,
+"line": 1107,
 "src": "t : y ? $inc + 1",
 "kind": "R",
 "state": "ok",
@@ -6158,7 +6207,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1114,
+"line": 1108,
 "src": "(t 1) + 2",
 "kind": "R",
 "state": "ok",
@@ -6175,7 +6224,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1115,
+"line": 1109,
 "src": "(t 1) + 1",
 "kind": "R",
 "state": "ok",
@@ -6192,7 +6241,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1116,
+"line": 1110,
 "src": "-($inc)",
 "kind": "R",
 "state": "ok",
@@ -6206,7 +6255,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1117,
+"line": 1111,
 "src": "-($inc + 1)",
 "kind": "R",
 "state": "ok",
@@ -6220,7 +6269,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1118,
+"line": 1112,
 "src": "|$inc|",
 "kind": "R",
 "state": "ok",
@@ -6234,7 +6283,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1119,
+"line": 1113,
 "src": "[+ 1] $inc",
 "kind": "R",
 "state": "ok",
@@ -6251,7 +6300,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1120,
+"line": 1114,
 "src": "inc $inc",
 "kind": "R",
 "state": "ok",
@@ -6268,7 +6317,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1121,
+"line": 1115,
 "src": "tw2 : f ? $f + 1",
 "kind": "R",
 "state": "ok",
@@ -6285,7 +6334,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1122,
+"line": 1116,
 "src": "tw2 $inc",
 "kind": "R",
 "state": "ok",
@@ -6302,7 +6351,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1123,
+"line": 1117,
 "src": "tw2 5",
 "kind": "R",
 "state": "ok",
@@ -6319,7 +6368,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1124,
+"line": 1118,
 "src": "($inc + 1) | 5",
 "kind": "R",
 "state": "ok",
@@ -6336,7 +6385,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1125,
+"line": 1119,
 "src": "($inc + 1) , 3",
 "kind": "R",
 "state": "ok",
@@ -6353,7 +6402,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1126,
+"line": 1120,
 "src": "inc ($inc + 1) 5",
 "kind": "R",
 "state": "ok",
@@ -6370,7 +6419,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1127,
+"line": 1121,
 "src": "(($inc + 1) & 5) + 2",
 "kind": "R",
 "state": "ok",
@@ -6387,7 +6436,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1128,
+"line": 1122,
 "src": "v : $inc + 1\nv | 5",
 "kind": "R",
 "state": "ok",
@@ -6404,7 +6453,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1129,
+"line": 1123,
 "src": "!($inc + 1)",
 "kind": "R",
 "state": "ok",
@@ -6418,7 +6467,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1130,
+"line": 1124,
 "src": "$($inc + 1) + 2",
 "kind": "R",
 "state": "ok",
@@ -6436,7 +6485,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1131,
+"line": 1125,
 "src": "($inc + 0x80) # 5",
 "kind": "R",
 "state": "ok",
@@ -6453,7 +6502,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1132,
+"line": 1126,
 "src": "g9 : $inc",
 "kind": "R",
 "state": "skip",
@@ -6466,7 +6515,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1133,
+"line": 1127,
 "src": "fs : $inc , $double , 3",
 "kind": "R",
 "state": "skip",
@@ -6479,7 +6528,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1134,
+"line": 1128,
 "src": "fz3 : g9 , 3",
 "kind": "R",
 "state": "skip",
@@ -6492,7 +6541,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1135,
+"line": 1129,
 "src": "p : 0x10",
 "kind": "R",
 "state": "skip",
@@ -6505,7 +6554,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1136,
+"line": 1130,
 "src": "(fs ' [0 ~ 0]) # $double",
 "kind": "R",
 "state": "ok",
@@ -6519,7 +6568,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1137,
+"line": 1131,
 "src": "(fs ' [0 ~ 0]) # 5",
 "kind": "R",
 "state": "ok",
@@ -6533,7 +6582,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1138,
+"line": 1132,
 "src": "0x4000 # $inc",
 "kind": "R",
 "state": "known",
@@ -6549,7 +6598,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1139,
+"line": 1133,
 "src": "0x4000 # 65",
 "kind": "R",
 "state": "ok",
@@ -6563,7 +6612,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1140,
+"line": 1134,
 "src": "g9 # $double",
 "kind": "R",
 "state": "ok",
@@ -6580,7 +6629,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1141,
+"line": 1135,
 "src": "a3 : adder 3",
 "kind": "R",
 "state": "skip",
@@ -6593,7 +6642,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1142,
+"line": 1136,
 "src": "p : $vs + 0x10",
 "kind": "R",
 "state": "ok",
@@ -6610,7 +6659,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R62",
-"line": 1143,
+"line": 1137,
 "src": "hh $inc",
 "kind": "R",
 "state": "ok",
@@ -6624,7 +6673,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R98",
-"line": 1149,
+"line": 1143,
 "src": "(0x20 - 0x10) / 0x8",
 "kind": "R",
 "state": "ok",
@@ -6638,7 +6687,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R98",
-"line": 1150,
+"line": 1144,
 "src": "0x1010 % 0x100",
 "kind": "R",
 "state": "ok",
@@ -6652,7 +6701,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R98",
-"line": 1151,
+"line": 1145,
 "src": "0x10 / 2",
 "kind": "R",
 "state": "ok",
@@ -6669,7 +6718,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R138",
-"line": 1161,
+"line": 1155,
 "src": "!_ 1 2",
 "kind": "R",
 "state": "ok",
@@ -6680,7 +6729,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R138",
-"line": 1162,
+"line": 1156,
 "src": "_ : 5",
 "kind": "R",
 "state": "skip",
@@ -6690,7 +6739,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R138",
-"line": 1163,
+"line": 1157,
 "src": "inc _~",
 "kind": "R",
 "state": "skip",
@@ -6700,7 +6749,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R138",
-"line": 1164,
+"line": 1158,
 "src": "[!_] 1 2 3 4 5",
 "kind": "R",
 "state": "skip",
@@ -6713,7 +6762,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R21",
-"line": 1170,
+"line": 1164,
 "src": "say 5",
 "kind": "R",
 "state": "ok",
@@ -6724,7 +6773,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R21",
-"line": 1171,
+"line": 1165,
 "src": "inc typo 5",
 "kind": "R",
 "state": "ok",
@@ -6738,7 +6787,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R21",
-"line": 1172,
+"line": 1166,
 "src": "q : typo\nq 5",
 "kind": "R",
 "state": "ok",
@@ -6749,7 +6798,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R21",
-"line": 1173,
+"line": 1167,
 "src": "hh : [x] ? zz",
 "kind": "R",
 "state": "skip",
@@ -6762,7 +6811,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R21",
-"line": 1174,
+"line": 1168,
 "src": "f : x ?\n\tx > 0 : typo\n\t7",
 "kind": "R",
 "state": "ok",
@@ -6773,7 +6822,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R21",
-"line": 1175,
+"line": 1169,
 "src": "g :\n\t\tx\n\t\ty : typo\n\t? x + y",
 "kind": "R",
 "state": "known",
@@ -6786,7 +6835,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R21",
-"line": 1176,
+"line": 1170,
 "src": "io@\nsay 5",
 "kind": "R",
 "state": "known",
@@ -6799,7 +6848,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R22",
-"line": 1182,
+"line": 1176,
 "src": "f2 _ inc 5",
 "kind": "R",
 "state": "ok",
@@ -6810,7 +6859,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R22",
-"line": 1183,
+"line": 1177,
 "src": "f [1]",
 "kind": "R",
 "state": "ok",
@@ -6821,7 +6870,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R119",
-"line": 1191,
+"line": 1185,
 "src": "0 <= 3 < 5",
 "kind": "R",
 "state": "ok",
@@ -6835,7 +6884,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R119",
-"line": 1192,
+"line": 1186,
 "src": "$inc + 1",
 "kind": "R",
 "state": "ok",
@@ -6852,7 +6901,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R119",
-"line": 1193,
+"line": 1187,
 "src": "1 != 2 != 3",
 "kind": "R",
 "state": "ok",
@@ -6863,7 +6912,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R119",
-"line": 1194,
+"line": 1188,
 "src": "(+ 1 2)",
 "kind": "R",
 "state": "ok",
@@ -6874,7 +6923,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R119",
-"line": 1195,
+"line": 1189,
 "src": "[:] x 20",
 "kind": "R",
 "state": "ok",
@@ -6885,7 +6934,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R119",
-"line": 1196,
+"line": 1190,
 "src": "#zq 5",
 "kind": "R",
 "state": "ok",
@@ -6896,7 +6945,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R119",
-"line": 1197,
+"line": 1191,
 "src": "f : [#a] ? a",
 "kind": "R",
 "state": "ok",
@@ -6907,7 +6956,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R127",
-"line": 1203,
+"line": 1197,
 "src": "p [(inc 5) (inc 5)]",
 "kind": "R",
 "state": "ok",
@@ -6918,7 +6967,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R127",
-"line": 1204,
+"line": 1198,
 "src": "a : 1\na : !_",
 "kind": "R",
 "state": "ok",
@@ -6929,7 +6978,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R117",
-"line": 1210,
+"line": 1204,
 "src": "width : 640\n␠+ 16",
 "kind": "R",
 "state": "skip",
@@ -6942,7 +6991,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R117",
-"line": 1211,
+"line": 1205,
 "src": "width : 640\n+ 16",
 "kind": "R",
 "state": "ok",
@@ -6953,7 +7002,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R117",
-"line": 1212,
+"line": 1206,
 "src": "- `width : 640` ⏎ 空行 ⏎ `␠+ 16` → 構文の断り",
 "kind": "R",
 "state": "skip",
@@ -6963,7 +7012,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R128",
-"line": 1220,
+"line": 1214,
 "src": "h 3",
 "kind": "R",
 "state": "ok",
@@ -6977,7 +7026,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R128",
-"line": 1221,
+"line": 1215,
 "src": "bb 5",
 "kind": "R",
 "state": "skip",
@@ -6987,7 +7036,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R128",
-"line": 1222,
+"line": 1216,
 "src": "f 3",
 "kind": "R",
 "state": "skip",
@@ -6997,7 +7046,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R128",
-"line": 1223,
+"line": 1217,
 "src": "f 3",
 "kind": "R",
 "state": "ok",
@@ -7011,7 +7060,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R128",
-"line": 1224,
+"line": 1218,
 "src": "f 0",
 "kind": "R",
 "state": "skip",
@@ -7021,7 +7070,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R128",
-"line": 1225,
+"line": 1219,
 "src": "pr : x ?\n\ty : x + 1\n\ty * 2",
 "kind": "R",
 "state": "ok",
@@ -7032,7 +7081,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R128",
-"line": 1226,
+"line": 1220,
 "src": "f : x ?\n\tx > 0 : cfg ' hieght\n\t7",
 "kind": "R",
 "state": "ok",
@@ -7043,7 +7092,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R128",
-"line": 1227,
+"line": 1221,
 "src": "g [width : 640]",
 "kind": "R",
 "state": "ok",
@@ -7057,7 +7106,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R128",
-"line": 1228,
+"line": 1222,
 "src": "f 0",
 "kind": "R",
 "state": "ok",
@@ -7071,7 +7120,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R130",
-"line": 1234,
+"line": 1228,
 "src": "f : x ?\n\tx > 0 : 1\n\tx\n\tx < 0 : 2\n\t0",
 "kind": "R",
 "state": "ok",
@@ -7082,7 +7131,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R130",
-"line": 1235,
+"line": 1229,
 "src": "f : x ?\n\tx > 0 : 1\n\tx\n\t0",
 "kind": "R",
 "state": "ok",
@@ -7093,7 +7142,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R131",
-"line": 1241,
+"line": 1235,
 "src": "gq : x [y : 1] ? x + y",
 "kind": "R",
 "state": "ok",
@@ -7104,7 +7153,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R131",
-"line": 1242,
+"line": 1236,
 "src": "f :\n\t\t[y] : 1\n\t? y",
 "kind": "R",
 "state": "ok",
@@ -7115,7 +7164,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R139",
-"line": 1250,
+"line": 1244,
 "src": "gz 3",
 "kind": "R",
 "state": "ok",
@@ -7126,7 +7175,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R139",
-"line": 1251,
+"line": 1245,
 "src": "gz :\n\t\tx\n\t\ty : pw ' zz\n\t? x + y",
 "kind": "R",
 "state": "ok",
@@ -7137,7 +7186,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R139",
-"line": 1252,
+"line": 1246,
 "src": "area 3",
 "kind": "R",
 "state": "ok",
@@ -7148,7 +7197,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R139",
-"line": 1253,
+"line": 1247,
 "src": "gz 3",
 "kind": "R",
 "state": "skip",
@@ -7161,7 +7210,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R139",
-"line": 1254,
+"line": 1248,
 "src": "gz :\n\t\tx\n\t\ty : $inc + 1\n\t? x + y",
 "kind": "R",
 "state": "ok",
@@ -7175,7 +7224,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R139",
-"line": 1255,
+"line": 1249,
 "src": "o 3",
 "kind": "R",
 "state": "ok",
@@ -7192,7 +7241,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R133",
-"line": 1261,
+"line": 1255,
 "src": "h 2",
 "kind": "R",
 "state": "ok",
@@ -7209,7 +7258,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R133",
-"line": 1262,
+"line": 1256,
 "src": "a : 1\nf : a a ? a",
 "kind": "R",
 "state": "ok",
@@ -7220,7 +7269,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R133",
-"line": 1263,
+"line": 1257,
 "src": "bb ' r",
 "kind": "R",
 "state": "ok",
@@ -7237,7 +7286,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R133",
-"line": 1264,
+"line": 1258,
 "src": "(shape ' cube) 3",
 "kind": "R",
 "state": "ok",
@@ -7251,7 +7300,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R133",
-"line": 1265,
+"line": 1259,
 "src": "obj ' r",
 "kind": "R",
 "state": "ok",
@@ -7265,7 +7314,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R133",
-"line": 1266,
+"line": 1260,
 "src": "screen ' bytes",
 "kind": "R",
 "state": "ok",
@@ -7279,7 +7328,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R133",
-"line": 1267,
+"line": 1261,
 "src": "bb ' aa",
 "kind": "R",
 "state": "ok",
@@ -7290,7 +7339,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R134",
-"line": 1273,
+"line": 1267,
 "src": "f : c ?\n\tc :\n\t\t\ty : 1\n\t\t? y\n\t0",
 "kind": "R",
 "state": "ok",
@@ -7301,7 +7350,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R134",
-"line": 1274,
+"line": 1268,
 "src": "mk : x ? x ,\n\t\tm :\n\t\t\t\ty : 1\n\t\t\t? y",
 "kind": "R",
 "state": "ok",
@@ -7312,7 +7361,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R134",
-"line": 1275,
+"line": 1269,
 "src": "f : x ?\n\t\ty : 1\n\t? x + y",
 "kind": "R",
 "state": "ok",
@@ -7323,7 +7372,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R134",
-"line": 1276,
+"line": 1270,
 "src": "obj :\n\tm :\n\t\t\ty : 2\n\t\t? y",
 "kind": "R",
 "state": "skip",
@@ -7336,7 +7385,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R135",
-"line": 1282,
+"line": 1276,
 "src": "[\n\t\tx\n\t? x + 1\n] 5",
 "kind": "R",
 "state": "ok",
@@ -7347,7 +7396,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "R135",
-"line": 1283,
+"line": 1277,
 "src": "g : [\n\t\tx\n\t\ty\n]\n\t? x + y",
 "kind": "R",
 "state": "skip",
@@ -7357,7 +7406,7 @@
 {
 "doc": "coproduct_spec.md",
 "rule": "(前書き)",
-"line": 1575,
+"line": 1570,
 "src": "- `|f|`・`||f||`・`|_|` と、段18 の引く器の側・`#` の左・区間に書いた裸の関数（R27・R87）：仕様は `|f|`・`||f||` ",
 "kind": "R",
 "state": "skip",
