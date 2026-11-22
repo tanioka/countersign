@@ -85,7 +85,21 @@ def classify(tok, env):
         if k[0] in ("A", "V"): return ("V", tok)                                # `$` の先が値: `!_` と分かる値(R99)
     return c
 def _classify(tok, env):
-    """語 → ('A', 綴り) / ('F', 口, 名前) / ('I', 名前) / None(未対応)"""
+    """語 → ('A', 綴り) / ('F', 口, 名前) / ('I', 名前) / ('V', 綴り) / None(未対応)"""
+    if len(tok) > 1 and tok.endswith("~") and not tok.startswith("~") and "~" not in tok[:-1]:       # 後置 `~`(撒く、R51・R84)
+        base = tok[:-1]
+        if base.startswith("[") and base.endswith("]"):
+            its = tokens(base[1:-1]) or []
+            cs = [classify(x, env) for x in its]
+            if its and all(c is not None for c in cs):
+                if all(c[0] == "V" for c in cs): return ("V", tok)               # `!_` ばかりの器を撒けば消える
+                if all(c[0] == "A" for c in cs): return ("A", leaf_text(tok))
+            return None
+        c = classify(base, env)
+        if c is None: return None
+        if c[0] == "V": return ("V", tok)
+        if c[0] == "A": return ("A", leaf_text(tok))
+        return None
     if re.fullmatch(r"-?\d+|0[xXbBrRuU][0-9A-Za-z]+|\d\dx[0-9A-Fa-f]+|\"[^\"]*\"|'.'|\$[\w']+|\$\$[\w']+", tok): return ("A", leaf_text(tok))
     if tok[0] == "[":
         sec = section(tok)
@@ -181,7 +195,9 @@ def resolve_seq(toks, env, root_alone=False):
             c = classify(v, env)
             if c is None: return None
             terms.append(c)
-    if any(t[0] == "V" for t in terms) and any(t[0] == "F" and not _plain_head(t[-1], env) for t in terms): return None   # 参照の口は `$値` を受けるので消えない
+    if any(t[0] == "V" for t in terms) and any(t[0] == "F" and not _plain_head(t[-1], env) for t in terms):
+        if any(t[0] == "F" and not _plain_head(t[-1], env) and not t[-1].startswith("[") for t in terms): return None      # 名前のある関数の括りの口に入る位置の見分けは未対応(R122・R64)
+        terms = [("A", t[1]) if t[0] == "V" else t for t in terms]               # 点なしの括りは `!_` と分かる値も受けるので木に残る(R95・R137)。参照の口・点なしの括りは `!_` と分かる値も受けるので木に残る(R95・R122)
     terms = [t for t in terms if t[0] != "V"]                                   # `!_` と分かる値は積の単位で消える(R49・R137)
     if not terms: return None
     return build(terms)
@@ -236,14 +252,17 @@ def build(terms):
             mouth = 1 + sum((r[1] if r[0] == "F" else 1) - 1 for r in run)
         else: mouth = run[0][1]
         head = run[0][-1] if len(run) == 1 else "(compose " + " ".join(r[-1] for r in run) + ")"
+        spread = any(x.endswith("~") for x in args)
         if isinstance(mouth, tuple):
-            if len(args) < mouth[1]: return None
+            if len(args) < mouth[1] and not spread: return None
             use, rest = len(args), []
+        elif spread:
+            use, rest = len(args), []                                          # 撒いた流れは口を埋めきる(R51)
         else:
             use, rest = (len(args), []) if len(args) < mouth else (mouth, args[mouth:])
         a = args[:use]
         app = f"(apply {head} {a[0] if len(a) == 1 else '(construct ' + ' '.join(a) + ')'})"
-        if not isinstance(mouth, tuple) and len(args) < mouth: app = f"(unit {app})"          # 部分適用は口の開いた関数として残る(R136)
+        if not isinstance(mouth, tuple) and not spread and len(args) < mouth: app = f"(unit {app})"          # 部分適用は口の開いた関数として残る(R136)
         out.append(app); out += rest
         out += [f"(unit {x[-1]})" for x in tail]
         i = n

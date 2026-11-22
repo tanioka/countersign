@@ -1471,8 +1471,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R84|fc18bcb932"
 },
 {
@@ -1483,8 +1483,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R84|ebd3c1fc8f"
 },
 {
@@ -1495,8 +1495,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R84|0362bbfd00"
 },
 {
@@ -1511,8 +1511,8 @@
 "expected_warn": [
 "dollar-non-function"
 ],
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R84|34941b560d"
 },
 {
@@ -1994,8 +1994,8 @@
 "state": "ok",
 "actual": "8",
 "expected": "8",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R137|784ac43485"
 },
 {
@@ -2889,8 +2889,8 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R31|6f72a0ad7f"
 },
 {
@@ -3199,8 +3199,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R95|8a5a2760e2"
 },
 {
@@ -3211,8 +3211,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R95|fe37dd4214"
 },
 {
@@ -3441,8 +3441,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R64|3e681b8793"
 },
 {
@@ -3577,8 +3577,8 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R51|88cf7dd3fa"
 },
 {
@@ -3589,8 +3589,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R51|210beeee3b"
 },
 {
@@ -3602,8 +3602,8 @@
 "state": "ok",
 "actual": "8",
 "expected": "8",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R51|54cc18277e"
 },
 {
