@@ -102,6 +102,9 @@ def _classify(tok, env):
     mb = re.fullmatch(r"\[([a-z][\w']*)\]", tok)
     if mb and (env.get(mb.group(1)) or ("",))[0] == "F" and isinstance(env[mb.group(1)][1], int) and env[mb.group(1)][2]:
         return ("F", env[mb.group(1)][1], tok)                                  # 素の関数 1 つの括り `[add]` は、その関数と同じ口の関数(R16)
+    mm_ = re.fullmatch(r"\[([a-z][\w']*),\]", tok)
+    if mm_ and (env.get(mm_.group(1)) or ("",))[0] == "F" and env[mm_.group(1)][1] == 1 and env[mm_.group(1)][2]:
+        return ("F", ("var", 1), tok)                                           # `[F,]` の写像は F が口 1 つの時(R50)。可変長の口を持つ並びの関数
     if tok == "@[$_]": return ("I", tok)                                              # 恒等射の番地を開いた物は恒等射(R74・R49)
     if len(tok) > 1 and tok[0] == "@" and not tok.startswith("@@"):                    # 前置 `@`(関数の番地を開く、R49・R78)
         base = tok[1:]
