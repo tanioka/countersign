@@ -4472,8 +4472,8 @@
 "actual": "$inc",
 "expected": "知らせ",
 "tree_want": "(apply h [s : $inc])",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R49|5234039a1d"
 },
 {
@@ -4486,8 +4486,8 @@
 "actual": "!_",
 "expected": "!_",
 "tree_want": "(apply h [s : w])",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R49|fa28040994"
 },
 {
@@ -7050,8 +7050,8 @@
 "actual": "2",
 "expected": "2",
 "tree_want": "(apply g [width : 640])",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R128|27381b2b83"
 },
 {

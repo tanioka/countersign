@@ -40,6 +40,7 @@ OK += [("[add,] vs", "(construct [add,] vs)")]     # `[F,]` で F の口が 2 �
 OK += [("(inc double) inc 5", "(apply (compose [inc double] inc) 5)")]     # 関数だけの括りは合成した 1 つの関数で、開かない(R8)
 OK += [("inc i [* 2,] 1 2", "(apply [* 2,] (apply i (construct (apply inc 1) 2)))")]     # 合成の中の恒等射は並びを全部流す(R74)
 OK += [("||_|| 1 2 inc", "(apply inc (apply ||_|| (construct 1 2)))"), ("|_| (0 - 5) inc", "(apply inc (apply |_| [0 - 5]))")]     # 囲みの中の関数の後ろの関数は結果を受ける(R27)
+OK += [("g [width : 640]", "(apply g [width : 640])"), ("h [s : $inc]", "(apply h [s : $inc])")]     # 欄を書いた構造体は値の葉(R49・R128)
 NONE = ["gd 3 4 7", "inc ~1 5", "v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc"]
 for s, t in OK:
     g = T.tree_of(s, P)

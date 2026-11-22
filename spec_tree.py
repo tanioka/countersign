@@ -164,6 +164,11 @@ def _classify(tok, env):
         if sec is not None: return sec
     if tok[0] == "[" and tok[-1] == "]":
         its_ = tokens(tok[1:-1]) or []
+        if its_ and len(its_) % 3 == 0 and all(its_[i] == ":" and re.fullmatch(r"[a-z][\w']*", its_[i - 1]) for i in range(1, len(its_), 3)):
+            vs_ = [classify(its_[i], env) for i in range(2, len(its_), 3)]
+            if all(v is not None and v[0] in ("A", "V") for v in vs_) and not any(x in env.get("\0params", ()) for x in its_[2::3]): return ("A", leaf_text(tok))      # 欄を書いた構造体は値の葉(R49・R128)。欄の値が値か `!_` と分かる値の時
+    if tok[0] == "[" and tok[-1] == "]":
+        its_ = tokens(tok[1:-1]) or []
         if its_ and not any(x in TIGHT or x in ROOT or x == "," for x in its_):
             cs_ = [classify(x, env) for x in its_]
             if all(c is not None and c[0] in ("A", "V") for c in cs_) and any(c[0] == "V" for c in cs_):
