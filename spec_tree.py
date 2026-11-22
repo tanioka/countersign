@@ -552,6 +552,8 @@ def def_tree(toks, seps, env):
     if "?" in rhs:
         q = rhs.index("?")
         ps, body = rhs[:q], rhs[q + 1:]
+        if ps and body and any(p[0] == "[" for p in ps) and all(re.fullmatch(r"[a-z][\w']*|\[~?[a-z][\w']*(?: ~?[a-z][\w']*)*\]", p) for p in ps):
+            return f"(: {name} (? [{' '.join(re.sub(chr(92) + 's+', ' ', p) for p in ps)}] (defer {{{' '.join(body)}}})))"      # 括りの仮引数の関数の本体は、呼ばれた形ごとの実体でだけ解く(R25): 呼ばなければ `(defer {本体})`
         if not ps or not body or any(not re.fullmatch(r"[a-z][\w']*", p) for p in ps): return None
         e2 = dict(env)
         for p in ps: e2[p] = ("A",)
