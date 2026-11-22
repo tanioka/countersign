@@ -2335,7 +2335,11 @@ class FnGen:
                 for _ in range(nfree): self.free()
                 continue
             self.gen_cond(cond, nxt)
-            self.gen_any(val, tail, vk)
+            if STRICT[0] and vk == "I" and self.mu(val):                  # V10: 行は `c & v | 次の行`。値が `__` なら次の行へ落ちる
+                if self.is_call(val) and tail: raise AsmError("行の値が __ になりうる末尾呼びは、次の行へ落とせないので出せません(V10)")
+                self.gen_any(val, False, vk)
+                self.niche(); self.emit("cmp x0, x13"); self.emit("b.eq %s" % nxt, "値が __ なら次の行へ")
+            else: self.gen_any(val, tail, vk)
             self.emit("b %s" % end)
             self.lines.append("%s:" % nxt)
         if not has_default: self.unit_result(vk)
