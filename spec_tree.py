@@ -489,8 +489,53 @@ def ml_lines(src):
             out[-1] += " " + ln.lstrip(" ␠")
         else: out.append(ln)
     return out
+def block_tree(src, env):
+    """タブ字下げのブロック(R134): `名前 :` の下に字下げの行が続く定義。字下げの仮引数のブロックで書いた関数(`?` の行より深い行が仮引数 `{名前 : 既定値}`)を含む構造体の木。
+    出せない形は None。読む形: `名前 :`(子がブロック)・`名前 : 値` の子・`?` の行と、その前の深い行の仮引数。"""
+    ls = []
+    for ln in src.split("\n"):
+        if not ln.strip(): continue
+        d = len(ln) - len(ln.lstrip("\t"))
+        if " " in ln[:d] or "\t" in ln.lstrip("\t"): return None
+        ls.append((d, ln.strip()))
+    if not ls or ls[0][0] != 0: return None
+    pos = [0]
+    def parse(d0):
+        """深さ d0 以上の行の並び(次の行が d0 未満になるまで)→ 項の木の並び。"""
+        out = []; params = []
+        while pos[0] < len(ls) and ls[pos[0]][0] >= d0:
+            d, t = ls[pos[0]]
+            if t.startswith("?"):
+                body = tokens(t[1:].strip()) or []
+                if not body: return None
+                names = []
+                for pd_, pt in params:
+                    pm = re.fullmatch(r"([a-z][\w']*)(?: : (-?\d+))?", pt)
+                    if not pm: return None
+                    names.append(pm.group(1) + (f" : {pm.group(2)}" if pm.group(2) else ""))
+                if not names: return None
+                e2 = dict(env)
+                for nm_ in names: e2[nm_.split()[0]] = ("A",)
+                b = resolve_seq(body, e2, root_alone=True)
+                if b is None: return None
+                out.append(f"(? [{{{' '.join(names)}}}] {b})"); params = []; pos[0] += 1; continue
+            m = re.fullmatch(r"([a-z][\w']*) :", t)
+            if m and pos[0] + 1 < len(ls) and ls[pos[0] + 1][0] > d:                                  # `名前 :` の下に字下げが続けば入れ子の構造体
+                pos[0] += 1
+                sub = parse(d + 1)
+                if not sub: return None
+                out.append(f"(: {m.group(1)} (block {' '.join(sub)}))"); continue
+            params.append((d, t)); pos[0] += 1                                                       # それ以外は、後の `?` の行の仮引数の 1 つ
+        return out
+    top = parse(0)
+    if not top or pos[0] != len(ls) or len(top) != 1: return None
+    return top[0]
+
 def tree_of(src, defs=(), kinds="eval"):
     """源(1 行)の木。出せない形は None。kinds: "text"(綴りから)/ "eval"(評価器に聞く、P1)"""
+    if "\n\t" in src and kinds == "eval" and re.search(r"\n\t+\? ", src) and re.fullmatch(r"[a-z][\w']* :\n[\s\S]*", src.strip("\n")):
+        env_ = kinds_from_eval(list(defs))
+        return None if env_ is None else block_tree(src, env_)
     if "\n" in src.strip():
         lines = ml_lines(src)
         if lines is None or len(lines) < 2: return tree_of(lines[0], defs, kinds) if lines else None
