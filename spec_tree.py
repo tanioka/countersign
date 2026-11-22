@@ -216,11 +216,37 @@ def resolve_seq(toks, env, root_alone=False):
             if c is None: return None
             terms.append(c)
     if any(t[0] == "V" for t in terms) and any(t[0] == "F" and not _plain_head(t[-1], env) for t in terms):
-        if any(t[0] == "F" and not _plain_head(t[-1], env) and not t[-1].startswith(("[", "@")) for t in terms): return None      # 名前のある関数の括りの口に入る位置の見分けは未対応(R122・R64)
-        terms = [("A", t[1]) if t[0] == "V" else t for t in terms]               # 点なしの括りは `!_` と分かる値も受けるので木に残る(R95・R137)。参照の口・点なしの括りは `!_` と分かる値も受けるので木に残る(R95・R122)
+        named = [t for t in terms if t[0] == "F" and not _plain_head(t[-1], env) and not t[-1].startswith(("[", "@"))]
+        if named:
+            terms = ref_mouths(terms, env, named)                                # 名前のある関数の括りの口(R122・R64): 口に入る位置の `!_` は空の器として残り、口の外は消える
+            if terms is None: return None
+        else: terms = [("A", t[1]) if t[0] == "V" else t for t in terms]               # 点なしの括りは `!_` と分かる値も受けるので木に残る(R95・R137)。参照の口・点なしの括りは `!_` と分かる値も受けるので木に残る(R95・R122)
     terms = [t for t in terms if t[0] != "V"]                                   # `!_` と分かる値は積の単位で消える(R49・R137)
     if not terms: return None
     return build(terms)
+def ref_mouths(terms, env, named):
+    """頭が 1 つで名前のある関数なら、その後ろの実引数を口に順に割り当てる。括りの口(括りの名前の数、rest なら残り全部)に入った `!_` は残り、普通の口に入る物・口の外の物は
+    (口の外は消え、普通の口は未対応)。頭の前の `!_` は消える。分からない形は None"""
+    if len(named) != 1: return None
+    h = named[0]; hi = terms.index(h)
+    k = env.get(h[-1]); slots = k[3] if k and len(k) > 3 else None
+    if not slots: return None
+    out = [t for t in terms[:hi] if t[0] != "V"] + [h]
+    args = terms[hi + 1:]
+    if any(a[0] not in ("A", "V") for a in args): return None
+    si, used = 0, 0
+    for a in args:
+        while si < len(slots) and slots[si][0] == "g" and not slots[si][2] and used >= slots[si][1]: si += 1; used = 0
+        if si >= len(slots): inside = False
+        else:
+            inside = True
+            if slots[si][0] == "p":
+                if a[0] == "V": return None
+                si += 1; used = 0
+            else: used += 1
+        if a[0] == "V" and not inside: continue
+        out.append(("A", a[1]))
+    return out
 def _plain_head(name, env):
     return not name.startswith(("[", "@")) and (env.get(name) is None or env[name][0] != "F" or len(env[name]) < 3 or env[name][2])
 
@@ -313,7 +339,10 @@ def tree_of(src, defs=(), kinds="eval"):
         if any(not p for p in parts): return None
         sides = [resolve_seq(p, env, root_alone=True) for p in parts]
         if any(x is None for x in sides): return None
-        if op == "," and any(_absorbs(p, env) for p in parts[:-1]): return None     # 辺の中で畳む(R19)
+        if op == ",":
+            ab = fold_comma(parts, env)                                           # 最後の口が参照の口なら `F … x , R` は `F … (x , R)`(R66・R93)
+            if ab is not None: return ab if ab else None
+            if any(_absorbs(p, env) for p in parts[:-1]): return None             # 辺の中で畳む(R19)
         t = sides[-1]
         for x in reversed(sides[:-1]): t = f"({op} {x} {t})"                   # `,` は右へ入れ子
         return t
@@ -323,6 +352,27 @@ def tree_of(src, defs=(), kinds="eval"):
         if items and len(items) == 1 and items[0][0] == "fold": return fold_chain(items[0][1], env)
     return r
 
+def fold_comma(parts, env):
+    """`,` のすぐ左の並びが括りの関数 F の最後の口に届くなら (apply F [x , R])。届かない・関数の連なり・`_`・値の消去が絡む形は None(=ここでは決めない)、読めない形は ""(未対応)"""
+    p = parts[0]
+    if not p: return None
+    c = classify(p[0], env)
+    if not c or c[0] != "F" or isinstance(c[1], tuple) is False and False: return None
+    k = env.get(p[0]) if re.fullmatch(r"[\w']+", p[0]) else None
+    if not k or k[0] != "F" or len(k) < 4 or k[2]: return None
+    slots = k[3]
+    if not slots or slots[-1][0] != "g": return None
+    L = p[1:]
+    if len(L) < len(slots): return None                                           # 最後の口に届かない(`pb 1 , 2`)
+    cl = [classify(x, env) for x in L]
+    if any(x is None or x[0] != "A" for x in cl): return None                    # `_`・関数・`!_` が絡む形は決めない
+    rest = [" ".join(leaf_text(x) for x in q) for q in parts[1:]]
+    if any(not r for r in rest): return ""
+    m = len(slots)
+    head_args = [leaf_text(x) for x in L[:m - 1]]
+    box = "[" + " , ".join([" ".join(leaf_text(x) for x in L[m - 1:])] + rest) + "]"
+    args = head_args + [box]
+    return f"(apply {p[0]} {args[0] if len(args) == 1 else '(construct ' + ' '.join(args) + ')'})"
 def _absorbs(p, env):
     """`,` の左の並びが、口の数の決まらない関数(残りを受ける・不明)を頭に持てば、右の辺まで受ける(R19・R66)"""
     for t in p:
@@ -378,7 +428,8 @@ def kinds_from_eval(defs):
                 if has_def or not (isinstance(dn, tuple) and dn and dn[0] == "lam"): env[nm] = None; continue     # 既定値のある口・括りでない定義(`z : @$inc`)の種類は仕様が「未知」
                 last = ps[-1] if ps else None
                 var = last is not None and last[0] == "destr" and (len(last[1]) > 1 or last[2])
-                env[nm] = ("F", ("var", len(ps)) if var else len(ps), all(p[0] == "name" for p in ps))
+                slots = [("g", len(p[1]), bool(p[2])) if p[0] == "destr" else ("p",) for p in ps]
+                env[nm] = ("F", ("var", len(ps)) if var else len(ps), all(p[0] == "name" for p in ps), slots)
             elif v is S.ID or type(v).__name__ == "_Id": env[nm] = ("I",)
             else:
                 dn = (e.__dict__.get("defnodes") or {}).get(nm)

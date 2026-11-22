@@ -1401,8 +1401,8 @@
 "state": "ok",
 "actual": "!_",
 "expected": "知らせ",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R122|4f4a690494"
 },
 {
@@ -1414,8 +1414,8 @@
 "state": "ok",
 "actual": "!_",
 "expected": "知らせ",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R122|34ab1467ae"
 },
 {
@@ -1430,8 +1430,8 @@
 "expected_warn": [
 "dollar-non-function"
 ],
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R122|905afea509"
 },
 {
@@ -1459,8 +1459,8 @@
 "state": "ok",
 "actual": "!_",
 "expected": "!_",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R122|979c966590"
 },
 {
@@ -3454,8 +3454,8 @@
 "state": "ok",
 "actual": "1",
 "expected": "知らせ",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R64|75f9df6fef"
 },
 {
@@ -3490,8 +3490,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R66|41fa36329a"
 },
 {
@@ -3564,8 +3564,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R93|aff30dbf07"
 },
 {
