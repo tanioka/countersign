@@ -5,3 +5,6 @@ def test_range():
 def test_front_back_observation():
     r = subprocess.run([sys.executable, "diff_observe.py"], capture_output=True, text=True, timeout=600)
     assert r.returncode == 0, r.stdout[-800:]
+def test_fuzz_front():
+    r = subprocess.run([sys.executable, "fuzz_sir.py", "800", "7"], capture_output=True, text=True, timeout=600)
+    assert r.returncode == 0, r.stdout[-1200:]

@@ -1,0 +1,72 @@
+"""乱数で整数の式・関数を作り、strict の評価器と SIR の評価を照合する(前段)。
+使い方: python3 fuzz_sir.py [件数=2000] [種=1]     終了コード: 食い違いがあれば 1"""
+import sys, os, io, random
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); sys.setrecursionlimit(20000)
+import sign_interp as S, sign_sir as R
+from fixblank import fix
+
+def num(r):
+    return str(r.choice([0, 1, 2, 3, 5, 7, 10, 100, 9223372036854775807]))
+def atom(r, ps):
+    c = r.random()
+    if ps and c < .4: return r.choice(ps)
+    if c < .5: return "__"
+    return num(r)
+def expr(r, ps, d):
+    if d <= 0 or r.random() < .25: return atom(r, ps)
+    c = r.random(); a = expr(r, ps, d-1); b = expr(r, ps, d-1)
+    if c < .55: return f"({a} {r.choice('+-*/%')} {b})"
+    if c < .75: return f"({a} {r.choice(['<','>','<=','>=','==','!=','='])} {b})"
+    if c < .83: return f"({a} {r.choice('&|')} {b})"
+    if c < .88: return f"(0 - {a})"
+    if c < .94:
+        o = r.choice(["<", "<="]); return f"({a} {o} {b} {o} {expr(r, ps, d-1)})"
+    return f"({a} = {b} = {expr(r, ps, d-1)})"
+def program(r):
+    out, fs = [], []
+    for i in range(r.randint(0, 2)):
+        k = r.randint(1, 2); ps = ["x", "y"][:k]
+        body = expr(r, ps, 3)
+        if r.random() < .3: body = f"{expr(r, ps, 2)} ? {expr(r, ps, 2)} : {expr(r, ps, 2)}"
+        if " ? " in body:
+            c, v, e = body.split(" ? ")[0], None, None
+            c, rest = body.split(" ? ", 1); v, e = rest.split(" : ", 1)
+            out.append(f"f{i} : {' '.join(ps)} ?\n\t{c} : {v}\n\t{e}")
+        else: out.append(f"f{i} : {' '.join(ps)} ? {body}")
+        fs.append((f"f{i}", k))
+    t = expr(r, [], 3)
+    if fs and r.random() < .7:
+        n, k = r.choice(fs); t = f"{n} " + " ".join(f"({expr(r, [], 2)})" for _ in range(k))
+    return "\n".join(out + [t]) + "\n"
+def obs_strict(t):
+    S.STRICT_GATES = True
+    try:
+        S.MEMORY.clear(); S.WARNINGS.clear(); old = sys.stdout; sys.stdout = io.StringIO()
+        try: r = S.run(t)
+        finally: sys.stdout = old
+        v = S.show(r[-1]) if r else "!_"
+    except BaseException as e: return ("refuse", type(e).__name__)
+    finally: S.STRICT_GATES = False
+    return ("void",) if v == "!_" else (("val", int(v)) if v.lstrip("-").isdigit() else ("other", v[:20]))
+def obs_sir(t):
+    try:
+        f, top = R.lower(S.parse_source(t))
+        if top is None: return ("unsup", "なし")
+        return R.evaluate(f, top)
+    except R.Unsup as e: return ("unsup", str(e))
+    except BaseException as e: return ("crash", type(e).__name__ + str(e)[:40])
+def main():
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else 2000; r = random.Random(int(sys.argv[2]) if len(sys.argv) > 2 else 1)
+    tally, bad = {}, []
+    for _ in range(n):
+        t = fix(program(r)); b = obs_sir(t)
+        if b[0] == "unsup": tally["未対応"] = tally.get("未対応", 0) + 1; continue
+        if b[0] == "crash": bad.append((t, "SIR が落ちた", b)); continue
+        a = obs_strict(t)
+        if a[0] in ("refuse", "other") or b == ("partial",) or b == ("fuel",): k = "比べない: " + ("評価器が断る" if a[0]=="refuse" else "評価器の値が整数でない" if a[0]=="other" else "部分適用" if b==("partial",) else "燃料"); tally[k] = tally.get(k, 0) + 1; continue
+        if a == b: tally["一致"] = tally.get("一致", 0) + 1
+        else: bad.append((t, a, b))
+    print("乱数照合:", tally, "食い違い", len(bad))
+    for t, a, b in bad[:8]: print("---\n" + t + f"評価器 {a} / SIR {b}")
+    return 1 if bad else 0
+if __name__ == "__main__": sys.exit(main())

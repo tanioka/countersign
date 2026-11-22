@@ -8,7 +8,7 @@ SIR は、strict の読みを**木の形そのものに書き出した**中間�
   ("chain", [記号...], [項...])                  比べの連鎖: 3 項の範囲(`a < b < c` 等)は両方成り立てば真ん中の項、`=`・`==` だけの連鎖は全部等しければ最初の項。外れたら後ろの項は評価しない
   ("cmp", 記号, a, b)                           < > <= >= = == != !==。成り立てば a、外れ・どちらかが void なら void(R-rule、`a op b` は a か void)
   ("and", a, b) / ("or", a, b)                  `&`: a が void でなければ b、void なら void。`|`: a が void でなければ a、void なら b
-  ("rows", [(条件 か None, 値), ...])             行の列: 条件が void でない最初の行の値。条件 None は最後の既定の行。当たる行が無ければ void
+  ("rows", [(条件 か None, 値), ...])             行の列。各行は `c & v | 次の行`(V10): 条件が void でなく値も void でなければその値。値が void なら次の行へ落ちる。条件 None は既定の行。尽きれば void
   ("call", 名前, [実引数...])                     関数の呼び。口の数ちょうど。実引数が 1 つでも void なら呼びは成り立たず(部分適用)、SIR の評価は ("partial",) を返す
   ("flow", [項...])                              並び(積)。void の項は消える。項が 1 つだけ残ればその項、0 ならvoid
 SIR に下げられない形は Unsup を投げ、理由を持つ(未対応の数え方が、そのまま次の段の仕事の一覧になる)。"""
@@ -173,8 +173,10 @@ def evaluate(funcs, top, fuel=200000):
             a = ev(e[1], env)
             return a if a is not None else ev(e[2], env)
         if k == "rows":
-            for c, v in e[1]:
-                if c is None or ev(c, env) is not None: return ev(v, env)
+            for c, v in e[1]:                                                  # 行は `c & v | 次の行`(value_spec V10)。v が void なら次の行へ落ちる
+                if c is None or ev(c, env) is not None:
+                    r = ev(v, env)
+                    if r is not None: return r
             return None
         if k == "call":
             args = [ev(x, env) for x in e[2]]
