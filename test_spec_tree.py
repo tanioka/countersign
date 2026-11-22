@@ -38,7 +38,8 @@ OK += [("@($inc ' -1) 5", "(apply @[$inc ' -1] 5)")]     # 関数の番地を負
 OK += [("inc [w w] 5", "(apply inc 5)"), ("[w 5]", "[w 5]")]     # 括りの中の `!_` と分かる要素は単位として消え、全部なら `!_` と分かる括り(R137)
 OK += [("[add,] vs", "(construct [add,] vs)")]     # `[F,]` で F の口が 2 つ以上は未知の葉(R50)
 OK += [("(inc double) inc 5", "(apply (compose [inc double] inc) 5)")]     # 関数だけの括りは合成した 1 つの関数で、開かない(R8)
-NONE = ["gd 3 4 7", "inc ~1 5", "v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc", "inc i [* 2,] 1 2"]
+OK += [("inc i [* 2,] 1 2", "(apply [* 2,] (apply i (construct (apply inc 1) 2)))")]     # 合成の中の恒等射は並びを全部流す(R74)
+NONE = ["gd 3 4 7", "inc ~1 5", "v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc"]
 for s, t in OK:
     g = T.tree_of(s, P)
     if g != t: bad += 1; print("NG", s, g, t)

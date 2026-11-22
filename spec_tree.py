@@ -419,6 +419,7 @@ def build(terms):
 def pipeline(ts):
     """関数と値だけの並び(先頭は関数)を、左から合成して読む: 関数は左から順に、値を左から必要な数だけ受け、前の関数の結果を最初の実引数にして次へ渡す。
     可変長の口は残りの値を全部受ける。余った値は後ろに積む。値が足りない・恒等射・撒いた値・`|` の関数は None(R11・R31・R40・R41・R35)"""
+    ts = [("F", ("var", 1), "i") if t[0] == "I" and t[1] == "i" else t for t in ts]     # 恒等射 `i` は、合成の中の可変長の口として受ける並びを全部流す(R74・R29)
     if not ts or ts[0][0] != "F": return None
     fs = [t for t in ts if t[0] == "F"]; vs = [t[1] for t in ts if t[0] == "A"]
     if len(fs) + len(vs) != len(ts) or any(v.endswith("~") for v in vs): return None
