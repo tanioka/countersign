@@ -7244,8 +7244,8 @@
 "actual": "27",
 "expected": "27",
 "tree_want": "(apply [shape ' cube] 3)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R133|1dab9a74de"
 },
 {

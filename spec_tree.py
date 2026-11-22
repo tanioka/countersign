@@ -725,6 +725,8 @@ def _eval_group(tok, env):
             if v_ is not None and v_ is not S.ID and not isinstance(v_, S.Closure) and S.is_unit(v_): return ("V", leaf_text(tok))
         if S.closed_expr(inner, e, set()):
             v = S.quiet_ev(inner, e)
+            if isinstance(v, S.Closure) and inner[0] == "bin" and inner[1] == "'" and len(inner) == 4 and inner[2][0] == "id" and inner[3][0] == "id" and isinstance(v.params, (list, tuple)) and v.params and all(p[0] == "name" and p[2] is None for p in v.params) and not (getattr(v, "args", None) or []):
+                return ("F", len(v.params), leaf_text(tok))                          # 構造体の欄の関数を名前の鍵で引いた括りは、欄の関数の口を持つ関数(R26・R133)
             if v is None or isinstance(v, S.Closure) or v is S.ID: return None      # 値が関数かもしれない括り(`(shape ' cube) 3`)は種類を言わない
             return ("A", leaf_text(tok))
     except BaseException: return None

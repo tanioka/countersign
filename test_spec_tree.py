@@ -66,6 +66,9 @@ OK += [("(inc | 1 & inc) 5", "(apply [inc | 1 & inc] 5)")]     # `|`・`&` で�
 OK += [("inc (([0x10 0x20] ' 1~) ' 1) 5", "(apply inc 5)")]     # 字面のデータの入れ子の引きが領域の外なら `!_`(R26・R112)
 OK += [("@[$[x ? x]] 1 2", "(construct (apply @[$[x ? x]] 1) 2)")]     # 式の番地を開いた物の口は中の関数式の仮引数の数(R49・R35)
 OK += [("obj :\n\tm :\n\t\t\ty : 2\n\t\t? y", "(: obj (block (: m (block (? [{y : 2}] y)))))")]     # 字下げの仮引数のブロックで書いた関数を欄に持つ構造体(R134)
+for src_, defs_, want_ in [("(shape ' cube) 3", ["shape :\n\tsquare : x ? x * x\n\tcube : x ? x * (square x)"], "(apply [shape ' cube] 3)")]:
+    g_ = T.tree_of(src_, P + defs_)
+    if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 構造体の欄の関数を名前の鍵で引いた括りは口を持つ関数(R26・R133)
 NONE = ["f : x ?\n\t\ty : 1\n\t? x + y", "obj :\n\tm : 1\n\tn : 2", "gd 3 4 7", "inc ~1 5", "inc _ 2", "add 1 inc"]
 for s, t in OK:
     g = T.tree_of(s, P)
