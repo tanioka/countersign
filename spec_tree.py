@@ -289,6 +289,13 @@ def resolve_seq(toks, env, root_alone=False):
             g = v
             if len(g) == 3 and g[1] == "'" and not terms and g[0][0] == "(" and re.fullmatch(r"[a-z][\w']*", g[2]) and (classify(g[0], env) or ("",))[0] == "A":
                 terms.append(("A", f"(' {leaf_text(g[0])} {g[2]})")); continue     # 括りの名前の鍵(欄の名前、R64)で引いた物は種類が未知で、続く値を受けない(R125)。並びの先頭だけ
+            if len(g) == 3 and g[1] == "'" and re.fullmatch(r"[a-z][\w']*", g[0]) and re.fullmatch(r"[a-z][\w']*", g[2]) and (env.get(g[0]) or ("",))[0] == "A" and env.get("\0env") is not None:
+                import sign_interp as S
+                try:
+                    v_ = S.quiet_ev(("bin", "'", ("id", g[0]), ("id", g[2])), env["\0env"])
+                    if isinstance(v_, S.Closure) and isinstance(v_.params, (list, tuple)) and v_.params and all(p[0] == "name" and p[2] is None for p in v_.params) and not (getattr(v_, "args", None) or []):
+                        terms.append(("F", len(v_.params), f"(' {g[0]} {g[2]})")); continue      # 構造体の欄の関数は、欄の名前で引いた物が口を持つ関数(R26: 種類は引かれた物の生まれで決まる)
+                except BaseException: pass
             if any(x in ("'", "@", "~") for x in g): return None
             c = [classify(x, env) for x in g[::2]]
             if any(x is None or x[0] != "A" for x in c): return None

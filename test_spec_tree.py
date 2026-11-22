@@ -48,6 +48,9 @@ OK += [("0 <= 3 < 5", "(< (<= 0 3) 5)"), ("1 < 2 < 3", "(< (< 1 2) 3)")]     # �
 OK += [("w , _", "(unit _)"), ("v : 1 , $v", "(: v 1)"), ("w , 5", "5")]     # `!_` と分かる辺は `,` で消える(R61・R103・R137)
 OK += [("pb : [x] ? x + 1", "(: pb (? [[x]] (defer {x + 1})))"), ("hh : [x] ? zz", "(: hh (? [[x]] (defer {zz})))")]     # 括りの仮引数の関数の本体は呼ばなければ defer(R25)
 OK += [("h : f x ? @f x inc", "(: h (? [f x] (construct (apply @f x) (unit inc))))")]     # 前置 `@` で開いた仮引数の後ろの関数は結果を受けない(R136)
+for src_, defs_, want_ in [("p ' a 5", ["p : [a : inc]"], "(apply (' p a) 5)"), ("p ' a", ["p : [a : inc]"], "(' p a)")]:
+    g_ = T.tree_of(src_, P + defs_)
+    if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 構造体の欄の関数は引いた物が口を持つ関数(R26)
 NONE = ["gd 3 4 7", "inc ~1 5", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc"]
 for s, t in OK:
     g = T.tree_of(s, P)
