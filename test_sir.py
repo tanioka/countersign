@@ -8,3 +8,6 @@ def test_front_back_observation():
 def test_fuzz_front():
     r = subprocess.run([sys.executable, "fuzz_sir.py", "800", "7"], capture_output=True, text=True, timeout=600)
     assert r.returncode == 0, r.stdout[-1200:]
+def test_fuzz_lists_asm():
+    r = subprocess.run([sys.executable, "fuzz_sir.py", "500", "9", "--lists", "--asm"], capture_output=True, text=True, timeout=900)
+    assert r.returncode == 0, r.stdout[-1200:]

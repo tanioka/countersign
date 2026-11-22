@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); sys.setrecursion
 import sign_interp as S, sign_sir as R
 from fixblank import fix
 
+LIST_RATE = [0.0]
 def num(r):
     return str(r.choice([0, 1, 2, 3, 5, 7, 10, 100, 9223372036854775807]))
 def atom(r, ps):
@@ -22,7 +23,21 @@ def expr(r, ps, d):
     if c < .94:
         o = r.choice(["<", "<="]); return f"({a} {o} {b} {o} {expr(r, ps, d-1)})"
     return f"({a} = {b} = {expr(r, ps, d-1)})"
+def lst(r):
+    return " ".join(r.choice(["0","1","-5","7","100","9223372036854775807","-9223372036854775807"]) for _ in range(r.randint(2, 5)))
+def lexpr(r, names, d):
+    """リストを使う式(関数の外の式だけ。関数の中の添字は SIR が断る)。"""
+    c = r.random()
+    if c < .45: return f"({r.choice(names)} ' {expr(r, [], 1)})"
+    if c < .6: return f"||{r.choice(names)}||"
+    if d <= 0: return num(r)
+    a, b = lexpr(r, names, d-1), lexpr(r, names, d-1)
+    return f"({a} {r.choice(['+','-','*','/','%','|','&','<','=='])} {b})"
+def list_program(r):
+    names = ["la", "lb"][:r.randint(1, 2)]
+    return "\n".join(f"{n} : {lst(r)}" for n in names) + "\n" + lexpr(r, names, 3) + "\n"
 def program(r):
+    if r.random() < LIST_RATE[0]: return list_program(r)
     out, fs = [], []
     for i in range(r.randint(0, 2)):
         k = r.randint(1, 2); ps = ["x", "y"][:k]
@@ -78,6 +93,7 @@ def obs_asm(t):
 def main():
     av = [x for x in sys.argv[1:] if not x.startswith('--')]
     n = int(av[0]) if av else 2000; r = random.Random(int(av[1]) if len(av) > 1 else 1)
+    LIST_RATE[0] = 0.5 if '--lists' in sys.argv else 0.0
     tally, bad = {}, []
     for _ in range(n):
         t = fix(program(r)); b = obs_sir(t)
