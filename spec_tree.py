@@ -565,6 +565,17 @@ def _eval_group(tok, env):
         node = node[0]
         if S.unit_like(node, e, set()): return ("V", leaf_text(tok))
         inner = node[1] if node[0] == "block" else node
+        def _data(x):                                                   # 字面の数・括り・並び・範囲だけでできた形
+            if not isinstance(x, tuple) or not x: return False
+            if x[0] == "lit": return isinstance(x[1], int)
+            if x[0] == "block": return _data(x[1])
+            if x[0] == "seq": return isinstance(x[1], list) and bool(x[1]) and all(_data(y) for y in x[1])
+            if x[0] == "bin" and x[1] == "~": return len(x) == 4 and _data(x[2]) and _data(x[3])
+            if x[0] == "post" and x[1] == "~": return _data(x[2])
+            return False
+        if inner[0] == "bin" and inner[1] == "'" and len(inner) == 4 and _data(inner[2]) and _data(inner[3]):      # R26・R112: 字面のデータを字面の鍵で引いて無ければ `!_` と分かる値
+            v_ = S.quiet_ev(inner, e)
+            if v_ is not None and v_ is not S.ID and not isinstance(v_, S.Closure) and S.is_unit(v_): return ("V", leaf_text(tok))
         if S.closed_expr(inner, e, set()):
             v = S.quiet_ev(inner, e)
             if v is None or isinstance(v, S.Closure) or v is S.ID: return None      # 値が関数かもしれない括り(`(shape ' cube) 3`)は種類を言わない
