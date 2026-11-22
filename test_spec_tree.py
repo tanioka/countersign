@@ -8,7 +8,8 @@ OK += [("inc add 5 g 3", "(apply g (apply add (construct (apply inc 5) 3)))"), (
 OK += [("i 1 2 3", "(apply i (construct 1 2 3))"), ("i inc 1 2", "(construct (apply inc 1) 2)"), ("i 5 inc", "(construct 5 (unit inc))")]     # 恒等射が頭: 関数が続けば単位律で消え、続かなければ並び全体を受ける(R29・R74)
 OK += [("$[inc 5] + 1", "(+ $[inc 5] 1)"), ("$($inc + 1) + 2", "(+ $[$inc + 1] 2)"), ("$[1 +] == $inc", "(== $[1 +] $inc)"), ("$_ , $inc", "(, $_ $inc)"),     # 式の番地・恒等射の番地は値(R62・R101)
        ("@[$_] 1 2", "(apply @[$_] (construct 1 2))"), ("@[$_] inc 1 2", "(construct (apply inc 1) 2)")]
-NONE = ["@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc", "inc i [* 2,] 1 2"]
+OK += [("fs : $inc , $double , 3", "(: fs (, $inc (, $double 3)))"), ("x : 1 , 2", "(: x (, 1 2))")]          # 右辺が `,` の連なりの値の定義
+NONE = ["v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc", "inc i [* 2,] 1 2"]
 bad = 0
 for s, t in OK:
     g = T.tree_of(s, P)
