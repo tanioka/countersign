@@ -6656,7 +6656,7 @@ def strict_rewrite(tree):
         if k == "cases":
             rows = []
             for c, e in n[1]:
-                if isinstance(c, tuple) and c[0] == "id" and "4" not in off:
+                if isinstance(c, tuple) and c[0] == "id" and c[1] != "__" and "4" not in off:           # `__` は字面の void(未定義の名前ではない。行は外れる)
                     if c[1] in params or c[1] in vals: c = ("bin", "|", c, c)
                     else: rest.append((4, "行の左が名前だけ `%s : …`(仮引数でもファイルの定義でもない名前。strict では未定義)" % c[1], src(c) + " : " + src(e)))
                 rows.append((tr(c, params) if c is not None else None, tr(e, params)))
