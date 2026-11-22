@@ -603,6 +603,7 @@ def _eval_group(tok, env):
         def _data(x):                                                   # 字面の数・括り・並び・範囲だけでできた形
             if not isinstance(x, tuple) or not x: return False
             if x[0] == "lit": return isinstance(x[1], int)
+            if x[0] == "neg": return len(x) == 2 and _data(x[1])
             if x[0] == "block": return _data(x[1])
             if x[0] == "seq": return isinstance(x[1], list) and bool(x[1]) and all(_data(y) for y in x[1])
             if x[0] == "bin" and x[1] == "~": return len(x) == 4 and _data(x[2]) and _data(x[3])
@@ -613,9 +614,9 @@ def _eval_group(tok, env):
             if ct_[0] == "id" and (ky_[0] == "id" or ky_ == ("not", ("hole",))) and S.closed_expr(ct_, e, set()):
                 v_ = S.quiet_ev(inner, e)
                 if v_ is not None and v_ is not S.ID and not isinstance(v_, S.Closure) and S.is_unit(v_): return ("V", leaf_text(tok))
-        if inner[0] == "bin" and inner[1] == "'" and len(inner) == 4 and inner[2][0] == "id" and _data(inner[3]) and S.closed_expr(inner[2], e, set()):      # 閉じた名前を字面の鍵・範囲で引いた切り出しは値(器の位置の切り出し、R62)
+        if inner[0] == "bin" and inner[1] == "'" and len(inner) == 4 and (inner[2][0] == "id" or (inner[2][0] == "addr" and inner[2][1][0] == "id")) and _data(inner[3]) and S.closed_expr(inner[2][1] if inner[2][0] == "addr" else inner[2], e, set()):      # 閉じた名前を字面の鍵・範囲で引いた切り出しは値(器の位置の切り出し、R62)
             v_ = S.quiet_ev(inner, e)
-            if isinstance(v_, list): return ("A", leaf_text(tok))
+            if isinstance(v_, (list, S.VarRef)): return ("A", leaf_text(tok))
         if inner[0] == "bin" and inner[1] == "'" and len(inner) == 4 and _data(inner[2]) and _data(inner[3]):      # R26・R112: 字面のデータを字面の鍵で引いて無ければ `!_` と分かる値
             v_ = S.quiet_ev(inner, e)
             if v_ is not None and v_ is not S.ID and not isinstance(v_, S.Closure) and S.is_unit(v_): return ("V", leaf_text(tok))

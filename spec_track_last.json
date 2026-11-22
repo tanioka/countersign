@@ -4930,8 +4930,8 @@
 "actual": "6",
 "expected": "6",
 "tree_want": "(apply @[$inc ' -1] 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R102|21dd32edf0"
 },
 {
