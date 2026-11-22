@@ -2277,7 +2277,7 @@ class FnGen:
         skip = 0
         for i, (cond, val) in enumerate(rows):
             if i < skip: continue
-            if cond is not None and SPEC_LOOK[0] > 1 and vk == "I" and PAR[0] is not None and SPEC[0] and getattr(self.prog, "target", "bare") == "linux" and self.has_seq(cond):
+            if cond is not None and SPEC_LOOK[0] > 1 and vk == "I" and not (STRICT[0] and any(r[1] is not None and self.mu(r[1]) for r in rows[i:i + SPEC_LOOK[0]])) and PAR[0] is not None and SPEC[0] and getattr(self.prog, "target", "bare") == "linux" and self.has_seq(cond):
                 grp = list(range(i, min(i + SPEC_LOOK[0], len(rows))))
                 for pos, j in enumerate(grp):                      # 既定の行は最後のときだけ含める(最後でなければ今までの経路が断る)
                     if rows[j][0] is None:
@@ -2322,7 +2322,7 @@ class FnGen:
                 self.gen_any(val, tail, vk); has_default = True
                 break
             nxt = self.prog.label()
-            sp = self.spec_for(val, cond) if vk == "I" else None
+            sp = self.spec_for(val, cond) if vk == "I" and not (STRICT[0] and self.mu(val)) else None       # strict: 値が __ になりうる行は先読みせず、次の行へ落とす普通の道へ(V10)
             if sp is not None:                          # --par-spec: 値の呼び出しを、条件を調べる間に別のスレッドで先に走らせる
                 sb, tv, nfree = self.spec_begin(*sp)
                 lf, ser, ok = self.prog.label(), self.prog.label(), self.prog.label()
