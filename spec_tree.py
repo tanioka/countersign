@@ -164,6 +164,11 @@ def _classify(tok, env):
             if all(c is not None for p in cs for c in p):
                 if all(all(c[0] == "V" for c in p) for p in cs): return ("V", leaf_text(tok))      # `!_` ばかりの積は空(R84・R61)
                 return ("A", leaf_text(tok))
+    if tok[0] == "(":
+        in_ = tokens(tok[1:-1]) or []
+        in2_ = [t for t in in_ if t != "|"] if len(in_) == 3 and in_[1] == "|" else in_
+        if len(in2_) == 2 and re.fullmatch(r"-?\d+", in2_[0]) and re.fullmatch(r"[a-z][\w']*", in2_[1]) and (env.get(in2_[1]) or ("",))[0] == "F":
+            return ("A", leaf_text(tok))                                  # 字面の数は `!_` でない辺なので、続く関数はいつも余る(R52・R136・R76)。括りは値
     if tok[0] in "([":
         inner = tokens(tok[1:-1])
         if inner is None or any(t in TIGHT + ROOT for t in inner) is False and False: return None

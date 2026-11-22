@@ -1003,8 +1003,8 @@
 "leftover-lambda"
 ],
 "tree_want": "(construct [3 | inc] 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R136|a37a7e88fa"
 },
 {
@@ -2434,8 +2434,8 @@
 "actual": "[5, 3]",
 "expected": "5 3",
 "tree_want": "(construct [5 inc] 3)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R52|c7a9e45e39"
 },
 {

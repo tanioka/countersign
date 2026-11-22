@@ -23,6 +23,7 @@ for src_, defs_, want_ in [("f -x", ["f : a ? a", "x : 3"], "(apply f -x)")]:
     g_ = T.tree_of(src_, P + defs_)
     if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 値の名前に前置 `-` は値(R2)
 OK += [("[!_] 1 2 3 4 5", "(apply [!_] (construct 1 2 3 4 5))")]     # 前置・後置の点なしの席は口が並び全体(R35・R138)
+OK += [("(5 inc) 3", "(construct [5 inc] 3)"), ("(3 | inc) 5", "(construct [3 | inc] 5)")]     # 字面の数に続く関数は余る(R52・R136)
 NONE = ["inc ~1 5", "[add,] vs", "v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc", "inc i [* 2,] 1 2"]
 for s, t in OK:
     g = T.tree_of(s, P)
