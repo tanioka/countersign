@@ -54,7 +54,7 @@ for doc in HEAD:
             exp, warns, none_w = A.expect(right)
             if exp is None and not warns and not none_w:
                 rec["state"] = "skip"
-                rec["why"] = "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)"
+                rec["why"] = ("期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)" if re.match(r"\s*`\(", right) or re.match(r"\s*\d+、`", right) else "期待が値でも断りでも知らせでもない(説明文・括り付きの値など)")
             else:
                 names = {re.match(r"#?([\w']+)", d).group(1) for d in defs if re.match(r"#?([\w']+)", d)}
                 pre = "".join(l + "\n" for l in A.PRE.splitlines() if l.split(" ")[0] not in names)
