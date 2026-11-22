@@ -35,6 +35,7 @@ python3 sign.py --strict hello.sn        # 仕様どおりの読みで実行
 python3 sign.py --asm prog.sn --target=linux -o prog.s   # AArch64 のアセンブリを出す
 python3 sign.py --asm prog.sn --elf=prog                  # ELF を出す
 python3 sign.py --emit-st mod.sn         # 公開(#)の名前から mod.st を書く
+python3 sign.py --tree hello.sn          # 仕様 §1.3 の「出力の木」(construct・apply・compose・unit)を出す。出せない形は「未対応」
 ```
 
 - `sign.py` は `sign_interp.py` の起動口です。`std.sn`(標準の定義)と `sign_st.py` は `sign_interp.py` と同じフォルダに置いてください。
@@ -49,6 +50,7 @@ python3 sign.py --emit-st mod.sn         # 公開(#)の名前から mod.st を�
 | `sign_asm.py` と `sign_opt.py`・`sign_peep.py`・`sign_fuse.py`・`sign_inline.py`・`sign_neon.py`・`sign_plan.py` ほか | AArch64 コンパイラと最適化 |
 | `sign_st.py` | `--emit-st`(`.st` の書き出し) |
 | `std.sn` | 標準の定義(実装側で決めたもの)。置き場所は番地で渡します(`0x500000` と書く)。`--strict` では素の数を渡せません(仕様 R62: 番地と素の数は混ぜられず、数から番地を作る射がありません) |
+| `spec_audit.py` / `spec_track.py` / `spec_tree.py` | 仕様書の見本との突き合わせ(`spec_audit.py 仕様書.md`)/ 公式の R 規則・V 規則の見本を規則別に数え、前回との差を出す(`spec_track.py [仕様リポジトリ] [--save] [-v]`、毎日 `.github/workflows/spec-track.yml`)/ `--tree` の木の出力。設計は `TREE_SHARING_DESIGN.md` |
 | `test_*.py` | 試験。`test_laws.py` は仕様の法則、`test_origin.py`・`test_law5253.py`・`test_xfile.py`・`test_st.py` ほかは個別の仕様項目 |
 | `*.sn` | サンプルと実行例(既定のモードで動かす) |
 | `IMPLEMENTATION_NOTES.md` | 実装ノート。日付ごとの変更・精査表・設計メモ |
