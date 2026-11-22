@@ -446,11 +446,11 @@ def pipeline(ts):
 
 def fold_chain(g, env):
     """畳んだ中置が 3 つ以上の語(同じ演算子の連なり)なら左結合の入れ子 `(+ (+ a b) c)`"""
-    if len(g) < 3 or len(set(g[1::2])) != 1: return None
+    if len(g) < 3 or (len(set(g[1::2])) != 1 and not set(g[1::2]) <= {"<", "<=", ">", ">="}): return None     # 大小の比較の連なりは、演算子が違っても左へ入れ子(R119)
     ops = [operand(x, env, True) for x in g[::2]]
     if any(o is None for o in ops): return None
     t = ops[0]
-    for o in ops[1:]: t = f"({g[1]} {t} {o})"
+    for k_, o in enumerate(ops[1:]): t = f"({g[2 * k_ + 1]} {t} {o})"
     return t
 
 def ml_lines(src):

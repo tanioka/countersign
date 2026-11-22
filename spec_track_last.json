@@ -6828,8 +6828,8 @@
 "actual": "3",
 "expected": "3",
 "tree_want": "(< (<= 0 3) 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R119|533ed876e8"
 },
 {

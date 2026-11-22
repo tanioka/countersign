@@ -44,6 +44,7 @@ OK += [("g [width : 640]", "(apply g [width : 640])")]     # 欄を書いた構�
 for src_, defs_, want_ in [("h [s : $inc]", ["h : f ? @f 5"], "(apply h [s : $inc])")]:
     g_ = T.tree_of(src_, P + defs_)
     if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 欄を書いた構造体は値の葉で、関数が受ける(R49)
+OK += [("0 <= 3 < 5", "(< (<= 0 3) 5)"), ("1 < 2 < 3", "(< (< 1 2) 3)")]     # 大小の比較の連なりは演算子が違っても左へ入れ子(R119)
 NONE = ["gd 3 4 7", "inc ~1 5", "v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc"]
 for s, t in OK:
     g = T.tree_of(s, P)
