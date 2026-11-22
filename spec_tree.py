@@ -450,8 +450,7 @@ def kinds_from_eval(defs):
                 env[nm] = ("F", ("var", len(ps)) if var else len(ps), all(p[0] == "name" for p in ps), slots)
             elif v is S.ID or type(v).__name__ == "_Id": env[nm] = ("I",)
             else:
-                dn = (e.__dict__.get("defnodes") or {}).get(nm)
-                try: vv = S.unit_like(("id", nm), e, set()) or (isinstance(dn, tuple) and dn and dn[0] == "addr" and S.unit_like(dn, e, set()))     # R49: `q : $w` のように `!_` と分かる値を右辺に持つ名前も(評価器の zeronames はまだ持たない→ OPEN_QUESTIONS)
+                try: vv = S.unit_like(("id", nm), e, set())
                 except BaseException: vv = False
                 env[nm] = ("V",) if vv else ("A",)
         env["\0env"] = e

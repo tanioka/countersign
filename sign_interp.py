@@ -4702,7 +4702,7 @@ def _ev(n, env):
             zs = env.__dict__.setdefault("zeronames", set())
             (zs.add if only_hole(n[2], env) else zs.discard)(n[1])
             vn_ = env.__dict__.setdefault("voidnames", set())                  # R49・R139: 無い欄を引いた `w : pw ' zz` は `!_` と分かる名前(`$w` は零射の番地でなく、値に当てた `$`)
-            (vn_.add if (n[2][0] == "bin" and n[2][1] == "'" and unit_like(n[2], env, set())) else vn_.discard)(n[1])
+            (vn_.add if ((n[2][0] == "bin" and n[2][1] == "'") or n[2][0] == "addr") and unit_like(n[2], env, set()) else vn_.discard)(n[1])      # `q : $w`(`!_` と分かる値に付けた `$`)の名前も同じ(R49・R99)
             if n[1] in PROVISIONAL:                                # R103: A と仮置きして読んだのに関数になった(仮置きで不動点の無い輪)
                 PROVISIONAL.discard(n[1])
                 if isinstance(v, Closure) and not v.dead and v is not ID:
