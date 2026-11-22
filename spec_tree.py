@@ -106,6 +106,7 @@ def _classify(tok, env):
     mp_ = re.fullmatch(r"[-!](_|[a-z][\w']*)", tok)
     if mp_ and (mp_.group(1) == "_" or (env.get(mp_.group(1)) or ("",))[0] in ("F", "I")): return ("A", tok)      # 値の印(前置 `-`・`!`)を関数・恒等射に直接当てた形は解なしの葉(R87)
     if mp_ and (env.get(mp_.group(1)) or ("",))[0] == "A" and tok[0] == "-": return ("A", tok)      # 値の名前に前置 `-`: 値(R2)
+    if re.fullmatch(r"\[(?:-_|!_|!!_|_!)\]", tok): return ("F", ("var", 1), tok)      # 前置・後置の点なしの席は、口が並び全体(R35・R138)
     mm_ = re.fullmatch(r"\[([a-z][\w']*),\]", tok)
     if mm_ and (env.get(mm_.group(1)) or ("",))[0] == "F" and env[mm_.group(1)][1] == 1 and env[mm_.group(1)][2]:
         return ("F", ("var", 1), tok)                                           # `[F,]` の写像は F が口 1 つの時(R50)。可変長の口を持つ並びの関数
