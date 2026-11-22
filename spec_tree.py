@@ -189,6 +189,8 @@ def _classify(tok, env):
                 return ("A", leaf_text(tok))
     if tok[0] == "(":
         in_ = tokens(tok[1:-1]) or []
+        if len(in_) >= 2 and re.fullmatch(r"[a-z][\w']*", in_[0]) and (env.get(in_[0]) or ("",))[0] == "I" and all((classify(x, env) or ("",))[0] == "V" for x in in_[1:]):
+            return ("I", leaf_text(tok))                                      # 恒等射が `!_` と分かる値だけ受けた括りは、恒等射が残る(R95・R48)
         if len(in_) >= 2 and all(re.fullmatch(r"[a-z][\w']*", x) for x in in_):
             cf_ = [env.get(x) for x in in_]
             if all(c is not None and c[0] == "F" and isinstance(c[1], int) and c[2] for c in cf_):
@@ -305,6 +307,7 @@ def resolve_seq(toks, env, root_alone=False):
         else:
             c = classify(v, env)
             if c is None: return None
+            if c[0] == "I" and c[1].startswith("[") and len(items) > 1: return None      # 括りの恒等射は、並びの中での読みが仕様の見本に無いので、根の被演算子だけ
             terms.append(c)
     if len(terms) >= 2 and terms[0][0] == "F" and re.fullmatch(r"\[(?:[-+*/%^] -?\d+|[a-z][\w']*),\]", terms[0][-1]) and all(t[0] == "V" for t in terms[1:]):
         return f"(unit {terms[0][-1]})"                                         # 点なしの可変長の口が `!_` と分かる値だけ受けたら、何も受けていないのと同じで関数が残る(R95)

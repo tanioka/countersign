@@ -3341,8 +3341,8 @@
 "leftover-lambda"
 ],
 "tree_want": "(& 1 (unit [i w]))",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R95|339451cdf3"
 },
 {

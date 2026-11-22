@@ -61,6 +61,7 @@ for src_, defs_, want_ in [("v 5", ["v : [* 2,] w"], "(apply v 5)")]:
     g_ = T.tree_of(src_, P + defs_)
     if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 点なしの可変長の括りが残った名前は、並びを受ける関数(R95)
 OK += [("[+] inc w~", "(apply (compose [+] inc) w~)")]     # 撒いた流れを受ける合成(R95・R84)
+OK += [("1 & (i w)", "(& 1 (unit [i w]))")]     # 恒等射が `!_` と分かる値だけ受けた括りは恒等射が残る(R95・R48)
 NONE = ["gd 3 4 7", "inc ~1 5", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc"]
 for s, t in OK:
     g = T.tree_of(s, P)
