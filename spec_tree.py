@@ -140,7 +140,7 @@ def _classify(tok, env):
         return None
     if re.fullmatch(r"-?\d+|0[xXbBrRuU][0-9A-Za-z]+|\d\dx[0-9A-Fa-f]+|\"[^\"]*\"|'.'|\$[\w']+|\$\$[\w']+", tok): return ("A", leaf_text(tok))
     if tok[0] == "[":
-        sec = section(tok)
+        sec = section(tok, env)
         if sec is not None: return sec
     if tok[0] == "(" and re.search(r"['@~]", tok):
         g = _eval_group(tok, env)
@@ -191,9 +191,11 @@ def _classify(tok, env):
 
 FOLDOPS = {"+", "-", "*", "/", "%", "^", "|", "&", ";", "<", "<=", "=", ">=", ">", "==", "||", ";;", "&&"}
 PLAINOPS = {"<<", ">>", "'", "@", "!=", "!==", "~"}
-def section(tok):
+def section(tok, env=None):
     """点なしの括り `[+]` `[+ 1]` `[' 0]` `[<<]` → ('F', 口, 綴り)。読めない形は None"""
     inner = tokens(tok[1:-1])
+    if env is not None and inner and len(inner) == 2 and (inner[0] in FOLDOPS) != (inner[1] in FOLDOPS) and all(t in FOLDOPS or t == "_" or (re.fullmatch(r"[a-z][\w']*", t) and (env.get(t) or ("",))[0] in ("F", "I")) for t in inner):
+        return ("F", 1, re.sub(r"\s+", " ", tok))                 # 点なしの括りの片側に関数・恒等射を書いた物(R87・R29・R48): 口は1つ
     if not inner or any("," in t for t in inner) or any(re.search(r"[A-Za-z_(\[$]", t) and not re.fullmatch(r"\$\w+|-?\d+", t) for t in inner): return None
     sp = re.sub(r"\s+", " ", tok)
     if len(inner) == 1 and inner[0] in FOLDOPS: return ("F", ("var", 1), sp)

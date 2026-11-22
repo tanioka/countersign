@@ -2588,8 +2588,8 @@
 "leftover-lambda"
 ],
 "tree_want": "(apply [+ inc] 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R87|42dc652e04"
 },
 {
@@ -2619,8 +2619,8 @@
 "actual": "5",
 "expected": "5",
 "tree_want": "(apply [+ i] 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R87|08f671e3f3"
 },
 {
@@ -2636,8 +2636,8 @@
 "leftover-lambda"
 ],
 "tree_want": "(apply [< _] 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R87|bd4bb2b0dd"
 },
 {
