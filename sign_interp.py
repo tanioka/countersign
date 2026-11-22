@@ -3350,6 +3350,8 @@ _NOFN2 = frozenset([Closure, Stream])
 def expand(v):
     if STRICT_GATES and isinstance(v, list) and not _NOFN.isdisjoint(map(type, v)):                  # 関数を含むか(C の速さで型を見る。Closure に派生は無い)
         strict_gate("G7: 関数を含む器は撒けません(`fs~`)")
+    if STRICT_GATES and type(v) is Closure and v is not ID and not v.dead and v.native is None:
+        strict_gate("G7: 関数を撒けません(`[inc]~`・`~inc~`。`~x~` は `[x]~` と同じ読みで、R79)")
     if isinstance(v, Struct) and v: return SpreadStruct(v)
     if is_unit(v): return Stream()
     if isinstance(v, str) and not isinstance(v, Char): return Stream(Char(c) for c in v)   # (String)~ は文字へ撒かれる

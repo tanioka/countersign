@@ -3774,3 +3774,9 @@ push のたびに動いていた。初回の結果は 62 本中 4 本が失敗�
 - 未検証: GPIO・I2C・SPI の実ピン(`/dev/gpiochip0`・`i2c-1`・`spidev0.0` はある。配線が分からないので動かしていない)、`/dev/fb0` は無い、入力装置(`/dev/input/event0〜3`)。
 - 利用者の報告(2026-11-22): SPI のループバック(`spi_loopback.sn`)と、I2C の AHT25 の温度(`aht25_demo.sn`)は、以前に実機で確認済み。この段階では再実行していない(記録は利用者の確認による)。残る実ピンは GPIO(`led_gpio.sn`・`led_blink.sn`・PWM)と入力装置・フレームバッファ。
 - 補足(同日): リポジトリの `pi_check/report.json` は x86_64 の Ubuntu(/dev/i2c・spidev・gpiochip が無い環境、疑似カーネルとの突き合わせ)で取ったもので、Pi の実機の結果ではない(SPI の 4027538085・GPIO の読み戻し・AHT25 の 0 はいずれもそこでの値)。SPI ループバックと AHT25 の実機の結果は、利用者が以前確認したとのことだが、記録が手元に無い。
+
+## 仕様の更新への追従(johnny-shaman/Sign 3d91c456、2026-11-23)
+- 取得先を原本 `johnny-shaman/Sign` に変更(`.github/workflows/spec-track.yml`)。以前の `tanioka/Sign` は 11/19 で止まったフォークだった。
+- R79: `~inc~` は `[inc]~` と同じ G7。`expand` が strict で関数(`Closure`)を撒こうとしたら G7 で断る。`[inc]~` も同じに断る(以前は `~[<fn/1>]` を値として返していた)。
+- R121: `F … x , R` は `[F … x] , R`。実装の読みは合っている(`fp 1 , 2 , 3` は積 `1 2 3`)。値の綴り `1 , 2 , 3` との比べだけ食い違うので、設計者への質問 G1 に回した。`spec_track_last.json` は未更新(差を見えるまま残す)。
+- 木の出力: `inc ~$w 5`・`inc ~5~`・`inc ~w~ 5`・`fp [1 , 2 , 3]` は未対応、`fp 1 , 2 , 3`・`fp 1 2 , 3` は旧仕様の木(不一致 2)。次の課題。
