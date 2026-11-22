@@ -4689,6 +4689,7 @@ def _ev(n, env):
     if k == "hole": return UNIT                          # 書いた _ は印(単位)
     if k == "seq": return ev_seq(n[1], env)
     if k == "def":
+        if STRICT_GATES and isinstance(n[2], tuple) and n[2] and n[2][0] == "lam": nest_shape_gate(n[1], n[2])
         _lo = LEFTOVERS[0]
         if STRICT_GATES: KEEP[0] = n[2]
         v = ev_place(n[2], env, rhs=True)
@@ -5472,6 +5473,22 @@ def is_identity_name(x, env, pnames):         # `i : _` の名前は恒等射(�
     if not (isinstance(x, tuple) and x and x[0] == "id") or x[1] in pnames: return False
     if env.owner(x[1]) is None: return x[1] in IDENT_NAMES
     return False
+def nest_shape_gate(name, lam):                # R22: 自分を呼ぶ実引数が、残りを受ける名前を2項以上の括りの要素に入れ直す形(`f : [x ~xs] ? f [xs xs]`)は、実体の形が段ごとに深くなり続けるので G7(実体の守り)
+    tails = {sp[2] for sp in lam[1] if sp[0] == "destr" and sp[2]}
+    if not tails: return
+    def walk(x):
+        if isinstance(x, list):
+            for y in x: walk(y)
+            return
+        if not isinstance(x, tuple) or not x: return
+        if x[0] == "seq" and isinstance(x[1], list) and x[1] and x[1][0] == ("id", name):
+            for a in x[1][1:]:
+                inner = a[1] if isinstance(a, tuple) and a and a[0] == "block" else None
+                if isinstance(inner, tuple) and inner and inner[0] == "seq" and isinstance(inner[1], list) and len(inner[1]) >= 2 and any(e in [("id", t) for t in tails] for e in inner[1]):
+                    raise Gate(f"G7: `{name}` が自分を呼ぶ実引数 `[{' '.join(node_src(e) for e in inner[1])}]` は、残りを受ける名前を括りの要素に入れ直し、実体の形が段ごとに深くなり続けます(R22。実体を作る守り)。残りは `{name} xs` のように並べ直さずに渡すか、再帰の形を変えます")
+        for c in x[1:]:
+            if isinstance(c, (list, tuple)): walk(c)
+    walk(lam[2])
 def branch_unit_gate(n, env):                  # R128(2026-11-18 版): 本体の枝の条件か値が `!_` と分かる値(印 zero の物、R49。未定義の名前も)なら、呼ばない定義でも G22。既定の行は枝でない
     body = n[2]
     while isinstance(body, tuple) and body and body[0] == "block": body = body[1]

@@ -1395,3 +1395,13 @@ def main(argv):
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
 
+
+# R22: 残りを受ける名前を括りの要素に入れ直して自分を呼ぶ形は G7(実体の形が深くなり続ける)
+def _g7_nest():
+    import sign_interp as S
+    S.STRICT_GATES = True
+    try:
+        try: S.run("f : [x ~xs] ? f [xs xs]\nf [1]\n"); return False
+        except BaseException as e: return "G7" in str(e)
+    finally: S.STRICT_GATES = False
+print("ok  R22 実体の形が深くなる再帰は G7" if _g7_nest() else "NG  R22 G7 nest")

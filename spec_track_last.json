@@ -5742,12 +5742,10 @@
 "line": 1183,
 "src": "f [1]",
 "kind": "R",
-"state": "known",
-"actual": "!_",
+"state": "ok",
+"actual": "断り: G7: `f` が自分を呼ぶ実引数 `[xs xs]` は、残りを受ける名前を括りの要素に入れ直し、実体の形が段ごとに深",
 "expected": "G7",
-"why": "断りのはずが 値 !_",
-"id": "coproduct_spec.md|R22|f9943833fa",
-"known": "実装の穴: 実体の形が深くなり続ける G7 の守りが無い(OPEN_QUESTIONS 参照)"
+"id": "coproduct_spec.md|R22|f9943833fa"
 },
 {
 "doc": "coproduct_spec.md",
