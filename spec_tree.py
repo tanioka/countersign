@@ -69,12 +69,13 @@ def kinds_from(defs):
     return env
 
 def leaf_text(t):
-    """葉の綴り: 丸い括りは角括りに、空白は 1 つに"""
+    """葉の綴り: 丸い括りは(入れ子も)角括りに、空白は 1 つに。文字列の中は変えない"""
     t = re.sub(r"\s+", " ", t.strip())
-    if t.startswith("(") and t.endswith(")"):
-        inner = tokens(t[1:-1])
-        if inner is not None: t = "[" + " ".join(inner) + "]"
-    return t
+    out, q = [], False
+    for ch in t:
+        if ch == '"': q = not q
+        out.append(("[" if ch == "(" else "]" if ch == ")" else ch) if not q else ch)
+    return "".join(out)
 
 def classify(tok, env):
     c = _classify(tok, env)
@@ -186,7 +187,10 @@ def _plain_head(name, env):
 
 def operand(tok, env, root):
     c = classify(tok, env)
-    if c is None: return None
+    if c is None:
+        if root and re.fullmatch(r"~?-?\d+~?|[\w']+|[\[(][^?:]*[\])]", tok) and not (re.fullmatch(r"[\w']+", tok) and (env.get(tok) or ("",))[0] in ("F", "I")) and "_" != tok:
+            return leaf_text(tok)                                              # 根の中置の被演算子は綴りのまま(値の読みに依らない)
+        return None
     if c[0] == "A": return c[1]
     if c[0] == "V": return c[1]
     return f"(unit {c[-1]})"

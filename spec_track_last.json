@@ -98,7 +98,7 @@
 "state": "ok",
 "actual": "[2, 3]",
 "expected": "2 3",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R19|919059f3b5"
 },
 {
@@ -283,7 +283,7 @@
 "state": "ok",
 "actual": "[2, 2]",
 "expected": "2 2",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R121|7708849554"
 },
 {
@@ -2886,7 +2886,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R77|6a9969f368"
 },
 {
@@ -3319,7 +3319,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree": "match",
+"tree": "unsupported",
 "id": "coproduct_spec.md|R66|1cd7b8abf3"
 },
 {
@@ -3334,7 +3334,7 @@
 "expected_warn": [
 "leftover-lambda"
 ],
-"tree": "match",
+"tree": "unsupported",
 "id": "coproduct_spec.md|R66|8a16363040"
 },
 {
@@ -3550,7 +3550,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "$inc",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R99|492e53992d"
 },
 {
@@ -3562,7 +3562,7 @@
 "state": "ok",
 "actual": "$inc",
 "expected": "$inc",
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R99|12e5522f53"
 },
 {
@@ -5517,7 +5517,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|1770125e40"
 },
 {
@@ -5532,7 +5532,7 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree": "unsupported",
+"tree": "match",
 "id": "coproduct_spec.md|R62|5b976903ba"
 },
 {
