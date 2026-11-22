@@ -55,8 +55,29 @@ def obs_sir(t):
         return R.evaluate(f, top)
     except R.Unsup as e: return ("unsup", str(e))
     except BaseException as e: return ("crash", type(e).__name__ + str(e)[:40])
+_ns = {}
+def obs_asm(t):
+    """機械語(strict_rewrite + generate + エミュレータ)の観測。断り・罠は答えを出さない観測。"""
+    import sign_asm
+    if not _ns:
+        here = os.path.dirname(os.path.abspath(__file__))
+        src = open(os.path.join(here, "test_asm.py"), encoding="utf-8").read()
+        _ns.update({"__file__": os.path.join(here, "test_asm.py"), "__name__": "emu"})
+        exec(compile(src[:src.index("# ---------------- 処理系の答え")], "emu", "exec"), _ns)
+        sign_asm.STRICT[0] = True
+    try:
+        tree, rest = sign_asm.strict_rewrite(S.parse_source(t))
+        if rest: return ("refuse", "strict_rewrite")
+        got = _ns["run_asm"](sign_asm.generate(tree))
+    except sign_asm.AsmError as e: return ("refuse", str(e)[:30])
+    except Exception as e: return ("refuse", "例外 " + type(e).__name__)
+    if got[0] == "trap": return ("trap",)
+    if got[0] != "ok": return ("refuse", str(got)[:30])
+    return ("void",) if got[1] == "__" else ("val", got[1])
+
 def main():
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 2000; r = random.Random(int(sys.argv[2]) if len(sys.argv) > 2 else 1)
+    av = [x for x in sys.argv[1:] if not x.startswith('--')]
+    n = int(av[0]) if av else 2000; r = random.Random(int(av[1]) if len(av) > 1 else 1)
     tally, bad = {}, []
     for _ in range(n):
         t = fix(program(r)); b = obs_sir(t)
@@ -66,6 +87,11 @@ def main():
         if a[0] in ("refuse", "other") or b == ("partial",) or b == ("fuel",): k = "比べない: " + ("評価器が断る" if a[0]=="refuse" else "評価器の値が整数でない" if a[0]=="other" else "部分適用" if b==("partial",) else "燃料"); tally[k] = tally.get(k, 0) + 1; continue
         if a == b: tally["一致"] = tally.get("一致", 0) + 1
         else: bad.append((t, a, b))
+        if "--asm" in sys.argv:
+            c = obs_asm(t)
+            k = "後段 一致" if c == b else ("後段 断り" if c[0] == "refuse" else "後段 罠" if c[0] == "trap" else "後段 誤答")
+            tally[k] = tally.get(k, 0) + 1
+            if k == "後段 誤答": bad.append((t, "機械語 " + str(c), b))
     print("乱数照合:", tally, "食い違い", len(bad))
     for t, a, b in bad[:8]: print("---\n" + t + f"評価器 {a} / SIR {b}")
     return 1 if bad else 0

@@ -41,9 +41,8 @@ def obs_asm(t):
     except sign_asm.AsmError as e: return ("refuse", str(e)[:40])
     except Exception as e: return ("refuse", "例外 " + str(e)[:30])
     if got[0] == "trap": return ("trap",)
-    if got[0] != "exit": return ("refuse", str(got)[:30])
-    s = got[1].strip()
-    return ("void",) if s == "__" else (("val", int(s)) if s.lstrip("-").isdigit() else ("unsup", "出力 " + s[:20]))
+    if got[0] != "ok": return ("refuse", str(got)[:30])
+    return ("void",) if got[1] == "__" else ("val", got[1])
 
 i_ = src.index("MAX, MIN1 = "); j_ = src.index("\n]\n", src.index("CASES = [")) + 3
 exec(src[i_:j_], ns)
