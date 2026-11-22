@@ -90,6 +90,9 @@ def _classify(tok, env):
     if tok[0] == "[":
         sec = section(tok)
         if sec is not None: return sec
+    if tok[0] == "(" and re.search(r"['@~]", tok):
+        g = _eval_group(tok, env)
+        if g is not None: return g
     if tok[0] in "([":
         inner = tokens(tok[1:-1])
         if inner is None or any(t in TIGHT + ROOT for t in inner) is False and False: return None
@@ -345,8 +348,28 @@ def kinds_from_eval(defs):
                 try: vv = S.unit_like(("id", nm), e, set()) or (isinstance(dn, tuple) and dn and dn[0] == "addr" and S.unit_like(dn, e, set()))     # R49: `q : $w` のように `!_` と分かる値を右辺に持つ名前も(評価器の zeronames はまだ持たない→ OPEN_QUESTIONS)
                 except BaseException: vv = False
                 env[nm] = ("V",) if vv else ("A",)
+        env["\0env"] = e
     finally: S.STRICT_GATES = old
     return env
+
+def _eval_group(tok, env):
+    """P2: `'`・`@`・`~` を含む括りの項を評価器に聞く。`!_` と分かる → ('V', 綴り)、閉じた式で値がある → ('A', 綴り)、分からない → None"""
+    e = env.get("\0env")
+    if e is None: return None
+    import sign_interp as S
+    mm = re.fullmatch(r"\(\s*(?:0x[0-9A-Fa-f]+|\d\dx[0-9A-Fa-f]+)\s*'\s*(.+?)\s*\)", tok)
+    if mm and not re.search(r"(?<![0-9A-Za-z])[A-Za-z_]", re.sub(r"0x[0-9A-Fa-f]+", "", mm.group(1))): return ("A", leaf_text(tok))     # 番地を数や範囲で引いた中身は機械の読みで、解決器は `!_` と言わない(評価器は機械を持たず `!_` になる)
+    old = S.STRICT_GATES; S.STRICT_GATES = True
+    try:
+        node = S.parse_source(tok + "\n")
+        if len(node) != 1: return None
+        node = node[0]
+        if S.unit_like(node, e, set()): return ("V", leaf_text(tok))
+        inner = node[1] if node[0] == "block" else node
+        if S.closed_expr(inner, e, set()): return ("A", leaf_text(tok))
+    except BaseException: return None
+    finally: S.STRICT_GATES = old
+    return None
 
 def items_of(text):
     """ファイルを、字下げの無い行で始まる項目(行番号, 本文の行の列)に分ける。空行と `--` の注釈だけの行は飛ばす"""
