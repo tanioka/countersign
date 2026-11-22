@@ -564,8 +564,8 @@
 "actual": "6",
 "expected": "6",
 "tree_want": "(apply inc 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R26|6fe88bf5ee"
 },
 {
@@ -632,8 +632,8 @@
 "actual": "6",
 "expected": "6",
 "tree_want": "(apply inc 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R26|9ed3652d8d"
 },
 {

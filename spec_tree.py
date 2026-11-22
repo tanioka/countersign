@@ -573,6 +573,11 @@ def _eval_group(tok, env):
             if x[0] == "bin" and x[1] == "~": return len(x) == 4 and _data(x[2]) and _data(x[3])
             if x[0] == "post" and x[1] == "~": return _data(x[2])
             return False
+        if inner[0] == "bin" and inner[1] in ("'", "@") and len(inner) == 4:     # 名前の鍵(`_` も)は欄の名前で、読まない(R64・R115)。入れ物が閉じていて引いて `!_` なら `!_` と分かる値
+            ct_, ky_ = (inner[2], inner[3]) if inner[1] == "'" else (inner[3], inner[2])
+            if ct_[0] == "id" and (ky_[0] == "id" or ky_ == ("not", ("hole",))) and S.closed_expr(ct_, e, set()):
+                v_ = S.quiet_ev(inner, e)
+                if v_ is not None and v_ is not S.ID and not isinstance(v_, S.Closure) and S.is_unit(v_): return ("V", leaf_text(tok))
         if inner[0] == "bin" and inner[1] == "'" and len(inner) == 4 and _data(inner[2]) and _data(inner[3]):      # R26・R112: 字面のデータを字面の鍵で引いて無ければ `!_` と分かる値
             v_ = S.quiet_ev(inner, e)
             if v_ is not None and v_ is not S.ID and not isinstance(v_, S.Closure) and S.is_unit(v_): return ("V", leaf_text(tok))

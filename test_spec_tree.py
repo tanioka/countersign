@@ -15,6 +15,7 @@ for src_, defs_, want_ in [("p _ 2", ["p : add"], "(unit (? [$p0] (apply p (cons
     g_ = T.tree_of(src_, P + defs_)                                        # 別名・部分適用の名前は、残りの口の素の関数(R16)
     if g_ != want_: bad += 1; print("NG", src_, defs_, g_, want_)
 OK += [("inc ([1 2] ' 5) 5", "(apply inc 5)"), ("inc (5 ' [1 ~ 3]) 5", "(apply inc 5)"), ("inc ([1 2] ' 1) 5", None)]     # 字面のデータを字面の鍵で引いて領域の外なら `!_`(R26・R112)
+OK += [("inc (vs ' _) 5", "(apply inc 5)"), ("inc (b @ pw) 5", "(apply inc 5)")]     # 名前の鍵で引いて無ければ `!_`(R64・R115)
 NONE = ["v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc", "inc i [* 2,] 1 2"]
 for s, t in OK:
     g = T.tree_of(s, P)
