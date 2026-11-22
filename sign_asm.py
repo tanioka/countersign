@@ -6475,6 +6475,17 @@ def _fold_minmax(n):
     for x in args[1:]: e = ("bin", "|", ("cmp", [e, x], [h[2]]), x)
     return ("block", e)
 
+# strict の形の規則の表(番号 → 名前・書き換える所・断る所)。二つの関数は直列: strict_rewrite が書き換え、その結果に strict_divergences をかけて残りを断る。
+# 形が両方をすり抜けない(書き換えるか断るかのどちらかに必ず当たる)ことは test_strict_rules.py が見本で守る。
+STRICT_RULES = {
+    1: ("鍵が名前 `x ' k`(R64)",         "strict_rewrite: 鍵を `__` に",                 "strict_divergences: 書き換え残り"),
+    2: ("逆適用 `c f`",                  "strict_rewrite: `c` だけに",                   "strict_divergences: 書き換え残り(`c f x` など)"),
+    3: ("行の値が `!_` になりうる(R128)", "strict_rewrite: `(c & v) | 次の行以降`",       "strict_divergences: 静的に見えない形"),
+    4: ("行の左が名前だけ(R128)",        "strict_rewrite: `(y | y)` に",                 "strict_divergences: 仮引数でもファイルの値でもない名前"),
+    5: ("`!=` の void",                  "strict_rewrite: `(a==a)&(b==b)&(a!=b)` に",    "(断りなし)"),
+    6: ("順序・等しさの畳み",            "strict_rewrite: 最大・最小に(`__` なしの整数・名前だけ)", "strict_divergences: それ以外の畳み(`__`・計算・`==`/`=` の void 混じり)"),
+}
+
 def _fold_eq_simple(n):
     """`[==] a b …`・`[=] a b …` で、実引数が字面の整数・名前(`__` でない)だけ。void が混ざらないので既定の読みと答えが同じ。"""
     if not (isinstance(n, tuple) and n and n[0] == "seq" and len(n[1]) >= 2): return False
