@@ -2802,8 +2802,8 @@
 "actual": "5",
 "expected": "5",
 "tree_want": "(construct (' [q 1] g) 4)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R125|9b14545837"
 },
 {
@@ -2819,8 +2819,8 @@
 "bare-function-return"
 ],
 "tree_want": "(construct (' [f 1] g) 4)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R125|b10d7ee8c7"
 },
 {
@@ -2836,8 +2836,8 @@
 "bare-function-return"
 ],
 "tree_want": "(construct (' [q 1] g) 4)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R125|9b14545837"
 },
 {
@@ -2887,8 +2887,8 @@
 "bare-function-return"
 ],
 "tree_want": "(construct (' [f 5] g) 4)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R125|2cd338f333"
 },
 {

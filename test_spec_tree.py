@@ -26,6 +26,9 @@ OK += [("[!_] 1 2 3 4 5", "(apply [!_] (construct 1 2 3 4 5))")]     # 前置・
 OK += [("(5 inc) 3", "(construct [5 inc] 3)"), ("(3 | inc) 5", "(construct [3 | inc] 5)")]     # 字面の数に続く関数は余る(R52・R136)
 OK += [("gd 3 (3 < 2) 7", "(apply gd (construct 3 [3 < 2] 7))")]     # 既定値のある関数に口より多く、`!_` でありうる括りを混ぜて渡す(R83)
 OK += [("[* 2,] w", "(unit [* 2,])"), ("[* 2,] 1 2 3", "(apply [* 2,] (construct 1 2 3))")]     # 点なしの可変長の口が `!_` だけ受ければ関数が残る(R95)
+for src_, defs_, want_ in [("(q 1) ' g 4", ["inc : x ? x + 1", "q : x ? [g : inc]"], "(construct (' [q 1] g) 4)"), ("(q 1) ' g", ["inc : x ? x + 1", "q : x ? [g : inc]"], "(' [q 1] g)")]:
+    g_ = T.tree_of(src_, P + defs_)
+    if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 呼んだ答えを欄の名前で引いた物は種類が未知で値を受けない(R125)
 NONE = ["gd 3 4 7", "inc ~1 5", "[add,] vs", "v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc", "inc i [* 2,] 1 2"]
 for s, t in OK:
     g = T.tree_of(s, P)

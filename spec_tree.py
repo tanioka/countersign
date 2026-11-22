@@ -261,6 +261,8 @@ def resolve_seq(toks, env, root_alone=False):
     for kind, v in items:
         if kind == "fold":
             g = v
+            if len(g) == 3 and g[1] == "'" and not terms and g[0][0] == "(" and re.fullmatch(r"[a-z][\w']*", g[2]) and (classify(g[0], env) or ("",))[0] == "A":
+                terms.append(("A", f"(' {leaf_text(g[0])} {g[2]})")); continue     # 括りの名前の鍵(欄の名前、R64)で引いた物は種類が未知で、続く値を受けない(R125)。並びの先頭だけ
             if any(x in ("'", "@", "~") for x in g): return None
             c = [classify(x, env) for x in g[::2]]
             if any(x is None or x[0] != "A" for x in c): return None
