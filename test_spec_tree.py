@@ -9,8 +9,12 @@ OK += [("i 1 2 3", "(apply i (construct 1 2 3))"), ("i inc 1 2", "(construct (ap
 OK += [("$[inc 5] + 1", "(+ $[inc 5] 1)"), ("$($inc + 1) + 2", "(+ $[$inc + 1] 2)"), ("$[1 +] == $inc", "(== $[1 +] $inc)"), ("$_ , $inc", "(, $_ $inc)"),     # 式の番地・恒等射の番地は値(R62・R101)
        ("@[$_] 1 2", "(apply @[$_] (construct 1 2))"), ("@[$_] inc 1 2", "(construct (apply inc 1) 2)")]
 OK += [("fs : $inc , $double , 3", "(: fs (, $inc (, $double 3)))"), ("x : 1 , 2", "(: x (, 1 2))")]          # 右辺が `,` の連なりの値の定義
-NONE = ["v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc", "inc i [* 2,] 1 2"]
 bad = 0
+OK += [("[add] _ 2", "(unit (? [$p0] (apply [add] (construct $p0 2))))")]
+for src_, defs_, want_ in [("p _ 2", ["p : add"], "(unit (? [$p0] (apply p (construct $p0 2))))"), ("q _ 2", ["q : f3 1"], "(unit (? [$p0] (apply q (construct $p0 2))))"), ("q 5 6", ["q : f3 1"], "(apply q (construct 5 6))")]:
+    g_ = T.tree_of(src_, P + defs_)                                        # 別名・部分適用の名前は、残りの口の素の関数(R16)
+    if g_ != want_: bad += 1; print("NG", src_, defs_, g_, want_)
+NONE = ["v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc", "inc i [* 2,] 1 2"]
 for s, t in OK:
     g = T.tree_of(s, P)
     if g != t: bad += 1; print("NG", s, g, t)

@@ -99,6 +99,9 @@ def _classify(tok, env):
     if re.fullmatch(r"\$_", tok): return ("A", tok)                                   # 恒等射の番地(R62・R101): 値
     if len(tok) > 3 and tok[0] == "$" and tok[1] in "[(" and tok[-1] == {"[": "]", "(": ")"}[tok[1]] and _balanced(tok[1:]):
         return ("A", "$[" + tok[2:-1] + "]")                                    # 式の番地 `$[…]`・`$(…)`: 値。括りは `[…]` で書く(R62)
+    mb = re.fullmatch(r"\[([a-z][\w']*)\]", tok)
+    if mb and (env.get(mb.group(1)) or ("",))[0] == "F" and isinstance(env[mb.group(1)][1], int) and env[mb.group(1)][2]:
+        return ("F", env[mb.group(1)][1], tok)                                  # 素の関数 1 つの括り `[add]` は、その関数と同じ口の関数(R16)
     if tok == "@[$_]": return ("I", tok)                                              # 恒等射の番地を開いた物は恒等射(R74・R49)
     if len(tok) > 1 and tok[0] == "@" and not tok.startswith("@@"):                    # 前置 `@`(関数の番地を開く、R49・R78)
         base = tok[1:]
@@ -527,6 +530,13 @@ def kinds_from_eval(defs):
                 if not isinstance(ps, (list, tuple)): env[nm] = None; continue
                 dn = (e.__dict__.get("defnodes") or {}).get(nm)
                 has_def = any((p[0] == "name" and p[2] is not None) or (p[0] == "destr" and len(p) > 3 and p[3]) for p in ps)
+                if isinstance(dn, tuple) and dn and dn[0] in ("id", "seq") and not has_def and all(p[0] == "name" for p in ps):
+                    base = env.get(dn[1]) if dn[0] == "id" else (env.get(dn[1][0][1]) if dn[1] and dn[1][0][0] == "id" else None)
+                    k_ = 0 if dn[0] == "id" else len(dn[1]) - 1
+                    if dn[0] == "seq" and not all(x[0] == "lit" and isinstance(x[1], int) for x in dn[1][1:]): base = None
+                    rem = len(ps) - len(getattr(v, "args", None) or [])                     # 部分適用の Closure は元の口を持ち、束縛済みの実引数を別に持つ
+                    if base and base[0] == "F" and isinstance(base[1], int) and base[2] and base[1] - k_ == rem > 0:
+                        env[nm] = ("F", rem, True, [("p",)] * rem, [False] * rem); continue      # 別名 `p : add`・部分適用の名前 `q : f3 1` は、残りの口の素の関数(R16)
                 if (has_def and any(p[0] != "name" for p in ps)) or not (isinstance(dn, tuple) and dn and dn[0] == "lam"): env[nm] = None; continue     # 既定値のある口・括りでない定義(`z : @$inc`)の種類は仕様が「未知」
                 last = ps[-1] if ps else None
                 var = last is not None and last[0] == "destr" and (len(last[1]) > 1 or last[2])
