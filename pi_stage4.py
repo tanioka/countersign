@@ -167,7 +167,7 @@ def make(d):
             if isinstance(r, tuple): exp, files = r
             else: exp = r
         elif exp == "~": pass
-        want_fs = None if files is None else {n: b.decode("latin-1") for n, b in files.items()}
+        want_fs = None if (files is None or c["kind"] == "db") else {n: b.decode("latin-1") for n, b in files.items()}
         rows.append(dict(idx=idx, cat=c["cat"], name=c["name"], kind=c["kind"], expect=exp, rx=c["rx"], timing=c["timing"], group=c["group"], par=c["par"], fs=want_fs,
                          strip_zero=(c["expect"] == "console")))
     json.dump(rows, open(os.path.join(d, "expected.json"), "w"), ensure_ascii=False, indent=1)

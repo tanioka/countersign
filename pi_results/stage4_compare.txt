@@ -1,0 +1,40 @@
+{'一致': 44}
+  UART: {'一致': 4}
+  時計: {'一致': 2}
+  メモリ: {'一致': 4}
+  ファイル: {'一致': 2}
+  ネット: {'一致': 6}
+  DB: {'一致': 2}
+  並列: {'一致': 24}
+
+並列(ミリ秒。直列 → par=2 → par=4。実機 nproc=4)
+  fib 30 + fib 31                  42 →     29 →     20  (par=2 1.45 倍, par=4 2.10 倍)
+  fib 32(再帰の中で分ける)                 42 →     33 →     20  (par=2 1.27 倍, par=4 2.10 倍)
+  積 fib 26 * fib 27                10 →      8 →      7  (par=2 1.25 倍, par=4 1.43 倍)
+  連なり 4 個                          36 →     29 →     19  (par=2 1.24 倍, par=4 1.89 倍)
+  2 引数                              5 →      5 →      5  (par=2 1.00 倍, par=4 1.00 倍)
+  実引数の呼びどうし                        42 →     33 →     20  (par=2 1.27 倍, par=4 2.10 倍)
+  0 で割る(__)                         4 →      4 →      5  (par=2 1.00 倍, par=4 0.80 倍)
+  軽い(直列に戻る)                         4 →      5 →      5  (par=2 0.80 倍, par=4 0.80 倍)
+
+装置ファイル:
+ls: '/dev/fb0' にアクセスできません: そのようなファイルやディレクトリはありません
+crw-rw----+ 1 root gpio  254,  0 11月 22 09:33 /dev/gpiochip0
+crw-rw----+ 1 root gpio  254,  1 11月 22 09:33 /dev/gpiochip1
+lrwxrwxrwx  1 root root        9 11月 22 09:33 /dev/gpiochip4 -> gpiochip0
+crw-rw----  1 root i2c    89,  1 11月 22 09:33 /dev/i2c-1
+crw-rw----  1 root i2c    89, 20 11月 22 09:33 /dev/i2c-20
+crw-rw----  1 root i2c    89, 21 11月 22 09:33 /dev/i2c-21
+crw-rw----  1 root input  13, 64 11月 22 09:33 /dev/input/event0
+crw-rw----  1 root input  13, 65 11月 22 09:33 /dev/input/event1
+crw-rw----  1 root input  13, 66 11月 22 09:33 /dev/input/event2
+crw-rw----  1 root input  13, 67 11月 22 09:33 /dev/input/event3
+crw-rw----  1 root spi   153,  0 11月 22 09:33 /dev/spidev0.0
+crw-rw----  1 root spi   153,  1 11月 22 09:33 /dev/spidev0.1
+/usr/include/sqlite3.h
+/usr/bin/gcc
+/usr/bin/as
+/usr/bin/ld
+/usr/bin/sqlite3
+
+誤答: 0
