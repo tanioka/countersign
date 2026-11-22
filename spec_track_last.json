@@ -6512,8 +6512,8 @@
 "actual": "!_",
 "expected": "!_",
 "tree_want": "(# [fs ' [0 ~ 0]] $double)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R62|89063341f4"
 },
 {
@@ -6526,8 +6526,8 @@
 "actual": "!_",
 "expected": "!_",
 "tree_want": "(# [fs ' [0 ~ 0]] 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R62|02a7fdf1ef"
 },
 {
