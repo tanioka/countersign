@@ -35,6 +35,7 @@ for src_, defs_, want_ in [("(fs ' [0 ~ 0]) # 5", ["fs : $inc , $double , 3"], "
     g_ = T.tree_of(src_, P + defs_)
     if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 器の位置の切り出しは値で、`#` の左の書く場所(R62)
 OK += [("@($inc ' -1) 5", "(apply @[$inc ' -1] 5)")]     # 関数の番地を負の鍵で引いた括りは値で、`@` が開く(R102)
+OK += [("inc [w w] 5", "(apply inc 5)"), ("[w 5]", "[w 5]")]     # 括りの中の `!_` と分かる要素は単位として消え、全部なら `!_` と分かる括り(R137)
 NONE = ["gd 3 4 7", "inc ~1 5", "[add,] vs", "v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc", "inc i [* 2,] 1 2"]
 for s, t in OK:
     g = T.tree_of(s, P)

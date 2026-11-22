@@ -2069,8 +2069,8 @@
 "dollar-non-function"
 ],
 "tree_want": "(apply pc (construct [w 1] 5))",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R137|c8f4a96921"
 },
 {
@@ -2184,8 +2184,8 @@
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
 "tree_want": "(apply inc 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R137|6b5c29a6cd"
 },
 {

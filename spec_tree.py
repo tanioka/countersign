@@ -160,6 +160,12 @@ def _classify(tok, env):
     if tok[0] == "[":
         sec = section(tok, env)
         if sec is not None: return sec
+    if tok[0] == "[" and tok[-1] == "]":
+        its_ = tokens(tok[1:-1]) or []
+        if its_ and not any(x in TIGHT or x in ROOT or x == "," for x in its_):
+            cs_ = [classify(x, env) for x in its_]
+            if all(c is not None and c[0] in ("A", "V") for c in cs_) and any(c[0] == "V" for c in cs_):
+                return ("V", leaf_text(tok)) if all(c[0] == "V" for c in cs_) else ("A", leaf_text(tok))      # `!_` と分かる要素は括りの中で単位として消える: 全部なら `!_` と分かる括り、混ざれば書いた括りのまま(R137)
     if tok[0] == "(" and re.search(r"['@~]", tok):
         g = _eval_group(tok, env)
         if g is not None: return g
