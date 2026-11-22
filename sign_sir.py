@@ -233,7 +233,7 @@ def nonvoid(e):
 
 def has_call(e):
     if not isinstance(e, tuple): return False
-    if e[0] == "call": return True
+    if e[0] == "call" and e[2]: return True                 # 口の無い呼び(値の名前)は二重に評価しても同じ値
     for x in e[1:]:
         if isinstance(x, tuple) and has_call(x): return True
         if isinstance(x, list) and any(has_call(y) for y in x if isinstance(y, tuple)): return True
@@ -273,6 +273,9 @@ def raise_ast(funcs, top):
         if k == "call":
             if not e[2]: return ("id", e[1])
             return ("seq", [("id", e[1])] + [blk(r(x, False)) for x in e[2]])          # void になりうる実引数は strict の部分適用。asm 側の strict_call_check が罠か断りにする
+        if k == "list": return ("seq", [r(("int", v), False) for v in e[1]])
+        if k == "idx": return ("bin", "'", blk(r(e[1], False)), blk(r(e[2], False)))
+        if k == "len": return ("norm", blk(r(e[1], False)))
         if k == "fold":
             op = e[1]
             xs = [x for x in e[2] if x[0] != "void"]                                  # 字面の void は畳みで飛ばされる

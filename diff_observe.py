@@ -33,6 +33,18 @@ def obs_sir(t):
         return R.evaluate(f, top) if False else (lambda r: ("unsup", "fuel") if r == ("fuel",) else r)(R.evaluate(f, top))
     except R.Unsup as e: return ("unsup", str(e))
 
+def obs_asm_sir(t):
+    """SIR を旧 AST に戻し、strict_rewrite を通さずに generate へ(段階 C の試作)。"""
+    try:
+        f, top = R.lower(S.parse_source(t)); nodes = R.raise_ast(f, top)
+    except R.Unsup as e: return ("unsup", str(e)[:30])
+    try: got = ns["run_asm"](sign_asm.generate(nodes))
+    except sign_asm.AsmError as e: return ("refuse", str(e)[:40])
+    except Exception as e: return ("refuse", "例外 " + str(e)[:30])
+    if got[0] == "trap": return ("trap",)
+    if got[0] != "ok": return ("refuse", str(got)[:30])
+    return ("void",) if got[1] == "__" else ("val", got[1])
+
 def obs_asm(t):
     try:
         tree, rest = sign_asm.strict_rewrite(S.parse_source(t))
@@ -46,7 +58,7 @@ def obs_asm(t):
 
 i_ = src.index("MAX, MIN1 = "); j_ = src.index("\n]\n", src.index("CASES = [")) + 3
 exec(src[i_:j_], ns)
-front = collections.Counter(); back = collections.Counter(); unsup = collections.Counter(); bad = []
+via = collections.Counter(); front = collections.Counter(); back = collections.Counter(); unsup = collections.Counter(); bad = []
 for name, t in ns["CASES"]:
     t2 = fix(t)
     a, b = obs_strict(t2), obs_sir(t2)
@@ -57,12 +69,18 @@ for name, t in ns["CASES"]:
     elif b == ("partial",): front["SIR: 部分適用(実引数が void)"] += 1
     else: front["食い違い"] += 1; bad.append(("前段", name, a, b))
     c = obs_asm(t2)
+    if b not in (("partial",),):
+        d = obs_asm_sir(t2)
+        k2 = "戻せない" if d[0] == "unsup" else "一致" if d == b else "断り" if d[0] == "refuse" else "罠" if d[0] == "trap" else "誤答"
+        via[k2] += 1
+        if k2 == "誤答": bad.append(("SIR経由", name, b, d))
     if b in (("partial",),): continue
     if c == b: back["一致"] += 1
     elif c[0] == "refuse": back["機械語が断る"] += 1
     elif c[0] == "trap": back["機械語が罠(溢れ・部分適用)"] += 1
     else: back["誤答"] += 1; bad.append(("後段", name, b, c))
 print("前段(評価器 = SIR):", dict(front)); print("後段(SIR = 機械語):", dict(back))
+print("SIR 経由の機械語(strict_rewrite なし):", dict(via))
 print("SIR に下げられない形(上位):", unsup.most_common(8))
 for x in bad: print("NG", *x)
 sys.exit(1 if [x for x in bad] else 0)
