@@ -79,6 +79,19 @@ for t, want in FLOWS:
     elif got[0] == "断り": bad += 1; print("NG 断った", repr(t[-50:]))
     elif (got[0], got[1].strip()) != ("exit", ("__" if sv == "!_" else sv)): bad += 1; print("NG", repr(t[-50:]), "strict", sv, "asm", got)
 
+# 罠を出せなかった呼びが残れば断る(安全装置 part_seen)。strict_call_check が余計な呼びを記録した形で確かめる。
+_orig_scc = sign_asm.Program.strict_call_check
+def _scc_fake(self):
+    r = _orig_scc(self)
+    if r is None: self.part_trap[-1] = (("seq", []), "(試験: 記録だけで罠を出さない呼び)", None)
+    return r
+sign_asm.Program.strict_call_check = _scc_fake
+try:
+    _t = "g : x ? x + 1\n\nf : x ? 1 (g x)\n\nf 3\n"
+    try: sign_asm.generate(sign_asm.strict_rewrite(S.parse_source(_t))[0], "linux"); bad += 1; print("NG 罠を出せない呼びが残るのに断らない")
+    except sign_asm.StrictRefusal: pass
+finally: sign_asm.Program.strict_call_check = _orig_scc
+
 # ---- test_asm.py の整数の表(CASES)を全部、strict の読みと突き合わせる ----
 # 溢れだけは、strict の読み(value_spec V5)が `!_`、asm は documents(integer_overflow.md)どおり罠(wfi)で、仕様どうしの食い違い(OPEN_QUESTIONS)。それ以外は一致する。
 i_ = src.index("MAX, MIN1 = "); j_ = src.index("\n]\n", src.index("CASES = [")) + 3

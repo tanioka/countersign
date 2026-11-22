@@ -5777,10 +5777,13 @@ class Program:
                         if isinstance(z, tuple):
                             if len(z) == 2 and k == "cases": walk(z[0], params, False); walk(z[1], params, live)
                             else: walk(z, params, False)
+        owners = {}                                   # 呼びの節の id → それを含む定義の名前(出力されない関数の中の呼びは、罠を出せなくてもよい)
         for n in self.nodes:
+            k0 = len(calls)
             if n[0] == "def" and isinstance(n[2], tuple) and n[2][0] == "lam": walk(n[2], set(), False)
             elif n[0] == "def": walk(n[2], set(), False)
             else: walk(n, set(), False)
+            for c in calls[k0:]: owners[id(c[0])] = n[1] if n[0] == "def" else None
         if sites:
             if getattr(self, "sc_depth", 0) > 30: raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 余った関数が後ろの値を受け取る呼びが多すぎて、静的に解ききれません")
             seq_, i_, c_, j_, cond = sites[0]
@@ -5799,7 +5802,7 @@ class Program:
             if voidarg and not fit:
                 raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が `!_` になりうる呼び `%s …` で、引数の数が仮引数の数と違う(strict は `!_` の実引数が消えて引数がずれる。R83・R84)\n      %s" % (f, src(n)))
             if voidarg and live:                       # 余った関数が生きる形: 関数値は asm に無いので、実引数が実際に `!_` になったときだけ罠で止める(出ない入力は strict と同じ答え)
-                self.part_trap[id(n)] = (n, src(n))
+                self.part_trap[id(n)] = (n, src(n), owners.get(id(n)))
 
     def generate(self, target="bare", source=None):
         self.target = target
@@ -5912,8 +5915,8 @@ class Program:
         if close:
             a, b = close[0]
             self.note_estimate(self.addr_cells[a][0], "幅より近い定数の番地が %d 組あります(例: 0x%x と 0x%x。幅 %d byte)。仕様(value_representation.md §5.4)では `0x…` の幅は target の語幅(aarch64 は 8 バイト)なので重なります。4 バイトの変数・レジスタには幅を書く `4x…` を使います。番地ごとに別のセルとして扱う処理系の古い読みとは答えが変わります" % (len(close), a, b, self.addr_cells[a][1]))
-        if STRICT[0] and any(i not in self.part_seen for i in self.part_trap):             # 罠を出せなかった呼びが残るなら、strict の読みにできない(`!_` の実引数で答えが変わるのを黙って通さない)
-            raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が `!_` になりうる呼びの後ろに値が続くか、`~` が付く形で、実行時の罠を出せません(asm に関数値は無い)\n      %s" % "; ".join(sorted({t for i, (n, t) in self.part_trap.items() if i not in self.part_seen})[:1]))
+        if STRICT[0] and any(i not in self.part_seen and (o is None or o in self.live) for i, (_n, _t, o) in self.part_trap.items()):             # 罠を出せなかった呼びが残るなら、strict の読みにできない(`!_` の実引数で答えが変わるのを黙って通さない)
+            raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が `!_` になりうる呼びの後ろに値が続くか、`~` が付く形で、実行時の罠を出せません(asm に関数値は無い)\n      %s" % "; ".join(sorted({t for i, (_n, t, o) in self.part_trap.items() if i not in self.part_seen and (o is None or o in self.live)})[:1]))
         if self.trap_used:
             if self.work_trap: out += [".Ltrap_work:", "\tmov x16, #2  // 作業領域に入らない伸び(原因の印)", "\tb .Ltrap_halt", ""]
             if self.part_used: out += [".Ltrap_part:", "\tmov x16, #3  // --strict: 余った関数が値として残る・後ろの値を受け取る形(asm に関数値は無い。原因の印)", "\tb .Ltrap_halt", ""]
