@@ -663,6 +663,7 @@ def _eval_group(tok, env):
             if x[0] == "seq": return isinstance(x[1], list) and bool(x[1]) and all(_data(y) for y in x[1])
             if x[0] == "bin" and x[1] == "~": return len(x) == 4 and _data(x[2]) and _data(x[3])
             if x[0] == "post" and x[1] == "~": return _data(x[2])
+            if x[0] == "bin" and x[1] == "'": return len(x) == 4 and _data(x[2]) and _data(x[3])      # 字面のデータを字面の鍵で引いた物も字面のデータ(入れ子の引き)
             return False
         if inner[0] == "bin" and inner[1] in ("'", "@") and len(inner) == 4:     # 名前の鍵(`_` も)は欄の名前で、読まない(R64・R115)。入れ物が閉じていて引いて `!_` なら `!_` と分かる値
             ct_, ky_ = (inner[2], inner[3]) if inner[1] == "'" else (inner[3], inner[2])
