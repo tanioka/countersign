@@ -366,7 +366,10 @@ def _eval_group(tok, env):
         node = node[0]
         if S.unit_like(node, e, set()): return ("V", leaf_text(tok))
         inner = node[1] if node[0] == "block" else node
-        if S.closed_expr(inner, e, set()): return ("A", leaf_text(tok))
+        if S.closed_expr(inner, e, set()):
+            v = S.quiet_ev(inner, e)
+            if v is None or isinstance(v, S.Closure) or v is S.ID: return None      # 値が関数かもしれない括り(`(shape ' cube) 3`)は種類を言わない
+            return ("A", leaf_text(tok))
     except BaseException: return None
     finally: S.STRICT_GATES = old
     return None

@@ -511,8 +511,8 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R26|27d4cdf1cf"
 },
 {
@@ -673,8 +673,8 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R26|fa0272cbb5"
 },
 {
@@ -4684,8 +4684,8 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R102|16fae904cb"
 },
 {

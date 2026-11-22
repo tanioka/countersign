@@ -5752,7 +5752,7 @@ def closed_expr(x, env, params):
     if not isinstance(x, tuple) or not x: return False
     k = x[0]
     if k == "lit": return True
-    if k == "id": return x[1] not in params and x[1] not in ("__", "_") and env.owner(x[1]) is not None
+    if k == "id": return x[1] not in params and x[1] not in ("__", "_") and (env.owner(x[1]) is not None or undefined_plain(env, x[1]))      # R21: 未定義の名前は `!_` と分かる値(閉じている)
     if k in ("addr", "input"): return closed_expr(x[1], env, params)
     if k == "bin" and len(x) > 3 and (x[1] in VALUE_OPS or x[1] in ("'", "==", "!==")): return closed_expr(x[2], env, params) and closed_expr(x[3], env, params)
     if k == "prod": return bool(x[1]) and all(closed_expr(y, env, params) for y in x[1] if y != ("not", ("hole",)))
