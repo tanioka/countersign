@@ -291,6 +291,7 @@ def hole_rewrite(terms):
                 i += 1 + t[1]; continue
         out.append(t); i += 1
     return out
+env_defaults = {}
 def build(terms):
     terms = hole_rewrite(terms)
     out, i, n = [], 0, len(terms)
@@ -323,8 +324,12 @@ def build(terms):
         else:
             use, rest = (len(args), []) if len(args) < mouth else (mouth, args[mouth:])
         a = args[:use]
+        if len(run) == 1 and run[0][0] == "F" and any(env_defaults.get(run[0][-1]) or []) and not isinstance(mouth, tuple) and len(args) > mouth: return None     # 既定値のある関数に口より多く渡す形は仕様が「未知」(R83)
+        if len(run) == 1 and run[0][0] == "F" and not isinstance(mouth, tuple) and not spread and len(args) < mouth:
+            dm = (env_defaults.get(run[0][-1]) if env_defaults else None)
+            if dm and all(dm[len(args):mouth]): a = a + ["!_"] * (mouth - len(args)); use = mouth      # R107: 開いた口が全部既定値の口なら既定値の印 `!_` で埋める
         app = f"(apply {head} {a[0] if len(a) == 1 else '(construct ' + ' '.join(a) + ')'})"
-        if not isinstance(mouth, tuple) and not spread and len(args) < mouth: app = f"(unit {app})"          # 部分適用は口の開いた関数として残る(R136)
+        if not isinstance(mouth, tuple) and not spread and use < mouth: app = f"(unit {app})"          # 部分適用は口の開いた関数として残る(R136)
         out.append(app); out += rest
         if tail and (isinstance(mouth, tuple) or spread or len(args) < mouth): return None     # 口の足りない・残りを受ける関数の後ろの関数と値は、結果を受けるので未対応(R40・R11)
         i = k
@@ -344,6 +349,8 @@ def tree_of(src, defs=(), kinds="eval"):
     if "\n" in src.strip(): return None
     env = kinds_from(list(defs)) if kinds == "text" else kinds_from_eval(list(defs))
     if env is None: return None
+    env_defaults.clear()
+    env_defaults.update({k: v[4] for k, v in env.items() if isinstance(v, tuple) and v and v[0] == "F" and len(v) > 4})
     toks = tokens(src.strip())
     if not toks: return None
     seps = [i for i, t in enumerate(toks) if t in ROOT_SEP]
@@ -443,11 +450,11 @@ def kinds_from_eval(defs):
                 if not isinstance(ps, (list, tuple)): env[nm] = None; continue
                 dn = (e.__dict__.get("defnodes") or {}).get(nm)
                 has_def = any((p[0] == "name" and p[2] is not None) or (p[0] == "destr" and len(p) > 3 and p[3]) for p in ps)
-                if has_def or not (isinstance(dn, tuple) and dn and dn[0] == "lam"): env[nm] = None; continue     # 既定値のある口・括りでない定義(`z : @$inc`)の種類は仕様が「未知」
+                if (has_def and any(p[0] != "name" for p in ps)) or not (isinstance(dn, tuple) and dn and dn[0] == "lam"): env[nm] = None; continue     # 既定値のある口・括りでない定義(`z : @$inc`)の種類は仕様が「未知」
                 last = ps[-1] if ps else None
                 var = last is not None and last[0] == "destr" and (len(last[1]) > 1 or last[2])
                 slots = [("g", len(p[1]), bool(p[2])) if p[0] == "destr" else ("p",) for p in ps]
-                env[nm] = ("F", ("var", len(ps)) if var else len(ps), all(p[0] == "name" for p in ps), slots)
+                env[nm] = ("F", ("var", len(ps)) if var else len(ps), all(p[0] == "name" for p in ps), slots, [p[0] == "name" and p[2] is not None for p in ps])
             elif v is S.ID or type(v).__name__ == "_Id": env[nm] = ("I",)
             else:
                 try: vv = S.unit_like(("id", nm), e, set())
