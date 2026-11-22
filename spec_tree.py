@@ -120,6 +120,8 @@ def _classify(tok, env):
     mm_ = re.fullmatch(r"\[([a-z][\w']*),\]", tok)
     if mm_ and (env.get(mm_.group(1)) or ("",))[0] == "F" and env[mm_.group(1)][1] == 1 and env[mm_.group(1)][2]:
         return ("F", ("var", 1), tok)                                           # `[F,]` の写像は F が口 1 つの時(R50)。可変長の口を持つ並びの関数
+    if mm_ and (env.get(mm_.group(1)) or ("",))[0] == "F" and isinstance(env[mm_.group(1)][1], int) and env[mm_.group(1)][1] >= 2:
+        return ("A", tok)                                                       # `[F,]` で F の口が 2 つ以上なら写像にならず、種類が未知の葉(R50)
     if tok == "@[$_]": return ("I", tok)                                              # 恒等射の番地を開いた物は恒等射(R74・R49)
     if len(tok) > 1 and tok[0] == "@" and not tok.startswith("@@"):                    # 前置 `@`(関数の番地を開く、R49・R78)
         base = tok[1:]

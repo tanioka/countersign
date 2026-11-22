@@ -3180,8 +3180,8 @@
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
 "tree_want": "(construct [add,] vs)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R50|b2edb176c5"
 },
 {
