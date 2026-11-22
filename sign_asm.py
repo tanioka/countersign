@@ -6468,12 +6468,23 @@ def _fold_minmax(n):
     def simple(a):
         while isinstance(a, tuple) and a and a[0] == "block": a = a[1]
         if isinstance(a, tuple) and a and a[0] == "neg": a = a[1]
-        return isinstance(a, tuple) and a and (a[0] == "id" or (a[0] == "lit" and isinstance(a[1], int) and not isinstance(a[1], bool)))
+        return isinstance(a, tuple) and a and ((a[0] == "id" and a[1] != "__") or (a[0] == "lit" and isinstance(a[1], int) and not isinstance(a[1], bool)))   # `__` は畳みで飛ばされる(`[>=] 7 __` は 7)ので書き直せない
     args = n[1][1:]
     if not all(simple(a) for a in args): return None
     e = args[0]
     for x in args[1:]: e = ("bin", "|", ("cmp", [e, x], [h[2]]), x)
     return ("block", e)
+
+def _fold_eq_simple(n):
+    """`[==] a b …`・`[=] a b …` で、実引数が字面の整数・名前(`__` でない)だけ。void が混ざらないので既定の読みと答えが同じ。"""
+    if not (isinstance(n, tuple) and n and n[0] == "seq" and len(n[1]) >= 2): return False
+    h = n[1][0]
+    if not (isinstance(h, tuple) and h[0] == "sec" and len(h) >= 4 and h[1] == "fold" and h[2] in ("==", "=") and h[3] is None and not (len(h) > 4 and h[4])): return False
+    def simple(a):
+        while isinstance(a, tuple) and a and a[0] == "block": a = a[1]
+        if isinstance(a, tuple) and a and a[0] == "neg": a = a[1]
+        return isinstance(a, tuple) and a and ((a[0] == "id" and a[1] != "__") or (a[0] == "lit" and isinstance(a[1], int) and not isinstance(a[1], bool)))
+    return all(simple(a) for a in n[1][1:])
 
 def strict_divergences(tree):
     """--strict --asm(2026-11-18): コンパイラは既定の読みで解く。--strict(仕様の読み)と答えが分かれる次の6つの形に当たったら、出さずに名指しで断る。
@@ -6546,8 +6557,8 @@ def strict_divergences(tree):
             key = unwrap(n[3] if n[1] == "'" else n[2])
             if isinstance(key, tuple) and key and key[0] == "post" and key[1] == "~": key = unwrap(key[2])
             if isinstance(key, tuple) and key and key[0] == "id": found.append((1, "`' ` の鍵が名前 `%s`(strict は欄の名前で `!_`、既定は名前の値で引く。仕様 R64)" % key[1], src(n)))
-        if k == "seq" and _fold_minmax(n) is not None: handled.add(id(n[1][0]))      # 5. strict_rewrite が最大・最小に書き直す形
-        if k == "sec" and len(n) >= 3 and n[1] == "fold" and n[2] in (">", "<", ">=", "<=") and id(n) not in handled:
+        if k == "seq" and (_fold_minmax(n) is not None or _fold_eq_simple(n)): handled.add(id(n[1][0]))      # 5. strict_rewrite が最大・最小に書き直す形(`==`・`=` の畳みは void が混ざらない形だけ通す)
+        if k == "sec" and len(n) >= 3 and n[1] == "fold" and n[2] in (">", "<", ">=", "<=", "==", "=") and id(n) not in handled:
             found.append((5, "順序の比べの畳み `[%s]`(strict は偽でも右の数を返す `[>] 3 5` が 5。既定は `!_`)" % n[2], src(n)))
         if k == "seq" and len(n[1]) >= 2:
             h = n[1][0]

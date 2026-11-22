@@ -4,6 +4,7 @@ SIR は、strict の読みを**木の形そのものに書き出した**中間�
   ("int", n) / ("void",)                      値。整数は 64 ビット(範囲を出れば `!_`、value_spec V5)
   ("var", 名前)                                 仮引数(関数の本体の中)
   ("op", 記号, a, b)                            + - * / %。void の被演算子は単位で消える(`5 + _` は 5)。両方 void なら void。`/` `%` は割る数が 0 なら void(消えた void と同じ)
+  ("fold", 記号, [項...])                      `[>] a b c` などの畳み: void は飛ばし、`<` `>` `<=` `>=` は残りを `(a op b) | b` で畳む(最小・最大)、`==` `=` は全部等しければその値、違えば void
   ("neg", a)                                   符号反転。void は void のまま(`-_` は void。`0 - _` の 0 とは別)
   ("chain", [記号...], [項...])                  比べの連鎖: 3 項の範囲(`a < b < c` 等)は両方成り立てば真ん中の項、`=`・`==` だけの連鎖は全部等しければ最初の項。外れたら後ろの項は評価しない
   ("cmp", 記号, a, b)                           < > <= >= = == != !==。成り立てば a、外れ・どちらかが void なら void(R-rule、`a op b` は a か void)
@@ -77,6 +78,10 @@ def expr(n, params, arity):
         if op == "|": return ("or", expr(n[2], params, arity), expr(n[3], params, arity))
         if op == "'":
             if INFUNC[0]: raise Unsup("関数の中の添字(R24・R81 の形の見え方が未モデル)")
+            key = unblock(n[3])
+            if key[0] == "post" and key[1] == "~": key = unblock(key[2])
+            if key[0] == "id" and key[1] != "__":                                  # R64: 鍵の名前は欄の名前。値の名前でも `!_`
+                return ("idx", expr(n[2], params, arity), ("void",))
             return ("idx", expr(n[2], params, arity), expr(n[3], params, arity))
         if op in ("==", "!==", "!="): return ("cmp", op, expr(n[2], params, arity), expr(n[3], params, arity))
         raise Unsup("演算子 " + op)
@@ -93,6 +98,14 @@ def expr(n, params, arity):
     if k == "seq":
         items = n[1]
         h = unblock(items[0])
+        if h[0] == "sec" and len(h) == 5 and h[1] == "fold" and h[3] is None and h[4] is False and len(items) >= 2:
+            if h[2] not in ("<", ">", "<=", ">=", "==", "="): raise Unsup("畳みの節 " + h[2])
+            return ("fold", h[2], [expr(x, params, arity) for x in items[1:]])
+        if len(items) == 2:                                                        # 逆適用 `c f`: 関数 f は余りで落ち、値は c(補正 2)
+            m = unblock(items[1])
+            if (h[0] == "lit" or (h[0] == "id" and h[1] != "__" and (h[1] in params or arity.get(h[1]) == 0))) \
+                    and m[0] == "id" and m[1] not in params and arity.get(m[1], 0) > 0:
+                return expr(h, params, arity)
         if h[0] == "id" and h[1] in arity and h[1] not in params:
             a = arity[h[1]]
             args = [expr(x, params, arity) for x in items[1:1 + a]]
@@ -137,6 +150,16 @@ def evaluate(funcs, top, fuel=200000):
             op = e[1]
             ok = {"<": a < b, ">": a > b, "<=": a <= b, ">=": a >= b, "=": a == b, "==": a == b, "!=": a != b, "!==": a != b}[op]
             return a if ok else None
+        if k == "fold":
+            vs = [v for v in (ev(x, env) for x in e[2]) if v is not None]
+            if any(isinstance(v, tuple) for v in vs): raise Unsup("リストの畳み")
+            if not vs: return None
+            op = e[1]
+            if op in ("==", "="): return vs[0] if all(v == vs[0] for v in vs) else None
+            acc = vs[0]
+            for b in vs[1:]:
+                acc = acc if {"<": acc < b, ">": acc > b, "<=": acc <= b, ">=": acc >= b}[op] else b
+            return acc
         if k == "list": return e[1]
         if k == "len":
             a = ev(e[1], env)

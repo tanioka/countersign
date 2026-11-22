@@ -22,12 +22,17 @@ def expr(r, ps, d):
     if c < .88: return f"(0 - {a})"
     if c < .94:
         o = r.choice(["<", "<="]); return f"({a} {o} {b} {o} {expr(r, ps, d-1)})"
+    if c < .97:
+        op = r.choice(["<", ">", "<=", ">=", "==", "="])
+        xs = [atom(r, ps) if r.random() < .7 else "(" + expr(r, ps, d-1) + ")" for _ in range(r.randint(1, 4))]
+        return f"([{op}] {' '.join(xs)})"
     return f"({a} = {b} = {expr(r, ps, d-1)})"
 def lst(r):
     return " ".join(r.choice(["0","1","-5","7","100","9223372036854775807","-9223372036854775807"]) for _ in range(r.randint(2, 5)))
 def lexpr(r, names, d):
     """リストを使う式(関数の外の式だけ。関数の中の添字は SIR が断る)。"""
     c = r.random()
+    if c < .12: return f"({r.choice(names)} ' {r.choice(names)})"                   # 鍵が名前: 欄の名前なので void(R64)
     if c < .45: return f"({r.choice(names)} ' {expr(r, [], 1)})"
     if c < .6: return f"||{r.choice(names)}||"
     if d <= 0: return num(r)
@@ -50,7 +55,9 @@ def program(r):
         else: out.append(f"f{i} : {' '.join(ps)} ? {body}")
         fs.append((f"f{i}", k))
     t = expr(r, [], 3)
-    if fs and r.random() < .7:
+    if r.random() < .15: out.insert(0, "v0 : " + num(r)); t = expr(r, ["v0"], 2)
+    if fs and r.random() < .12: t = r.choice([num(r), "v0" if out and out[0].startswith("v0") else num(r)]) + " " + r.choice(fs)[0]
+    elif fs and r.random() < .7:
         n, k = r.choice(fs); t = f"{n} " + " ".join(f"({expr(r, [], 2)})" for _ in range(k))
     return "\n".join(out + [t]) + "\n"
 def obs_strict(t):
