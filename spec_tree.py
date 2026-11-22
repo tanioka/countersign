@@ -423,7 +423,7 @@ def pipeline(ts):
     if not ts or ts[0][0] != "F": return None
     fs = [t for t in ts if t[0] == "F"]; vs = [t[1] for t in ts if t[0] == "A"]
     if len(fs) + len(vs) != len(ts) or any(v.endswith("~") for v in vs): return None
-    if any(f[-1].startswith(("|", "@")) for f in fs): return None
+    if any(f[-1].startswith(("|", "@")) and f[-1] not in ("||_||", "|_|") for f in fs): return None
     cur = None
     for f in fs:
         m = f[1]

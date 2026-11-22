@@ -3435,8 +3435,8 @@
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
 "tree_want": "(apply inc (apply ||_|| (construct 1 2)))",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R27|e4d4565281"
 },
 {
@@ -3574,8 +3574,8 @@
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
 "tree_want": "(apply inc (apply |_| [0 - 5]))",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R27|a77907ad5d"
 },
 {
