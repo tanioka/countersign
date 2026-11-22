@@ -25,6 +25,7 @@ for src_, defs_, want_ in [("f -x", ["f : a ? a", "x : 3"], "(apply f -x)")]:
 OK += [("[!_] 1 2 3 4 5", "(apply [!_] (construct 1 2 3 4 5))")]     # 前置・後置の点なしの席は口が並び全体(R35・R138)
 OK += [("(5 inc) 3", "(construct [5 inc] 3)"), ("(3 | inc) 5", "(construct [3 | inc] 5)")]     # 字面の数に続く関数は余る(R52・R136)
 OK += [("gd 3 (3 < 2) 7", "(apply gd (construct 3 [3 < 2] 7))")]     # 既定値のある関数に口より多く、`!_` でありうる括りを混ぜて渡す(R83)
+OK += [("[* 2,] w", "(unit [* 2,])"), ("[* 2,] 1 2 3", "(apply [* 2,] (construct 1 2 3))")]     # 点なしの可変長の口が `!_` だけ受ければ関数が残る(R95)
 NONE = ["gd 3 4 7", "inc ~1 5", "[add,] vs", "v : 1 , $v", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc", "inc i [* 2,] 1 2"]
 for s, t in OK:
     g = T.tree_of(s, P)

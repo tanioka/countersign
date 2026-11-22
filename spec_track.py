@@ -118,6 +118,7 @@ if tr:
     c = _c.Counter(r["tree"] for r in tr)
     if "--tree-list" in sys.argv:
         for r_ in tr:
+            if r_.get("tree_eval") == "mismatch": print("木 不一致 %s L%s: %r  期待 %s  出力 %s" % (r_["rule"], r_["line"], r_["src"][:70], r_.get("tree_want", "")[:70], r_.get("tree_got", "")))
             if r_.get("tree_eval") == "unsupported": print("木 未対応 %s L%s: %r  期待 %s" % (r_["rule"], r_["line"], r_["src"][:70], r_.get("tree_want", "")[:70]))
     print(f"\n木の突き合わせ(spec_tree.py。仕様の見本 {len(tr)} 件): 一致 {c['match']} / 不一致 {c['mismatch']} / 未対応 {c['unsupported']}")
     ce = _c.Counter(r["tree_eval"] for r in tr)

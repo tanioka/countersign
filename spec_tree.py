@@ -107,6 +107,7 @@ def _classify(tok, env):
     if mp_ and (mp_.group(1) == "_" or (env.get(mp_.group(1)) or ("",))[0] in ("F", "I")): return ("A", tok)      # 値の印(前置 `-`・`!`)を関数・恒等射に直接当てた形は解なしの葉(R87)
     if mp_ and (env.get(mp_.group(1)) or ("",))[0] == "A" and tok[0] == "-": return ("A", tok)      # 値の名前に前置 `-`: 値(R2)
     if re.fullmatch(r"\[(?:-_|!_|!!_|_!)\]", tok): return ("F", ("var", 1), tok)      # 前置・後置の点なしの席は、口が並び全体(R35・R138)
+    if re.fullmatch(r"\[(?:[-+*/%^]) -?\d+,\]", tok): return ("F", ("var", 1), tok)     # `[* 2,]`: 区間の写像。口は並び全体(R50・R95)
     mm_ = re.fullmatch(r"\[([a-z][\w']*),\]", tok)
     if mm_ and (env.get(mm_.group(1)) or ("",))[0] == "F" and env[mm_.group(1)][1] == 1 and env[mm_.group(1)][2]:
         return ("F", ("var", 1), tok)                                           # `[F,]` の写像は F が口 1 つの時(R50)。可変長の口を持つ並びの関数
@@ -270,6 +271,8 @@ def resolve_seq(toks, env, root_alone=False):
             c = classify(v, env)
             if c is None: return None
             terms.append(c)
+    if len(terms) >= 2 and terms[0][0] == "F" and re.fullmatch(r"\[(?:[-+*/%^] -?\d+|[a-z][\w']*),\]", terms[0][-1]) and all(t[0] == "V" for t in terms[1:]):
+        return f"(unit {terms[0][-1]})"                                         # 点なしの可変長の口が `!_` と分かる値だけ受けたら、何も受けていないのと同じで関数が残る(R95)
     if any(t[0] == "V" for t in terms) and any(t[0] == "F" and not _plain_head(t[-1], env) for t in terms):
         named = [t for t in terms if t[0] == "F" and not _plain_head(t[-1], env) and not t[-1].startswith(("[", "@", "|"))]
         if named:
