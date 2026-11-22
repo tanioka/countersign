@@ -597,6 +597,8 @@ def kinds_from_eval(defs):
             v = e.vars.get(nm)
             if isinstance(v, S.Closure):
                 ps = v.params
+                if ps is None and getattr(v, "native", None) is not None and getattr(v, "pf", False) and isinstance(getattr(v, "arity", None), int) and v.arity >= 1 and not getattr(v, "variadic", False) and not (getattr(v, "args", None) or []):
+                    env[nm] = ("F", v.arity, True, [("p",)] * v.arity, [False] * v.arity); continue      # 点なしの括り(区間)をしまう名前は、その口の関数(R87)
                 if not isinstance(ps, (list, tuple)): env[nm] = None; continue
                 dn = (e.__dict__.get("defnodes") or {}).get(nm)
                 has_def = any((p[0] == "name" and p[2] is not None) or (p[0] == "destr" and len(p) > 3 and p[3]) for p in ps)

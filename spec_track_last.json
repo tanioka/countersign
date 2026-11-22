@@ -2605,8 +2605,8 @@
 "leftover-lambda"
 ],
 "tree_want": "(apply s 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R87|6f2f264923"
 },
 {

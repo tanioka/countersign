@@ -54,6 +54,9 @@ for src_, defs_, want_ in [("p ' a 5", ["p : [a : inc]"], "(apply (' p a) 5)"), 
 for src_, defs_, want_ in [("z 1 2", ["z : @$inc"], "(construct z 1 2)")]:
     g_ = T.tree_of(src_, P + defs_)
     if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 番地を開いた物をしまう名前は種類が未知(R120)
+for src_, defs_, want_ in [("s 5", ["s : [+ inc]"], "(apply s 5)")]:
+    g_ = T.tree_of(src_, P + defs_)
+    if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 点なしの括りをしまう名前は、その口の関数(R87)
 NONE = ["gd 3 4 7", "inc ~1 5", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc"]
 for s, t in OK:
     g = T.tree_of(s, P)
