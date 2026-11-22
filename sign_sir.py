@@ -231,6 +231,14 @@ def nonvoid(e):
         return True
     return False
 
+def has_call(e):
+    if not isinstance(e, tuple): return False
+    if e[0] == "call": return True
+    for x in e[1:]:
+        if isinstance(x, tuple) and has_call(x): return True
+        if isinstance(x, list) and any(has_call(y) for y in x if isinstance(y, tuple)): return True
+    return False
+
 def raise_ast(funcs, top):
     """SIR を旧 AST の列にする。void の単位の読みが要る形(void になりうる被演算子・呼びの実引数)は Unsup。整数だけ。"""
     def blk(x): return ("block", x) if x[0] in ("bin", "cmp", "seq", "neg", "cases") else x
@@ -242,10 +250,28 @@ def raise_ast(funcs, top):
         def operand(x):
             if not nonvoid(x): raise Unsup("void の単位の読み(被演算子が void になりうる)")
             return blk(r(x, False))
-        if k == "neg": return ("neg", operand(e[1]))
-        if k == "op": return ("bin", e[1], operand(e[2]), operand(e[3]))
-        if k == "cmp": return ("cmp", [operand(e[2]), operand(e[3])], [e[1]])
-        if k == "chain": return ("cmp", [operand(x) for x in e[2]], list(e[1]))
+        def maybe(x):                                                          # void になりうる被演算子: 二重に評価するので、呼びを含めない
+            if has_call(x): raise Unsup("void になりうる被演算子が呼びを含む")
+            return blk(r(x, False))
+        def both(xs, inner):                                                   # 全部あれば inner、どれかが void なら void(`a & b & inner`)
+            e = inner
+            for x in reversed(xs): e = ("bin", "&", x, e)
+            return e
+        if k == "neg":
+            if nonvoid(e[1]): return ("neg", operand(e[1]))
+            a = maybe(e[1]); return ("bin", "&", a, ("neg", a))
+        if k == "op":
+            a_, b_ = e[2], e[3]
+            if nonvoid(a_) and nonvoid(b_) and not (e[1] in ("/", "%") and not nonvoid(e)): return ("bin", e[1], operand(a_), operand(b_))
+            if e[1] in ("/", "%") and not (b_[0] == "int" and b_[1] != 0): raise Unsup("0 で割りうる除算の単位の読み")
+            a, b = maybe(a_), maybe(b_)
+            return ("bin", "|", ("bin", "|", ("block", both([a, b], ("bin", e[1], a, b))), a), b)     # 単位: 片方が void なら残り
+        if k in ("cmp", "chain"):
+            ts = [e[2], e[3]] if k == "cmp" else e[2]
+            ops = [e[1]] if k == "cmp" else list(e[1])
+            if all(nonvoid(t) for t in ts): return ("cmp", [operand(t) for t in ts], ops)
+            bs = [maybe(t) for t in ts]
+            return both(bs, ("cmp", bs, ops))                                  # どれかが void なら void
         if k == "and": return ("bin", "&", blk(r(e[1], False)), blk(r(e[2], False)))
         if k == "or": return ("bin", "|", blk(r(e[1], False)), blk(r(e[2], False)))
         if k == "rows": return ("cases", [(None if c is None else blk(r(c, False)), blk(r(v, False))) for c, v in e[1]])
