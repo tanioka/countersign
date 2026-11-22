@@ -257,21 +257,16 @@ def raise_ast(funcs, top):
             e = inner
             for x in reversed(xs): e = ("bin", "&", x, e)
             return e
-        if k == "neg":
-            if nonvoid(e[1]): return ("neg", operand(e[1]))
-            a = maybe(e[1]); return ("bin", "&", a, ("neg", a))
-        if k == "op":
-            a_, b_ = e[2], e[3]
-            if nonvoid(a_) and nonvoid(b_) and not (e[1] in ("/", "%") and not nonvoid(e)): return ("bin", e[1], operand(a_), operand(b_))
-            if e[1] in ("/", "%") and not (b_[0] == "int" and b_[1] != 0): raise Unsup("0 で割りうる除算の単位の読み")
-            a, b = maybe(a_), maybe(b_)
-            return ("bin", "|", ("bin", "|", ("block", both([a, b], ("bin", e[1], a, b))), a), b)     # 単位: 片方が void なら残り
+        if k == "neg": return ("neg", blk(r(e[1], False)))
+        if k == "op": return ("bin", e[1], blk(r(e[2], False)), blk(r(e[3], False)))      # asm の算術は void を単位として扱い、0 割りは void(bin_tail)。包みは要らない
         if k in ("cmp", "chain"):
             ts = [e[2], e[3]] if k == "cmp" else e[2]
             ops = [e[1]] if k == "cmp" else list(e[1])
-            if all(nonvoid(t) for t in ts): return ("cmp", [operand(t) for t in ts], ops)
-            bs = [maybe(t) for t in ts]
-            return both(bs, ("cmp", bs, ops))                                  # どれかが void なら void
+            bs = [blk(r(t, False)) for t in ts]
+            if k == "cmp" and ops[0] in ("!=", "!=="):                               # 補正 5: 既定の `!=` は void を「違う」と読むので、両方あるときだけ比べる(二重に評価するので呼びは戻さない)
+                if not all(nonvoid(t) for t in ts) and any(has_call(t) for t in ts): raise Unsup("`!=` の void になりうる被演算子が呼びを含む")
+                if not all(nonvoid(t) for t in ts): return ("bin", "&", ("bin", "==", bs[0], bs[0]), ("bin", "&", ("bin", "==", bs[1], bs[1]), ("cmp", bs, ops)))
+            return ("cmp", bs, ops)
         if k == "and": return ("bin", "&", blk(r(e[1], False)), blk(r(e[2], False)))
         if k == "or": return ("bin", "|", blk(r(e[1], False)), blk(r(e[2], False)))
         if k == "rows": return ("cases", [(None if c is None else blk(r(c, False)), blk(r(v, False))) for c, v in e[1]])

@@ -11,3 +11,6 @@ def test_fuzz_front():
 def test_fuzz_lists_asm():
     r = subprocess.run([sys.executable, "fuzz_sir.py", "500", "9", "--lists", "--asm"], capture_output=True, text=True, timeout=900)
     assert r.returncode == 0, r.stdout[-1200:]
+def test_fuzz_sir_route():
+    r = subprocess.run([sys.executable, "fuzz_sir.py", "400", "11", "--asm", "--novoid"], capture_output=True, text=True, timeout=900)
+    assert r.returncode == 0, r.stdout[-1200:]
