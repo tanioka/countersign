@@ -1,0 +1,14 @@
+`std.sn`@~
+INP : 0x9300000
+TM : 0x9200000
+POP : 0x9300014
+go : z ?
+	(@TM) > 60000 : 0
+	(@INP) > 0 : ev (@(INP + 4)) (@(INP + 8))
+	again ((TM + 4) # 10)
+again : w ? go 0
+ev : t c ? seq3 (println_int t) (println_int c) (more t c (POP # 1))
+more : t c w ?
+	t * 1000 + c = 1113 : 0
+	go 0
+go 0
