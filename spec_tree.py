@@ -189,6 +189,16 @@ def _classify(tok, env):
                 return ("A", leaf_text(tok))
     if tok[0] == "(":
         in_ = tokens(tok[1:-1]) or []
+        if len(in_) >= 3 and len(in_) % 2 == 1 and all(in_[k] in ("|", "&") for k in range(1, len(in_), 2)) and all(re.fullmatch(r"-?\d+|[a-z][\w']*", in_[k]) for k in range(0, len(in_), 2)) and env.get("\0env") is not None:
+            import sign_interp as S
+            old_ = S.STRICT_GATES; S.STRICT_GATES = True
+            try:
+                nd_ = S.parse_source(tok + "\n")
+                v_ = S.quiet_ev(nd_[0][1] if nd_[0][0] == "block" else nd_[0], env["\0env"]) if len(nd_) == 1 else None
+                if isinstance(v_, S.Closure) and isinstance(v_.params, (list, tuple)) and v_.params and all(p[0] == "name" and p[2] is None for p in v_.params) and not (getattr(v_, "args", None) or []):
+                    return ("F", len(v_.params), leaf_text(tok))              # `|`・`&` で選んだ結果が関数になる括りは、選ばれた関数の口を持つ関数(R137・R76)
+            except BaseException: pass
+            finally: S.STRICT_GATES = old_
         if len(in_) >= 2 and re.fullmatch(r"[a-z][\w']*", in_[0]) and (env.get(in_[0]) or ("",))[0] == "I" and all((classify(x, env) or ("",))[0] == "V" for x in in_[1:]):
             return ("I", leaf_text(tok))                                      # 恒等射が `!_` と分かる値だけ受けた括りは、恒等射が残る(R95・R48)
         if len(in_) >= 2 and all(re.fullmatch(r"[a-z][\w']*", x) for x in in_):

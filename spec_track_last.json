@@ -2019,8 +2019,8 @@
 "leftover-lambda"
 ],
 "tree_want": "(apply [inc | 1 & inc] 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R137|40f98c6945"
 },
 {
