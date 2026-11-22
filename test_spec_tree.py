@@ -57,6 +57,9 @@ for src_, defs_, want_ in [("z 1 2", ["z : @$inc"], "(construct z 1 2)")]:
 for src_, defs_, want_ in [("s 5", ["s : [+ inc]"], "(apply s 5)")]:
     g_ = T.tree_of(src_, P + defs_)
     if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 点なしの括りをしまう名前は、その口の関数(R87)
+for src_, defs_, want_ in [("v 5", ["v : [* 2,] w"], "(apply v 5)")]:
+    g_ = T.tree_of(src_, P + defs_)
+    if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 点なしの可変長の括りが残った名前は、並びを受ける関数(R95)
 NONE = ["gd 3 4 7", "inc ~1 5", "@[$[x ? x]] 1 2", "inc _ 2", "add 1 inc"]
 for s, t in OK:
     g = T.tree_of(s, P)

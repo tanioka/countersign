@@ -3355,8 +3355,8 @@
 "actual": "[10]",
 "expected": "10",
 "tree_want": "(apply v 5)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R95|8020b53037"
 },
 {
