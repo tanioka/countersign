@@ -1,5 +1,5 @@
 """木の出力で、仕様の見本の外にある形のうち、実装が読まない(None)か、見本が無いまま出している形を一覧にする。
-設計者への質問の元(designer_questions_tree_2026-11-22.md)を作る。使い方: python3 tree_gaps.py [--md]"""
+設計者への質問の元(designer_questions_2026-11-21.md の F 節)を作る。使い方: python3 tree_gaps.py [--md]"""
 import sys
 import spec_tree as T, spec_audit as A
 P = A.PRE.splitlines()

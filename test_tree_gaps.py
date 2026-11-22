@@ -1,4 +1,4 @@
-"""tree_gaps.py の分類(読まない形は None、見本の外の広げは木を出す)が実装の今と合っているか。ずれたら designer_questions_tree_2026-11-22.md を直す"""
+"""tree_gaps.py の分類(読まない形は None、見本の外の広げは木を出す)が実装の今と合っているか。ずれたら designer_questions_2026-11-21.md の F 節 を直す"""
 import tree_gaps as G
 bad = 0
 for kind, src, defs, got, q in G.run():
