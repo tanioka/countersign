@@ -2,8 +2,8 @@
 import spec_tree as T, spec_audit as A
 P = A.PRE.splitlines()
 OK = [("inc 3 4", "(construct (apply inc 3) 4)"), ("d 1 2", "(construct (apply d 1) 2)"), ("inc i inc 5", "(apply (compose inc i inc) 5)"),
-      ("inc # 5", "(# (unit inc) 5)"), ("add 1 2", "(apply add (construct 1 2))"), ("$inc + 0x80", "(+ $inc 0x80)")]
-NONE = ["inc _ 2", "i 1 2 3", "inc add 5", "[+ 1] 1 2 3", "inc (5 ' 1) 5", "nosuchname 5"]
+      ("inc # 5", "(# (unit inc) 5)"), ("[+ 1] 1 2 3", "(construct (apply [+ 1] 1) 2 3)"), ("inc add 5", "(unit (apply (compose inc add) 5))"), ("add 1 2", "(apply add (construct 1 2))"), ("$inc + 0x80", "(+ $inc 0x80)")]
+NONE = ["inc _ 2", "i 1 2 3", "inc (5 ' 1) 5", "nosuchname 5"]
 bad = 0
 for s, t in OK:
     g = T.tree_of(s, P)

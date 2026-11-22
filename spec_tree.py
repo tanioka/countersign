@@ -41,6 +41,7 @@ def arity_of(rhs):
         if len(inner) != 1 or "~" in last: return ("var", len(ps))
     return len(ps)
 
+PREDEF = set()
 def kinds_from(defs):
     """名前 → ('F', 口) / ('A',) / ('I',)(恒等射)。読めない定義の名前は載せない"""
     env = {}
@@ -50,8 +51,15 @@ def kinds_from(defs):
         if not m: continue
         nm, rhs = m.group(1), m.group(2)
         if re.match(r"^\s*$", rhs) and "\n" in d: env[nm] = None; continue          # 字下げの本体は未対応
+        r_ = rhs.strip()
+        mv = re.fullmatch(r"\$([\w']+)", r_)
+        if mv and (env.get(mv.group(1)) or ("",))[0] in ("A", "V"): env[nm] = ("V",); continue     # 値に付けた `$` は `!_` と分かる値(R99)
+        if re.fullmatch(r"[a-z][\w']*", r_) and r_ not in env and r_ not in PREDEF: env[nm] = ("V",); continue   # 未定義の名前(R21)
+        if re.fullmatch(r"[a-z][\w']*", r_) and (env.get(r_) or ("",))[0] == "V": env[nm] = ("V",); continue
+        mi = re.fullmatch(r"([a-z][\w']*) ' ([a-z][\w']*)", r_)
+        if mi and ((env.get(mi.group(1)) or ("",))[0] == "V" or (mi.group(2) not in env and mi.group(2) not in PREDEF and (env.get(mi.group(1)) or ("",))[0] == "A")): env[nm] = ("V",); continue
         a = arity_of(rhs)
-        if a is not None: env[nm] = ("F", a)
+        if a is not None: env[nm] = ("F", a, not re.search(r"\[", rhs.split("?")[0]))
         elif rhs.strip() == "_": env[nm] = ("I",)
         elif re.fullmatch(r"\$[\w']+", rhs.strip()): env[nm] = ("A",) if (env.get(rhs.strip()[1:]) or ("",))[0] in ("F", "I") else None   # 値に付けた `$` は `!_` と分かる値(R99)
         elif re.search(r"['@~]", rhs.strip()) and not rhs.strip().startswith('"') and "?" not in rhs: env[nm] = None   # 引いた物・ずらした物は `!_` になりうる(R26)
@@ -70,11 +78,17 @@ def leaf_text(t):
 
 def classify(tok, env):
     c = _classify(tok, env)
-    if c and c[0] == "A" and re.fullmatch(r"\$[\w']+", tok) and (env.get(tok[1:]) is None or env[tok[1:]][0] == "A"): return None   # `$` の先が値: `!_` と分かる値(R99)は未対応
+    if c and c[0] == "A" and re.fullmatch(r"\$[\w']+", tok):
+        k = env.get(tok[1:])
+        if k is None: return None
+        if k[0] in ("A", "V"): return ("V", tok)                                # `$` の先が値: `!_` と分かる値(R99)
     return c
 def _classify(tok, env):
     """語 → ('A', 綴り) / ('F', 口, 名前) / ('I', 名前) / None(未対応)"""
     if re.fullmatch(r"-?\d+|0[xXbBrRuU][0-9A-Za-z]+|\d\dx[0-9A-Fa-f]+|\"[^\"]*\"|'.'|\$[\w']+|\$\$[\w']+", tok): return ("A", leaf_text(tok))
+    if tok[0] == "[":
+        sec = section(tok)
+        if sec is not None: return sec
     if tok[0] in "([":
         inner = tokens(tok[1:-1])
         if inner is None or any(t in TIGHT + ROOT for t in inner) is False and False: return None
@@ -86,11 +100,23 @@ def _classify(tok, env):
     if m:
         k = env.get(tok)
         if k is None: return None
+        if k[0] == "V": return ("V", tok)
         if k[0] == "F": return ("F", k[1], tok)
         if k[0] == "I": return ("I", tok)
         return ("A", tok)
     return None
 
+FOLDOPS = {"+", "-", "*", "/", "%", "^", "|", "&", ";", "<", "<=", "=", ">=", ">", "==", "||", ";;", "&&"}
+PLAINOPS = {"<<", ">>", "'", "@", "!=", "!==", "~"}
+def section(tok):
+    """点なしの括り `[+]` `[+ 1]` `[' 0]` `[<<]` → ('F', 口, 綴り)。読めない形は None"""
+    inner = tokens(tok[1:-1])
+    if not inner or any("," in t for t in inner) or any(re.search(r"[A-Za-z_(\[$]", t) and not re.fullmatch(r"\$\w+|-?\d+", t) for t in inner): return None
+    sp = re.sub(r"\s+", " ", tok)
+    if len(inner) == 1 and inner[0] in FOLDOPS: return ("F", ("var", 1), sp)
+    if len(inner) == 1 and inner[0] in PLAINOPS: return ("F", 2, sp)
+    if len(inner) == 2 and (inner[0] in FOLDOPS | PLAINOPS) != (inner[1] in FOLDOPS | PLAINOPS): return ("F", 1, sp)
+    return None
 def _plain(inner, env):
     if any(re.search(r"['@~]", t) for t in inner): return False
     """括りの中が、字面・値の名前・点なしでない中置だけの時 True(中の木は出さず綴りで葉にする)"""
@@ -146,12 +172,18 @@ def resolve_seq(toks, env, root_alone=False):
             c = classify(v, env)
             if c is None: return None
             terms.append(c)
+    if any(t[0] == "V" for t in terms) and any(t[0] == "F" and not _plain_head(t[-1], env) for t in terms): return None   # 参照の口は `$値` を受けるので消えない
+    terms = [t for t in terms if t[0] != "V"]                                   # `!_` と分かる値は積の単位で消える(R49・R137)
+    if not terms: return None
     return build(terms)
+def _plain_head(name, env):
+    return not name.startswith("[") and (env.get(name) is None or env[name][0] != "F" or len(env[name]) < 3 or env[name][2])
 
 def operand(tok, env, root):
     c = classify(tok, env)
     if c is None: return None
     if c[0] == "A": return c[1]
+    if c[0] == "V": return c[1]
     return f"(unit {c[-1]})"
 
 def build(terms):
@@ -173,18 +205,19 @@ def build(terms):
             out += [f"(unit {r[-1]})" for r in run] if len(run) == 1 else [f"(unit (compose {' '.join(r[-1] for r in run)}))"]
             i = j; continue
         if run[0][0] == "I": return None                                     # 恒等射が頭の適用は R44・R74 の読みで未対応
-        if len(run) > 1 and any(r[0] == "F" and r[1] != 1 for r in run): return None
+        if len(run) > 1:
+            if any(r[0] != "F" or isinstance(r[1], tuple) for r in run if r[0] == "F"): return None
+            mouth = 1 + sum((r[1] if r[0] == "F" else 1) - 1 for r in run)
+        else: mouth = run[0][1]
         head = run[0][-1] if len(run) == 1 else "(compose " + " ".join(r[-1] for r in run) + ")"
-        mouth = run[0][1] if run[0][0] == "F" else 1
-        if len(run) > 1 and run[0][0] != "F": mouth = 1
         if isinstance(mouth, tuple):
             if len(args) < mouth[1]: return None
             use, rest = len(args), []
-        elif True:
-            if len(args) < mouth: return None                                  # 部分適用
-            use, rest = mouth, args[mouth:]
+        else:
+            use, rest = (len(args), []) if len(args) < mouth else (mouth, args[mouth:])
         a = args[:use]
         app = f"(apply {head} {a[0] if len(a) == 1 else '(construct ' + ' '.join(a) + ')'})"
+        if not isinstance(mouth, tuple) and len(args) < mouth: app = f"(unit {app})"          # 部分適用は口の開いた関数として残る(R136)
         out.append(app); out += rest
         out += [f"(unit {x[-1]})" for x in tail]
         i = n
