@@ -86,6 +86,26 @@ def classify(tok, env):
     return c
 def _classify(tok, env):
     """語 → ('A', 綴り) / ('F', 口, 名前) / ('I', 名前) / ('V', 綴り) / None(未対応)"""
+    if len(tok) > 1 and tok[0] == "@" and not tok.startswith("@@"):                    # 前置 `@`(関数の番地を開く、R49・R78)
+        base = tok[1:]
+        if re.fullmatch(r"[\w']+", base):
+            c = classify(base, env)
+            if c is None: return None
+            if c[0] == "V": return ("V", tok)
+            if c[0] == "A": return ("F", ("var", 1), tok)
+            return None
+        if base[0] in "[(":
+            if base[0] == "[":
+                its = tokens(base[1:-1]) or []
+                cs = [classify(x, env) for x in its]
+                if not its or any(c is None for c in cs): return None
+                if all(c[0] == "V" for c in cs): return ("V", tok)
+                if not all(c[0] == "A" for c in cs): return None
+            else:
+                c = classify(base, env)
+                if c is None or c[0] != "A": return None
+            return ("F", ("var", 1), leaf_text(tok))
+        return None
     if len(tok) > 1 and tok.endswith("~") and not tok.startswith("~") and "~" not in tok[:-1]:       # 後置 `~`(撒く、R51・R84)
         base = tok[:-1]
         if base.startswith("[") and base.endswith("]"):
@@ -196,13 +216,13 @@ def resolve_seq(toks, env, root_alone=False):
             if c is None: return None
             terms.append(c)
     if any(t[0] == "V" for t in terms) and any(t[0] == "F" and not _plain_head(t[-1], env) for t in terms):
-        if any(t[0] == "F" and not _plain_head(t[-1], env) and not t[-1].startswith("[") for t in terms): return None      # 名前のある関数の括りの口に入る位置の見分けは未対応(R122・R64)
+        if any(t[0] == "F" and not _plain_head(t[-1], env) and not t[-1].startswith(("[", "@")) for t in terms): return None      # 名前のある関数の括りの口に入る位置の見分けは未対応(R122・R64)
         terms = [("A", t[1]) if t[0] == "V" else t for t in terms]               # 点なしの括りは `!_` と分かる値も受けるので木に残る(R95・R137)。参照の口・点なしの括りは `!_` と分かる値も受けるので木に残る(R95・R122)
     terms = [t for t in terms if t[0] != "V"]                                   # `!_` と分かる値は積の単位で消える(R49・R137)
     if not terms: return None
     return build(terms)
 def _plain_head(name, env):
-    return not name.startswith("[") and (env.get(name) is None or env[name][0] != "F" or len(env[name]) < 3 or env[name][2])
+    return not name.startswith(("[", "@")) and (env.get(name) is None or env[name][0] != "F" or len(env[name]) < 3 or env[name][2])
 
 def operand(tok, env, root):
     c = classify(tok, env)
@@ -246,8 +266,8 @@ def build(terms):
         if any(r[0] == "I" and r[1] == "_" for r in run) and (len(run) > 1 or len(args) != 1): return None      # `_` の恒等射は 1 つの実引数だけ受ける形(R44)に限る
         if run[0][0] == "I" and run[0][1] != "_": return None                 # 恒等射の名前が頭の適用は R29・R74 の読みで未対応
         if len(run) > 1:
-            if any(r[0] != "F" or isinstance(r[1], tuple) for r in run if r[0] == "F"): return None
-            mouth = 1 + sum((r[1] if r[0] == "F" else 1) - 1 for r in run)
+            if any(r[0] == "F" and isinstance(r[1], tuple) and not r[-1].startswith("@") for r in run): return None
+            mouth = 1 + sum(((1 if isinstance(r[1], tuple) else r[1]) if r[0] == "F" else 1) - 1 for r in run)
         else: mouth = run[0][1] if run[0][0] == "F" else 1
         head = run[0][-1] if len(run) == 1 else "(compose " + " ".join(r[-1] for r in run) + ")"
         spread = any(x.endswith("~") for x in args)

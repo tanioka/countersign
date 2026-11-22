@@ -753,8 +753,8 @@
 "state": "ok",
 "actual": "<fn/1>",
 "expected": "知らせ",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R81|6f7ca55e5c"
 },
 {
@@ -3059,8 +3059,8 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R77|1999ca9ed2"
 },
 {
@@ -4144,8 +4144,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R49|e38e02a316"
 },
 {
@@ -4269,8 +4269,8 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R49|e34ef1e29d"
 },
 {
@@ -4282,8 +4282,8 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R49|0d7cc11502"
 },
 {
@@ -4582,8 +4582,8 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R102|95d0fae580"
 },
 {
@@ -4753,8 +4753,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R78|4e3fa9690c"
 },
 {
@@ -4765,8 +4765,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R78|220b6d50d8"
 },
 {
@@ -4777,8 +4777,8 @@
 "kind": "R",
 "state": "skip",
 "why": "期待が木(S 式)だけで値・断り・知らせが無い(実装は木を出さない)",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R78|0c9f34d307"
 },
 {
@@ -4801,8 +4801,8 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R78|c4dd49e245"
 },
 {
@@ -4814,8 +4814,8 @@
 "state": "ok",
 "actual": "6",
 "expected": "6",
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R78|7f5f602c68"
 },
 {
@@ -5500,8 +5500,8 @@
 "expected_warn": [
 "level-mismatch"
 ],
-"tree_eval": "unsupported",
-"tree": "unsupported",
+"tree_eval": "match",
+"tree": "match",
 "id": "coproduct_spec.md|R62|277779417e"
 },
 {
