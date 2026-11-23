@@ -30,135 +30,168 @@ seq9:
 	ldp x29, x30, [sp], #96  // フレームを戻す
 	ret
 
-max:
-	stp x29, x30, [sp, #-32]!  // フレーム 32 バイト
-	mov x29, sp
-	cmp x0, x1
-	b.gt .L6
-.L7:
-	mov x0, x1  // b
-.L6:
-	ldp x29, x30, [sp], #32  // フレームを戻す
-	ret
-
 str_put:
 	stp x29, x30, [sp, #-80]!  // フレーム 80 バイト
 	mov x29, sp
-	str x0, [x29, #40]  // 実引数
-	mov x0, #0
-	str x0, [x29, #64]  // 実引数
-	ldr x0, [x29, #40]
-	ldr x3, [x29, #64]
+	mov x3, #0  // 実引数(字面)
 	bl std_sput
 	ldp x29, x30, [sp], #80  // フレームを戻す
 	ret
 
 std_sput:
-	stp x29, x30, [sp, #-112]!  // フレーム 80 バイト
+	stp x29, x30, [sp, #-80]!  // フレーム 80 バイト
 	mov x29, sp
-	stp x19, x26, [x29, #80]  // 呼ぶ側のために保存(x19〜x28 は呼び出し先が保つ約束)
-	stp x27, x28, [x29, #96]  // 呼ぶ側のために保存(x19〜x28 は呼び出し先が保つ約束)
-	mov x27, x0  // 仮引数 dst
+	str x0, [x29, #16]  // 仮引数 dst
 	str x1, [x29, #24]  // 仮引数 s.ptr
-	mov x28, x2  // 仮引数 s.len
-	mov x26, x3  // 仮引数 i
-.L9:
-	cmp x26, x28
-	b.lt .L11
-	mov x10, #4
-	mul x11, x26, x10
-	smulh x12, x26, x10  // 積の上の語
-	mov x19, x27  // 途中の値はフレームへ
-	mov x0, #0
+	str x2, [x29, #32]  // 仮引数 s.len
+	str x3, [x29, #40]  // 仮引数 i
+.L6:
+	ldr x9, [x29, #24]  // s.ptr
+	ldr x0, [x29, #32]  // s.len
+	str x0, [x29, #48]  // 比べる項
+	ldr x9, [x29, #40]  // i
+	cmp x9, x0
+	b.lt .L8
+	ldr x0, [x29, #16]  // dst
+	str x0, [x29, #48]  // 途中の値はフレームへ
+	mov x0, #4  // STD_W4
+	ldr x10, [x29, #40]  // i
+	mul x11, x0, x10
+	smulh x12, x0, x10  // 積の上の語
 	cmp x12, x11, asr #63  // 上の語が下の語の符号の伸びでなければ溢れた
 	ccmp xzr, x11, #1, eq
 	b.vs .Ltrap
-	adds x9, x27, x11
+	ldr x9, [x29, #48]
+	adds x9, x9, x11
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
 	b.vs .Ltrap
+	str x9, [x29, #48]  // 番地
+	mov x0, #0
 	movz x10, #0x900, lsl #16
 	cmp x9, x10
-	b.lo .L13
+	b.lo .L10
 	mov x1, #4  // 幅
 	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
-	b .L14
-.L13:
+	b .L11
+.L10:
 	str w0, [x9]  // 幅 4 byte で書く(value_representation.md §5。値はその幅へ切れる)
-.L14:
-.L12:
-	mov x19, x26  // 実引数
-	mov x0, x9
-	mov x1, x19
-	bl seq2
-	b .L10
 .L11:
-	mov x10, #4
-	mul x11, x26, x10
-	smulh x12, x26, x10  // 積の上の語
+.L9:
+	str x9, [x29, #48]  // 実引数
+	ldr x0, [x29, #40]  // i
+	str x0, [x29, #56]  // 実引数
+	ldr x0, [x29, #48]
+	ldr x1, [x29, #56]
+	ldp x29, x30, [sp], #80  // フレームを戻す
+	b seq2  // 兄弟への末尾呼び出し
+	b .L7
+.L8:
+	ldr x0, [x29, #16]  // dst
+	str x0, [x29, #48]  // 途中の値はフレームへ
+	mov x0, #4  // STD_W4
+	ldr x10, [x29, #40]  // i
+	mul x11, x0, x10
+	smulh x12, x0, x10  // 積の上の語
 	cmp x12, x11, asr #63  // 上の語が下の語の符号の伸びでなければ溢れた
 	ccmp xzr, x11, #1, eq
 	b.vs .Ltrap
-	adds x9, x27, x11
+	ldr x9, [x29, #48]
+	adds x9, x9, x11
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
-	mov x19, x9  // 番地
-	ldr x9, [x29, #24]  // s.ptr
 	b.vs .Ltrap
-	mov x11, x26
-	cmp x26, #0
-	b.ge .L18
-	add x11, x11, x28  // 負の添字は後ろから
-.L18:
-	cmp x11, x28
-	b.hs .L16  // 範囲の外(符号なしで比べると、後ろからでも足りない負の数も外れる)。読まない
+	str x9, [x29, #48]  // 番地
+	ldr x11, [x29, #40]  // i
+	ldr x9, [x29, #24]  // s.ptr
+	ldr x10, [x29, #32]  // s.len
+	cmp x11, #0
+	b.ge .L15
+	add x11, x11, x10  // 負の添字は後ろから
+.L15:
+	cmp x11, x10
+	b.hs .L13  // 範囲の外(符号なしで比べると、後ろからでも足りない負の数も外れる)。読まない
 	ldrb w0, [x9, x11]  // 文字(ASCII の 1 バイト)
+	b .L14
+.L13:
+	mov x0, #0  // Char の `__` は U+0000(niche)
+.L14:
+	str x0, [x29, #56]  // 左の文字
+	mov x0, #0  // 文字
+	ldr x9, [x29, #56]
+	cbz x9, .L16  // Char の __ は U+0000(字面の U+0000 は __ ではない)
+	sub x0, x9, x0  // 符号位置の差は Int の値域に収まる
 	b .L17
 .L16:
-	mov x0, #0  // Char の `__` は U+0000(niche)
-.L17:
-	cbz x0, .L19  // Char の __ は U+0000(字面の U+0000 は __ ではない)
-	sub x0, x0, #0  // 符号位置の差は Int の値域に収まる
-	b .L20
-.L19:
 	movz x0, #0x8000, lsl #48  // __
-.L20:
+.L17:
+	ldr x9, [x29, #48]
 	movz x13, #0x8000, lsl #48  // __
-	mov x9, x19
 	cmp x0, x13
-	b.eq .L21  // 値が __ なら何も書かない(番地は返る)
+	b.eq .L18  // 値が __ なら何も書かない(番地は返る)
 	movz x10, #0x900, lsl #16
-	cmp x19, x10
-	b.lo .L22
+	cmp x9, x10
+	b.lo .L19
 	mov x1, #4  // 幅
 	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
-	b .L23
-.L22:
+	b .L20
+.L19:
 	str w0, [x9]  // 幅 4 byte で書く(value_representation.md §5。値はその幅へ切れる)
-.L23:
-.L21:
-	adds x9, x26, #1
+.L20:
+.L18:
+	ldr x0, [x29, #16]  // dst
+	str x0, [x29, #48]  // 実引数
+	ldr x0, [x29, #24]  // s.ptr
+	ldr x1, [x29, #32]  // s.len
+	str x0, [x29, #56]  // 実引数(ptr)
+	str x1, [x29, #64]  // 実引数(len)
+	ldr x0, [x29, #40]  // i
+	adds x9, x0, #1
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
 	b.vs .Ltrap
-	mov x26, x9  // 仮引数 i を更新
-	b .L9  // 自分への末尾呼び出し
-	b .L10
-.L15:
+	str x9, [x29, #72]  // 実引数
+	ldr x9, [x29, #48]
+	str x9, [x29, #16]  // 仮引数 dst を更新
+	ldr x9, [x29, #56]
+	str x9, [x29, #24]  // 仮引数 s を更新
+	ldr x9, [x29, #64]
+	str x9, [x29, #32]  // 仮引数 s を更新
+	ldr x9, [x29, #72]
+	str x9, [x29, #40]  // 仮引数 i を更新
+	b .L6  // 自分への末尾呼び出し
+	b .L7
+.L12:
 	movz x0, #0x8000, lsl #48  // __
-.L10:
-	ldp x19, x26, [x29, #80]  // 保存したレジスタを戻す
-	ldp x27, x28, [x29, #96]  // 保存したレジスタを戻す
-	ldp x29, x30, [sp], #112  // フレームを戻す
+.L7:
+	ldp x29, x30, [sp], #80  // フレームを戻す
 	ret
 
 str_int:
 	stp x29, x30, [sp, #-48]!  // フレーム 48 バイト
 	mov x29, sp
-	cmp x1, #0
-	b.ge .L26
-	bl std_neg
-	b .L25
-.L26:
-	bl std_uint
-.L25:
+	str x0, [x29, #16]  // 仮引数 dst
+	str x1, [x29, #24]  // 仮引数 n
+	mov x9, x1  // n
+	mov x10, #0
+	cmp x9, #0
+	b.ge .L23
+	ldr x0, [x29, #16]  // dst
+	str x0, [x29, #32]  // 実引数
+	ldr x0, [x29, #24]  // n
+	str x0, [x29, #40]  // 実引数
+	ldr x0, [x29, #32]
+	ldr x1, [x29, #40]
+	ldp x29, x30, [sp], #48  // フレームを戻す
+	b std_neg  // 兄弟への末尾呼び出し
+	b .L22
+.L23:
+	ldr x0, [x29, #16]  // dst
+	str x0, [x29, #32]  // 実引数
+	ldr x0, [x29, #24]  // n
+	str x0, [x29, #40]  // 実引数
+	ldr x0, [x29, #32]
+	ldr x1, [x29, #40]
+	ldp x29, x30, [sp], #48  // フレームを戻す
+	b std_uint  // 兄弟への末尾呼び出し
+.L22:
 	ldp x29, x30, [sp], #48  // フレームを戻す
 	ret
 
@@ -172,14 +205,14 @@ std_neg:
 	str x1, [x29, #24]  // 仮引数 n
 	mov x0, #45
 	cmp x9, x10
-	b.lo .L31
+	b.lo .L28
 	mov x1, #4  // 幅
 	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
-	b .L32
-.L31:
+	b .L29
+.L28:
 	str w0, [x9]  // 幅 4 byte で書く(value_representation.md §5。値はその幅へ切れる)
-.L32:
-.L30:
+.L29:
+.L27:
 	mov x0, #1
 	str x0, [x29, #32]  // 途中の値はフレームへ
 	ldr x0, [x29, #16]  // dst
@@ -197,19 +230,19 @@ std_neg:
 	ldr x9, [x29, #32]
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.ne .L34
+	b.ne .L31
 	mov x0, x9
-	b .L33
-.L34:
+	b .L30
+.L31:
 	adds x9, x9, x0
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
 	b.vs .Ltrap
 	mov x0, x9
-.L33:
-	b .L28
-.L29:
+.L30:
+	b .L25
+.L26:
 	movz x0, #0x8000, lsl #48  // __
-.L28:
+.L25:
 	ldp x29, x30, [sp], #64  // フレームを戻す
 	ret
 
@@ -220,20 +253,20 @@ std_ndig:
 	mov x19, x0  // 仮引数 n
 	mov x20, x1  // 仮引数 d
 	mov x10, #10
-.L35:
+.L32:
 	cmp x19, #10
-	b.ge .L37
+	b.ge .L34
 	mov x0, x20  // d
-	b .L36
-.L37:
+	b .L33
+.L34:
 	sdiv x0, x19, x10  // 商は被除数を超えず、値域は対称なので溢れない(integer_overflow.md §1.1)
 	adds x9, x20, #1
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
 	b.vs .Ltrap
 	mov x20, x9  // 仮引数 d を更新
 	mov x19, x0  // 実引数
-	b .L35  // 自分への末尾呼び出し
-.L36:
+	b .L32  // 自分への末尾呼び出し
+.L33:
 	ldp x19, x20, [x29, #48]  // 保存したレジスタを戻す
 	ldp x29, x30, [sp], #64  // フレームを戻す
 	ret
@@ -241,48 +274,53 @@ std_ndig:
 std_uint:
 	stp x29, x30, [sp, #-64]!  // フレーム 64 バイト
 	mov x29, sp
+	str x0, [x29, #16]  // 仮引数 dst
+	str x1, [x29, #24]  // 仮引数 n
+	ldr x0, [x29, #16]  // dst
 	str x0, [x29, #32]  // 実引数
-	mov x0, #1
-	str x0, [x29, #56]  // 実引数
-	str x1, [x29, #40]  // 実引数
-	mov x0, x1
-	ldr x1, [x29, #56]
+	ldr x0, [x29, #24]  // n
+	str x0, [x29, #40]  // 実引数
+	ldr x0, [x29, #24]  // n
+	str x0, [x29, #48]  // 実引数
+	mov x1, #1  // 実引数(字面)
 	bl std_ndig
 	str x0, [x29, #48]  // 実引数
 	ldr x0, [x29, #32]
 	ldr x1, [x29, #40]
 	ldr x2, [x29, #48]
-	bl std_uint2
+	ldp x29, x30, [sp], #64  // フレームを戻す
+	b std_uint2  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #64  // フレームを戻す
 	ret
 
 std_uint2:
 	stp x29, x30, [sp, #-80]!  // フレーム 80 バイト
 	mov x29, sp
-	mov x10, #4
-	mul x11, x2, x10
-	smulh x12, x2, x10  // 積の上の語
 	str x0, [x29, #16]  // 仮引数 dst
+	str x0, [x29, #40]  // 途中の値はフレームへ
+	mov x0, #4  // STD_W4
+	mul x11, x0, x2
+	smulh x12, x0, x2  // 積の上の語
+	ldr x9, [x29, #40]
 	str x1, [x29, #24]  // 仮引数 n
 	cmp x12, x11, asr #63  // 上の語が下の語の符号の伸びでなければ溢れた
 	str x2, [x29, #32]  // 仮引数 nd
-	str x0, [x29, #40]  // 途中の値はフレームへ
 	ccmp xzr, x11, #1, eq
 	b.vs .Ltrap
-	adds x9, x0, x11
+	adds x9, x9, x11
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
 	b.vs .Ltrap
 	movz x10, #0x900, lsl #16
 	mov x0, #0
 	cmp x9, x10
-	b.lo .L41
+	b.lo .L38
 	mov x1, #4  // 幅
 	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
-	b .L42
-.L41:
+	b .L39
+.L38:
 	str w0, [x9]  // 幅 4 byte で書く(value_representation.md §5。値はその幅へ切れる)
-.L42:
-.L40:
+.L39:
+.L37:
 	ldr x0, [x29, #16]  // dst
 	str x9, [x29, #40]  // 実引数
 	str x0, [x29, #48]  // 実引数
@@ -300,15 +338,15 @@ std_uint2:
 	movz x13, #0x8000, lsl #48  // __
 	str x0, [x29, #56]  // 実引数
 	cmp x9, x13
-	b.eq .L43  // 引数が __ なら呼び全体が __
+	b.eq .L40  // 引数が __ なら呼び全体が __
 	ldr x0, [x29, #40]
 	ldr x2, [x29, #56]
 	mov x1, x9
 	bl seq3
-	b .L44
-.L43:
+	b .L41
+.L40:
 	movz x0, #0x8000, lsl #48  // __
-.L44:
+.L41:
 	ldp x29, x30, [sp], #80  // フレームを戻す
 	ret
 
@@ -321,16 +359,17 @@ std_uw:
 	mov x28, x0  // 仮引数 dst
 	mov x27, x1  // 仮引数 n
 	mov x26, x2  // 仮引数 i
-.L45:
+.L42:
 	cmp x26, #0
-	b.gt .L47
+	b.gt .L44
 	mov x0, #0
-	b .L46
-.L47:
+	b .L43
+.L44:
+	mov x0, #4  // STD_W4
+	mov x20, x0  // 途中の値はフレームへ
 	subs x9, x26, #1
-	mov x10, #4
-	mul x11, x9, x10
-	smulh x12, x9, x10  // 積の上の語
+	mul x11, x20, x9
+	smulh x12, x20, x9  // 積の上の語
 	ccmp xzr, x9, #1, vc
 	b.vs .Ltrap
 	cmp x12, x11, asr #63  // 上の語が下の語の符号の伸びでなければ溢れた
@@ -351,14 +390,14 @@ std_uw:
 	b.vs .Ltrap
 	movz x10, #0x900, lsl #16
 	cmp x19, x10
-	b.lo .L50
+	b.lo .L47
 	mov x1, #4  // 幅
 	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
-	b .L51
-.L50:
+	b .L48
+.L47:
 	str w0, [x9]  // 幅 4 byte で書く(value_representation.md §5。値はその幅へ切れる)
-.L51:
-.L49:
+.L48:
+.L46:
 	mov x10, #10
 	sdiv x0, x27, x10  // 商は被除数を超えず、値域は対称なので溢れない(integer_overflow.md §1.1)
 	subs x9, x26, #1
@@ -367,11 +406,11 @@ std_uw:
 	mov x26, x9  // 仮引数 i を更新
 	mov x19, x0  // 実引数
 	mov x27, x19  // 仮引数 n を更新
-	b .L45  // 自分への末尾呼び出し
-	b .L46
-.L48:
+	b .L42  // 自分への末尾呼び出し
+	b .L43
+.L45:
 	movz x0, #0x8000, lsl #48  // __
-.L46:
+.L43:
 	ldr x28, [x29, #96]  // 保存したレジスタを戻す
 	ldp x19, x20, [x29, #64]  // 保存したレジスタを戻す
 	ldp x26, x27, [x29, #80]  // 保存したレジスタを戻す
@@ -381,11 +420,7 @@ std_uw:
 print:
 	stp x29, x30, [sp, #-64]!  // フレーム 64 バイト
 	mov x29, sp
-	str x0, [x29, #32]  // 実引数(ptr)
-	mov x0, #0
-	str x0, [x29, #48]  // 実引数
-	ldr x0, [x29, #32]
-	ldr x2, [x29, #48]
+	mov x2, #0  // 実引数(字面)
 	bl std_pr
 	ldp x29, x30, [sp], #64  // フレームを戻す
 	ret
@@ -398,85 +433,60 @@ std_pr:
 	mov x27, x0  // 仮引数 s.ptr
 	mov x28, x1  // 仮引数 s.len
 	mov x26, x2  // 仮引数 i
-.L53:
+.L50:
 	cmp x26, x28
-	b.lt .L55
+	b.lt .L52
 	mov x0, #0
-	b .L54
-.L55:
+	b .L51
+.L52:
 	movz x0, #0x900, lsl #16  // STD_UART
 	mov x19, x0  // 番地
 	mov x11, x26
 	mov x9, x27  // s.ptr
 	cmp x26, #0
-	b.ge .L59
+	b.ge .L56
 	add x11, x11, x28  // 負の添字は後ろから
-.L59:
+.L56:
 	cmp x11, x28
-	b.hs .L57  // 範囲の外(符号なしで比べると、後ろからでも足りない負の数も外れる)。読まない
+	b.hs .L54  // 範囲の外(符号なしで比べると、後ろからでも足りない負の数も外れる)。読まない
 	ldrb w0, [x9, x11]  // 文字(ASCII の 1 バイト)
-	b .L58
-.L57:
+	b .L55
+.L54:
 	mov x0, #0  // Char の `__` は U+0000(niche)
-.L58:
+.L55:
 	movz x10, #0x900, lsl #16
 	mov x9, x19
 	cmp x19, x10
-	b.lo .L61
+	b.lo .L58
 	mov x1, #8  // 幅
 	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
-	b .L62
-.L61:
+	b .L59
+.L58:
 	str x0, [x19]  // 64 ビットで書く(装置・普通のメモリの区別は処理系の仮想装置の領分。実機では番地が実在することが前提)
-.L62:
-.L60:
+.L59:
+.L57:
 	adds x9, x26, #1
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
 	mov x1, x28  // s.len
 	b.vs .Ltrap
 	mov x26, x9  // 仮引数 i を更新
-	b .L53  // 自分への末尾呼び出し
-	b .L54
-.L56:
+	b .L50  // 自分への末尾呼び出し
+	b .L51
+.L53:
 	mov x0, #0
-.L54:
+.L51:
 	ldp x19, x26, [x29, #64]  // 保存したレジスタを戻す
 	ldp x27, x28, [x29, #80]  // 保存したレジスタを戻す
 	ldp x29, x30, [sp], #96  // フレームを戻す
 	ret
 
-println:
-	stp x29, x30, [sp, #-64]!  // フレーム 64 バイト
-	mov x29, sp
-	bl print
-	str x0, [x29, #32]  // 実引数
-	movz x0, #0x900, lsl #16  // STD_UART
-	str x0, [x29, #40]  // 番地
-	ldr x9, [x29, #40]
-	movz x10, #0x900, lsl #16
-	mov x0, #10
-	cmp x9, x10
-	b.lo .L65
-	mov x1, #8  // 幅
-	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
-	b .L66
-.L65:
-	str x0, [x9]  // 64 ビットで書く(装置・普通のメモリの区別は処理系の仮想装置の領分。実機では番地が実在することが前提)
-.L66:
-.L64:
-	mov x0, #0
-	str x0, [x29, #48]  // 実引数
-	ldr x0, [x29, #32]
-	ldr x2, [x29, #48]
-	mov x1, x9
-	bl seq3
-	ldp x29, x30, [sp], #64  // フレームを戻す
-	ret
-
 print_mem:
 	stp x29, x30, [sp, #-32]!  // フレーム 32 バイト
 	mov x29, sp
-	bl std_pm
+	str x0, [x29, #16]  // 仮引数 p
+	str x0, [x29, #24]  // 実引数
+	ldp x29, x30, [sp], #32  // フレームを戻す
+	b std_pm  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #32  // フレームを戻す
 	ret
 
@@ -485,61 +495,61 @@ std_pm:
 	mov x29, sp
 	stp x26, x27, [x29, #32]  // 呼ぶ側のために保存(x19〜x28 は呼び出し先が保つ約束)
 	mov x26, x0  // 仮引数 p
-.L68:
+.L61:
 	movz x10, #0x900, lsl #16
 	mov x0, x26  // p
 	cmp x26, x10
-	b.lo .L71
+	b.lo .L64
 	mov x1, #4  // 幅
 	bl _sign_dev_ld  // 装置からの読み(実機の中継。sign_realdev.py)
-	b .L72
-.L71:
+	b .L65
+.L64:
 	ldr w0, [x0]  // 幅 4 byte で読む(ゼロ拡張)
-.L72:
+.L65:
 	movz x13, #0x8000, lsl #48  // __
 	mov x9, x0
 	cmp x0, x13
-	b.eq .L70  // __ との比較は外れ
+	b.eq .L63  // __ との比較は外れ
 	cmp x0, #0
-	b.ne .L70
+	b.ne .L63
 	mov x0, #0
-	b .L69
-.L70:
+	b .L62
+.L63:
 	movz x0, #0x900, lsl #16  // STD_UART
 	mov x27, x0  // 番地
 	movz x10, #0x900, lsl #16
 	mov x0, x26  // p
 	cmp x26, x10
-	b.lo .L74
+	b.lo .L67
 	mov x1, #4  // 幅
 	bl _sign_dev_ld  // 装置からの読み(実機の中継。sign_realdev.py)
-	b .L75
-.L74:
+	b .L68
+.L67:
 	ldr w0, [x0]  // 幅 4 byte で読む(ゼロ拡張)
-.L75:
+.L68:
 	movz x13, #0x8000, lsl #48  // __
 	mov x9, x27
 	cmp x0, x13
-	b.eq .L76  // 値が __ なら何も書かない(番地は返る)
+	b.eq .L69  // 値が __ なら何も書かない(番地は返る)
 	movz x10, #0x900, lsl #16
 	cmp x27, x10
-	b.lo .L77
+	b.lo .L70
 	mov x1, #8  // 幅
 	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
-	b .L78
-.L77:
+	b .L71
+.L70:
 	str x0, [x27]  // 64 ビットで書く(装置・普通のメモリの区別は処理系の仮想装置の領分。実機では番地が実在することが前提)
-.L78:
-.L76:
+.L71:
+.L69:
 	adds x9, x26, #4
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
 	b.vs .Ltrap
 	mov x26, x9  // 仮引数 p を更新
-	b .L68  // 自分への末尾呼び出し
-	b .L69
-.L73:
+	b .L61  // 自分への末尾呼び出し
+	b .L62
+.L66:
 	movz x0, #0x8000, lsl #48  // __
-.L69:
+.L62:
 	ldp x26, x27, [x29, #32]  // 保存したレジスタを戻す
 	ldp x29, x30, [sp], #48  // フレームを戻す
 	ret
@@ -551,7 +561,7 @@ print_int:
 	bl std_isi
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L81  // __ は偽
+	b.eq .L74  // __ は偽
 	movz x0, #0x7f, lsl #16  // STD_TMP
 	str x0, [x29, #24]  // 実引数
 	ldr x0, [x29, #16]  // n
@@ -565,21 +575,21 @@ print_int:
 	ldr x9, [x29, #24]
 	movz x13, #0x8000, lsl #48  // __
 	cmp x9, x13
-	b.eq .L82  // 引数が __ なら呼び全体が __
+	b.eq .L75  // 引数が __ なら呼び全体が __
 	mov x9, x0
 	cmp x0, x13
-	b.eq .L82  // 引数が __ なら呼び全体が __
+	b.eq .L75  // 引数が __ なら呼び全体が __
 	ldr x0, [x29, #24]
 	mov x1, x9
 	bl seq2
-	b .L83
-.L82:
+	b .L76
+.L75:
 	movz x0, #0x8000, lsl #48  // __
-.L83:
-	b .L80
-.L81:
+.L76:
+	b .L73
+.L74:
 	movz x0, #0x8000, lsl #48  // __
-.L80:
+.L73:
 	ldp x29, x30, [sp], #48  // フレームを戻す
 	ret
 
@@ -590,7 +600,7 @@ println_int:
 	bl std_isi
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L86  // __ は偽
+	b.eq .L79  // __ は偽
 	ldr x0, [x29, #16]  // n
 	bl print_int
 	str x0, [x29, #24]  // 実引数
@@ -600,46 +610,75 @@ println_int:
 	movz x10, #0x900, lsl #16
 	mov x0, #10
 	cmp x9, x10
-	b.lo .L88
+	b.lo .L81
 	mov x1, #8  // 幅
 	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
-	b .L89
-.L88:
+	b .L82
+.L81:
 	str x0, [x9]  // 64 ビットで書く(装置・普通のメモリの区別は処理系の仮想装置の領分。実機では番地が実在することが前提)
-.L89:
-.L87:
-	mov x0, #0
-	str x0, [x29, #40]  // 実引数
-	ldr x1, [x29, #40]
-	mov x0, x9
+.L82:
+.L80:
+	mov x0, x9  // 答えは番地
+	mov x1, #0  // 実引数(字面)
 	bl seq2
 	ldr x9, [x29, #24]
 	movz x13, #0x8000, lsl #48  // __
 	str x0, [x29, #32]  // 実引数
 	cmp x9, x13
-	b.eq .L90  // 引数が __ なら呼び全体が __
+	b.eq .L83  // 引数が __ なら呼び全体が __
 	mov x0, x9
 	ldr x1, [x29, #32]
 	bl seq2
-	b .L91
-.L90:
+	b .L84
+.L83:
 	movz x0, #0x8000, lsl #48  // __
-.L91:
-	b .L85
+.L84:
+	b .L78
+.L79:
+	movz x0, #0x8000, lsl #48  // __
+.L78:
+	ldp x29, x30, [sp], #48  // フレームを戻す
+	ret
+
+newline:
+	stp x29, x30, [sp, #-48]!  // フレーム 48 バイト
+	mov x29, sp
+	str x0, [x29, #16]  // 仮引数 z
+	movz x0, #0x900, lsl #16  // STD_UART
+	str x0, [x29, #24]  // 番地
+	mov x0, #10
+	ldr x9, [x29, #24]
+	movz x10, #0x900, lsl #16
+	cmp x9, x10
+	b.lo .L87
+	mov x1, #8  // 幅
+	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
+	b .L88
+.L87:
+	str x0, [x9]  // 64 ビットで書く(装置・普通のメモリの区別は処理系の仮想装置の領分。実機では番地が実在することが前提)
+.L88:
 .L86:
-	movz x0, #0x8000, lsl #48  // __
-.L85:
+	mov x0, x9  // 答えは番地
+	str x0, [x29, #24]  // 実引数
+	mov x1, #0  // 実引数(字面)
+	ldp x29, x30, [sp], #48  // フレームを戻す
+	b seq2  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #48  // フレームを戻す
 	ret
 
 std_isi:
 	stp x29, x30, [sp, #-32]!  // フレーム 32 バイト
 	mov x29, sp
-	and x0, x0, x0
+	str x0, [x29, #16]  // 仮引数 n
+	mov x9, x0
+	mov x10, x0  // n
+	and x0, x9, x10
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
 	b.eq .Ltrap  // 結果が __ の印と同じ値(INT64_MIN)は値域の外
-	bl std_isi1
+	str x0, [x29, #24]  // 実引数
+	ldp x29, x30, [sp], #32  // フレームを戻す
+	b std_isi1  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #32  // フレームを戻す
 	ret
 
@@ -647,16 +686,16 @@ std_isi1:
 	stp x29, x30, [sp, #-32]!  // フレーム 32 バイト
 	mov x29, sp
 	cmp x0, #0
-	b.lt .L97
-.L96:
+	b.lt .L94
+.L93:
 	cmp x0, #0
-	b.lt .L95
-.L97:
-	mov x0, #1
-	b .L94
-.L95:
-	movz x0, #0x8000, lsl #48  // __
+	b.lt .L92
 .L94:
+	mov x0, #1
+	b .L91
+.L92:
+	movz x0, #0x8000, lsl #48  // __
+.L91:
 	ldp x29, x30, [sp], #32  // フレームを戻す
 	ret
 
@@ -665,14 +704,14 @@ db_s32:
 	mov x29, sp
 	movz x10, #0x8000, lsl #16
 	cmp x0, x10
-	b.lt .L100
+	b.lt .L97
 	movz x10, #0x1, lsl #32
 	subs x0, x0, x10
 	ccmp xzr, x0, #1, vc
 	b.vs .Ltrap
-	b .L99
-.L100:
-.L99:
+	b .L96
+.L97:
+.L96:
 	ldp x29, x30, [sp], #32  // フレームを戻す
 	ret
 
@@ -690,6 +729,22 @@ db_call:
 	str x3, [x29, #40]  // 仮引数 c
 	str x4, [x29, #48]  // 仮引数 d
 	cmp x9, x10
+	b.lo .L100
+	mov x1, #4  // 幅
+	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
+	b .L101
+.L100:
+	str w0, [x9]  // 幅 4 byte で書く(value_representation.md §5。値はその幅へ切れる)
+.L101:
+.L99:
+	str x9, [x29, #56]  // 実引数
+	movz x0, #0x9a0, lsl #16  // DB_DEV
+	adds x9, x0, #4
+	ldr x0, [x29, #24]  // a
+	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
+	b.vs .Ltrap
+	movz x10, #0x900, lsl #16
+	cmp x9, x10
 	b.lo .L103
 	mov x1, #4  // 幅
 	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
@@ -698,10 +753,10 @@ db_call:
 	str w0, [x9]  // 幅 4 byte で書く(value_representation.md §5。値はその幅へ切れる)
 .L104:
 .L102:
-	str x9, [x29, #56]  // 実引数
+	str x9, [x29, #64]  // 実引数
 	movz x0, #0x9a0, lsl #16  // DB_DEV
-	adds x9, x0, #4
-	ldr x0, [x29, #24]  // a
+	adds x9, x0, #8
+	ldr x0, [x29, #32]  // b
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
 	b.vs .Ltrap
 	movz x10, #0x900, lsl #16
@@ -714,10 +769,10 @@ db_call:
 	str w0, [x9]  // 幅 4 byte で書く(value_representation.md §5。値はその幅へ切れる)
 .L107:
 .L105:
-	str x9, [x29, #64]  // 実引数
+	str x9, [x29, #72]  // 実引数
 	movz x0, #0x9a0, lsl #16  // DB_DEV
-	adds x9, x0, #8
-	ldr x0, [x29, #32]  // b
+	adds x9, x0, #12
+	ldr x0, [x29, #40]  // c
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
 	b.vs .Ltrap
 	movz x10, #0x900, lsl #16
@@ -730,10 +785,10 @@ db_call:
 	str w0, [x9]  // 幅 4 byte で書く(value_representation.md §5。値はその幅へ切れる)
 .L110:
 .L108:
-	str x9, [x29, #72]  // 実引数
+	str x9, [x29, #80]  // 実引数
 	movz x0, #0x9a0, lsl #16  // DB_DEV
-	adds x9, x0, #12
-	ldr x0, [x29, #40]  // c
+	adds x9, x0, #16
+	ldr x0, [x29, #48]  // d
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
 	b.vs .Ltrap
 	movz x10, #0x900, lsl #16
@@ -746,13 +801,13 @@ db_call:
 	str w0, [x9]  // 幅 4 byte で書く(value_representation.md §5。値はその幅へ切れる)
 .L113:
 .L111:
-	str x9, [x29, #80]  // 実引数
+	str x9, [x29, #88]  // 実引数
 	movz x0, #0x9a0, lsl #16  // DB_DEV
-	adds x9, x0, #16
-	ldr x0, [x29, #48]  // d
+	adds x9, x0, #32
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
 	b.vs .Ltrap
 	movz x10, #0x900, lsl #16
+	mov x0, #1
 	cmp x9, x10
 	b.lo .L115
 	mov x1, #4  // 幅
@@ -762,22 +817,6 @@ db_call:
 	str w0, [x9]  // 幅 4 byte で書く(value_representation.md §5。値はその幅へ切れる)
 .L116:
 .L114:
-	str x9, [x29, #88]  // 実引数
-	movz x0, #0x9a0, lsl #16  // DB_DEV
-	adds x9, x0, #32
-	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
-	b.vs .Ltrap
-	movz x10, #0x900, lsl #16
-	mov x0, #1
-	cmp x9, x10
-	b.lo .L118
-	mov x1, #4  // 幅
-	bl _sign_dev_st  // 装置への書き込み(実機の中継。sign_realdev.py)
-	b .L119
-.L118:
-	str w0, [x9]  // 幅 4 byte で書く(value_representation.md §5。値はその幅へ切れる)
-.L119:
-.L117:
 	str x9, [x29, #96]  // 実引数
 	movz x0, #0x9a0, lsl #16  // DB_DEV
 	adds x9, x0, #36
@@ -786,25 +825,25 @@ db_call:
 	mov x0, x9
 	movz x10, #0x900, lsl #16
 	cmp x0, x10
-	b.lo .L120
+	b.lo .L117
 	mov x1, #4  // 幅
 	bl _sign_dev_ld  // 装置からの読み(実機の中継。sign_realdev.py)
-	b .L121
-.L120:
+	b .L118
+.L117:
 	ldr w0, [x0]  // 幅 4 byte で読む(ゼロ拡張)
-.L121:
+.L118:
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L122  // 引数が __ なら呼び全体が __
+	b.eq .L119  // 引数が __ なら呼び全体が __
 	bl db_s32
-	b .L123
-.L122:
+	b .L120
+.L119:
 	movz x0, #0x8000, lsl #48  // __
-.L123:
+.L120:
 	movz x13, #0x8000, lsl #48  // __
 	mov x9, x0
 	cmp x0, x13
-	b.eq .L124  // 引数が __ なら呼び全体が __
+	b.eq .L121  // 引数が __ なら呼び全体が __
 	ldr x0, [x29, #56]
 	ldr x1, [x29, #64]
 	ldr x2, [x29, #72]
@@ -813,10 +852,10 @@ db_call:
 	ldr x5, [x29, #96]
 	mov x6, x9
 	bl seq7
-	b .L125
-.L124:
+	b .L122
+.L121:
 	movz x0, #0x8000, lsl #48  // __
-.L125:
+.L122:
 	ldp x29, x30, [sp], #112  // フレームを戻す
 	ret
 
@@ -835,7 +874,7 @@ db_str2:
 	mov x10, #4
 	sdiv x0, x3, x10  // 商は被除数を超えず、値域は対称なので溢れない(integer_overflow.md §1.1)
 	cmp x4, x0
-	b.ge .L129
+	b.ge .L126
 	ldr x0, [x29, #16]  // buf
 	bl str_put
 	str x0, [x29, #56]  // 実引数
@@ -844,18 +883,18 @@ db_str2:
 	movz x13, #0x8000, lsl #48  // __
 	str x0, [x29, #64]  // 実引数
 	cmp x9, x13
-	b.eq .L130  // 引数が __ なら呼び全体が __
+	b.eq .L127  // 引数が __ なら呼び全体が __
 	mov x0, x9
 	ldr x1, [x29, #64]
 	bl seq2
-	b .L131
-.L130:
-	movz x0, #0x8000, lsl #48  // __
-.L131:
 	b .L128
-.L129:
+.L127:
 	movz x0, #0x8000, lsl #48  // __
 .L128:
+	b .L125
+.L126:
+	movz x0, #0x8000, lsl #48  // __
+.L125:
 	ldp x29, x30, [sp], #80  // フレームを戻す
 	ret
 
@@ -863,19 +902,18 @@ db_open_mem:
 	stp x29, x30, [sp, #-80]!  // フレーム 80 バイト
 	mov x29, sp
 	str x0, [x29, #16]  // 仮引数 p
-	mov x0, #1
-	str x0, [x29, #32]  // 実引数
+	str x1, [x29, #24]  // 仮引数 flags
 	ldr x0, [x29, #16]  // p
-	str x1, [x29, #48]  // 実引数
-	ldr x2, [x29, #48]
 	str x0, [x29, #40]  // 実引数
-	mov x0, #0
-	str x0, [x29, #56]  // 実引数
-	ldr x3, [x29, #56]
-	ldr x0, [x29, #32]
+	ldr x0, [x29, #24]  // flags
+	str x0, [x29, #48]  // 実引数
+	mov x0, #1  // 実引数(字面)
 	ldr x1, [x29, #40]
-	mov x4, x3
-	bl db_call
+	ldr x2, [x29, #48]
+	mov x3, #0  // 実引数(字面)
+	mov x4, #0  // 実引数(字面)
+	ldp x29, x30, [sp], #80  // フレームを戻す
+	b db_call  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #80  // フレームを戻す
 	ret
 
@@ -903,14 +941,14 @@ db_open:
 	movz x13, #0x8000, lsl #48  // __
 	str x0, [x29, #48]  // 実引数
 	cmp x9, x13
-	b.eq .L134  // 引数が __ なら呼び全体が __
+	b.eq .L131  // 引数が __ なら呼び全体が __
 	mov x0, x9
 	ldr x1, [x29, #48]
 	bl db_open_mem
-	b .L135
-.L134:
+	b .L132
+.L131:
 	movz x0, #0x8000, lsl #48  // __
-.L135:
+.L132:
 	ldp x29, x30, [sp], #80  // フレームを戻す
 	ret
 
@@ -918,18 +956,14 @@ db_close:
 	stp x29, x30, [sp, #-64]!  // フレーム 64 バイト
 	mov x29, sp
 	str x0, [x29, #16]  // 仮引数 h
-	mov x0, #2
-	str x0, [x29, #24]  // 実引数
-	ldr x0, [x29, #16]  // h
 	str x0, [x29, #32]  // 実引数
-	mov x0, #0
-	str x0, [x29, #40]  // 実引数
-	ldr x2, [x29, #40]
-	ldr x0, [x29, #24]
+	mov x0, #2  // 実引数(字面)
 	ldr x1, [x29, #32]
-	mov x3, x2
-	mov x4, x2
-	bl db_call
+	mov x2, #0  // 実引数(字面)
+	mov x3, #0  // 実引数(字面)
+	mov x4, #0  // 実引数(字面)
+	ldp x29, x30, [sp], #64  // フレームを戻す
+	b db_call  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #64  // フレームを戻す
 	ret
 
@@ -937,19 +971,18 @@ db_exec_mem:
 	stp x29, x30, [sp, #-80]!  // フレーム 80 バイト
 	mov x29, sp
 	str x0, [x29, #16]  // 仮引数 h
-	mov x0, #3
-	str x0, [x29, #32]  // 実引数
+	str x1, [x29, #24]  // 仮引数 p
 	ldr x0, [x29, #16]  // h
-	str x1, [x29, #48]  // 実引数
-	ldr x2, [x29, #48]
 	str x0, [x29, #40]  // 実引数
-	mov x0, #0
-	str x0, [x29, #56]  // 実引数
-	ldr x3, [x29, #56]
-	ldr x0, [x29, #32]
+	ldr x0, [x29, #24]  // p
+	str x0, [x29, #48]  // 実引数
+	mov x0, #3  // 実引数(字面)
 	ldr x1, [x29, #40]
-	mov x4, x3
-	bl db_call
+	ldr x2, [x29, #48]
+	mov x3, #0  // 実引数(字面)
+	mov x4, #0  // 実引数(字面)
+	ldp x29, x30, [sp], #80  // フレームを戻す
+	b db_call  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #80  // フレームを戻す
 	ret
 
@@ -967,14 +1000,14 @@ db_exec:
 	movz x13, #0x8000, lsl #48  // __
 	mov x9, x0
 	cmp x0, x13
-	b.eq .L139  // 引数が __ なら呼び全体が __
+	b.eq .L136  // 引数が __ なら呼び全体が __
 	ldr x0, [x29, #40]
 	mov x1, x9
 	bl db_exec_mem
-	b .L140
-.L139:
+	b .L137
+.L136:
 	movz x0, #0x8000, lsl #48  // __
-.L140:
+.L137:
 	ldp x29, x30, [sp], #80  // フレームを戻す
 	ret
 
@@ -982,19 +1015,18 @@ db_prep_mem:
 	stp x29, x30, [sp, #-80]!  // フレーム 80 バイト
 	mov x29, sp
 	str x0, [x29, #16]  // 仮引数 h
-	mov x0, #4
-	str x0, [x29, #32]  // 実引数
+	str x1, [x29, #24]  // 仮引数 p
 	ldr x0, [x29, #16]  // h
-	str x1, [x29, #48]  // 実引数
-	ldr x2, [x29, #48]
 	str x0, [x29, #40]  // 実引数
-	mov x0, #0
-	str x0, [x29, #56]  // 実引数
-	ldr x3, [x29, #56]
-	ldr x0, [x29, #32]
+	ldr x0, [x29, #24]  // p
+	str x0, [x29, #48]  // 実引数
+	mov x0, #4  // 実引数(字面)
 	ldr x1, [x29, #40]
-	mov x4, x3
-	bl db_call
+	ldr x2, [x29, #48]
+	mov x3, #0  // 実引数(字面)
+	mov x4, #0  // 実引数(字面)
+	ldp x29, x30, [sp], #80  // フレームを戻す
+	b db_call  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #80  // フレームを戻す
 	ret
 
@@ -1012,14 +1044,14 @@ db_prep:
 	movz x13, #0x8000, lsl #48  // __
 	mov x9, x0
 	cmp x0, x13
-	b.eq .L143  // 引数が __ なら呼び全体が __
+	b.eq .L140  // 引数が __ なら呼び全体が __
 	ldr x0, [x29, #40]
 	mov x1, x9
 	bl db_prep_mem
-	b .L144
-.L143:
+	b .L141
+.L140:
 	movz x0, #0x8000, lsl #48  // __
-.L144:
+.L141:
 	ldp x29, x30, [sp], #80  // フレームを戻す
 	ret
 
@@ -1027,18 +1059,14 @@ db_step:
 	stp x29, x30, [sp, #-64]!  // フレーム 64 バイト
 	mov x29, sp
 	str x0, [x29, #16]  // 仮引数 s
-	mov x0, #9
-	str x0, [x29, #24]  // 実引数
-	ldr x0, [x29, #16]  // s
 	str x0, [x29, #32]  // 実引数
-	mov x0, #0
-	str x0, [x29, #40]  // 実引数
-	ldr x2, [x29, #40]
-	ldr x0, [x29, #24]
+	mov x0, #9  // 実引数(字面)
 	ldr x1, [x29, #32]
-	mov x3, x2
-	mov x4, x2
-	bl db_call
+	mov x2, #0  // 実引数(字面)
+	mov x3, #0  // 実引数(字面)
+	mov x4, #0  // 実引数(字面)
+	ldp x29, x30, [sp], #64  // フレームを戻す
+	b db_call  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #64  // フレームを戻す
 	ret
 
@@ -1046,18 +1074,14 @@ db_cols:
 	stp x29, x30, [sp, #-64]!  // フレーム 64 バイト
 	mov x29, sp
 	str x0, [x29, #16]  // 仮引数 s
-	mov x0, #10
-	str x0, [x29, #24]  // 実引数
-	ldr x0, [x29, #16]  // s
 	str x0, [x29, #32]  // 実引数
-	mov x0, #0
-	str x0, [x29, #40]  // 実引数
-	ldr x2, [x29, #40]
-	ldr x0, [x29, #24]
+	mov x0, #10  // 実引数(字面)
 	ldr x1, [x29, #32]
-	mov x3, x2
-	mov x4, x2
-	bl db_call
+	mov x2, #0  // 実引数(字面)
+	mov x3, #0  // 実引数(字面)
+	mov x4, #0  // 実引数(字面)
+	ldp x29, x30, [sp], #64  // フレームを戻す
+	b db_call  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #64  // フレームを戻す
 	ret
 
@@ -1065,19 +1089,24 @@ db_text:
 	stp x29, x30, [sp, #-96]!  // フレーム 96 バイト
 	mov x29, sp
 	str x0, [x29, #16]  // 仮引数 s
-	mov x0, #13
-	str x0, [x29, #48]  // 実引数
+	str x1, [x29, #24]  // 仮引数 i
+	str x2, [x29, #32]  // 仮引数 dst
+	str x3, [x29, #40]  // 仮引数 max_
 	ldr x0, [x29, #16]  // s
-	str x1, [x29, #64]  // 実引数
-	str x2, [x29, #72]  // 実引数
-	str x3, [x29, #80]  // 実引数
 	str x0, [x29, #56]  // 実引数
-	ldr x0, [x29, #48]
+	ldr x0, [x29, #24]  // i
+	str x0, [x29, #64]  // 実引数
+	ldr x0, [x29, #32]  // dst
+	str x0, [x29, #72]  // 実引数
+	ldr x0, [x29, #40]  // max_
+	str x0, [x29, #80]  // 実引数
+	mov x0, #13  // 実引数(字面)
 	ldr x1, [x29, #56]
 	ldr x2, [x29, #64]
 	ldr x3, [x29, #72]
 	ldr x4, [x29, #80]
-	bl db_call
+	ldp x29, x30, [sp], #96  // フレームを戻す
+	b db_call  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #96  // フレームを戻す
 	ret
 
@@ -1085,18 +1114,14 @@ db_rowid:
 	stp x29, x30, [sp, #-64]!  // フレーム 64 バイト
 	mov x29, sp
 	str x0, [x29, #16]  // 仮引数 h
-	mov x0, #17
-	str x0, [x29, #24]  // 実引数
-	ldr x0, [x29, #16]  // h
 	str x0, [x29, #32]  // 実引数
-	mov x0, #0
-	str x0, [x29, #40]  // 実引数
-	ldr x2, [x29, #40]
-	ldr x0, [x29, #24]
+	mov x0, #17  // 実引数(字面)
 	ldr x1, [x29, #32]
-	mov x3, x2
-	mov x4, x2
-	bl db_call
+	mov x2, #0  // 実引数(字面)
+	mov x3, #0  // 実引数(字面)
+	mov x4, #0  // 実引数(字面)
+	ldp x29, x30, [sp], #64  // フレームを戻す
+	b db_call  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #64  // フレームを戻す
 	ret
 
@@ -1104,18 +1129,14 @@ db_changes:
 	stp x29, x30, [sp, #-64]!  // フレーム 64 バイト
 	mov x29, sp
 	str x0, [x29, #16]  // 仮引数 h
-	mov x0, #18
-	str x0, [x29, #24]  // 実引数
-	ldr x0, [x29, #16]  // h
 	str x0, [x29, #32]  // 実引数
-	mov x0, #0
-	str x0, [x29, #40]  // 実引数
-	ldr x2, [x29, #40]
-	ldr x0, [x29, #24]
+	mov x0, #18  // 実引数(字面)
 	ldr x1, [x29, #32]
-	mov x3, x2
-	mov x4, x2
-	bl db_call
+	mov x2, #0  // 実引数(字面)
+	mov x3, #0  // 実引数(字面)
+	mov x4, #0  // 実引数(字面)
+	ldp x29, x30, [sp], #64  // フレームを戻す
+	b db_call  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #64  // フレームを戻す
 	ret
 
@@ -1124,38 +1145,36 @@ db_print_cols:
 	mov x29, sp
 	str x0, [x29, #16]  // 仮引数 s
 	cmp x1, x2
-	b.lt .L152
+	b.lt .L149
 	mov x0, #0
-	b .L151
-.L152:
+	b .L148
+.L149:
 	str x0, [x29, #40]  // 実引数
 	ldr x0, [x29, #16]  // s
 	str x2, [x29, #56]  // 実引数
 	str x1, [x29, #48]  // 実引数
+	mov x3, #4096  // 実引数(字面)
 	str x0, [x29, #64]  // 実引数
 	movz x0, #0x1000  // DB_TMP
 	movk x0, #0x7c, lsl #16
 	str x0, [x29, #80]  // 実引数
-	mov x0, #4096
-	str x0, [x29, #88]  // 実引数
 	ldr x0, [x29, #64]
 	ldr x2, [x29, #80]
-	ldr x3, [x29, #88]
 	bl db_text
 	movz x13, #0x8000, lsl #48  // __
 	mov x9, x0
 	cmp x0, x13
-	b.eq .L153  // 引数が __ なら呼び全体が __
+	b.eq .L150  // 引数が __ なら呼び全体が __
 	ldr x0, [x29, #40]
 	ldr x1, [x29, #48]
 	ldr x2, [x29, #56]
 	mov x3, x9
 	bl db_print_col
-	b .L154
-.L153:
+	b .L151
+.L150:
 	movz x0, #0x8000, lsl #48  // __
-.L154:
 .L151:
+.L148:
 	ldp x29, x30, [sp], #96  // フレームを戻す
 	ret
 
@@ -1166,10 +1185,10 @@ db_print_col:
 	str x1, [x29, #24]  // 仮引数 i
 	str x2, [x29, #32]  // 仮引数 n
 	cmp x3, #0
-	b.ge .L157
+	b.ge .L154
 	mov x0, x3  // r
-	b .L156
-.L157:
+	b .L153
+.L154:
 	movz x0, #0x1000  // DB_TMP
 	movk x0, #0x7c, lsl #16
 	bl print_mem
@@ -1199,19 +1218,19 @@ db_print_col:
 	ldr x9, [x29, #48]
 	movz x13, #0x8000, lsl #48  // __
 	cmp x9, x13
-	b.eq .L158  // 引数が __ なら呼び全体が __
+	b.eq .L155  // 引数が __ なら呼び全体が __
 	mov x9, x0
 	cmp x0, x13
-	b.eq .L158  // 引数が __ なら呼び全体が __
+	b.eq .L155  // 引数が __ なら呼び全体が __
 	ldr x0, [x29, #48]
 	ldr x1, [x29, #56]
 	mov x2, x9
 	bl seq3
-	b .L159
-.L158:
+	b .L156
+.L155:
 	movz x0, #0x8000, lsl #48  // __
-.L159:
 .L156:
+.L153:
 	ldp x29, x30, [sp], #96  // フレームを戻す
 	ret
 
@@ -1222,86 +1241,79 @@ db_tab:
 	ccmp xzr, x9, #1, vc  // 溢れずに INT64_MIN に着いた結果も罠
 	b.vs .Ltrap
 	cmp x9, x2
-	b.ge .L162
+	b.ge .L159
 	adrp x0, .Lstr0  // リストの像(.rodata)
 	add x0, x0, :lo12:.Lstr0
 	mov x1, #1  // 長さ
 	bl print
-	b .L161
-.L162:
+	b .L158
+.L159:
 	mov x0, #0
-.L161:
+.L158:
 	ldp x29, x30, [sp], #64  // フレームを戻す
 	ret
 
 db_print_row:
 	stp x29, x30, [sp, #-48]!  // フレーム 48 バイト
 	mov x29, sp
-	str x0, [x29, #16]  // 仮引数 s
 	str x0, [x29, #24]  // 実引数
-	mov x0, #0
-	str x0, [x29, #32]  // 実引数
-	ldr x0, [x29, #16]  // s
 	bl db_cols
 	movz x13, #0x8000, lsl #48  // __
 	mov x9, x0
 	cmp x0, x13
-	b.eq .L164  // 引数が __ なら呼び全体が __
+	b.eq .L161  // 引数が __ なら呼び全体が __
 	ldr x0, [x29, #24]
-	ldr x1, [x29, #32]
+	mov x1, #0  // 実引数(字面)
 	mov x2, x9
 	bl db_print_cols
-	b .L165
-.L164:
+	b .L162
+.L161:
 	movz x0, #0x8000, lsl #48  // __
-.L165:
+.L162:
 	str x0, [x29, #24]  // 実引数
-	adrp x0, .Lstr1  // リストの像(.rodata)
-	add x0, x0, :lo12:.Lstr1
-	mov x1, #0  // 長さ
-	bl println
+	mov x0, #0  // 実引数(字面)
+	bl newline
 	ldr x9, [x29, #24]
 	movz x13, #0x8000, lsl #48  // __
 	str x0, [x29, #32]  // 実引数
 	cmp x9, x13
-	b.eq .L166  // 引数が __ なら呼び全体が __
+	b.eq .L163  // 引数が __ なら呼び全体が __
 	mov x0, x9
 	ldr x1, [x29, #32]
 	bl seq2
-	b .L167
-.L166:
+	b .L164
+.L163:
 	movz x0, #0x8000, lsl #48  // __
-.L167:
+.L164:
 	ldp x29, x30, [sp], #48  // フレームを戻す
 	ret
 
 pr:
 	stp x29, x30, [sp, #-32]!  // フレーム 32 バイト
 	mov x29, sp
-	bl println_int
+	str x0, [x29, #16]  // 仮引数 x
+	str x0, [x29, #24]  // 実引数
+	ldp x29, x30, [sp], #32  // フレームを戻す
+	b println_int  // 兄弟への末尾呼び出し
 	ldp x29, x30, [sp], #32  // フレームを戻す
 	ret
 
 t:
 	stp x29, x30, [sp, #-48]!  // フレーム 48 バイト
 	mov x29, sp
-	adrp x0, .Lstr2  // リストの像(.rodata)
-	add x0, x0, :lo12:.Lstr2
-	str x0, [x29, #24]  // 実引数(ptr)
-	mov x0, #0
-	str x0, [x29, #40]  // 実引数
-	ldr x0, [x29, #24]
-	ldr x2, [x29, #40]
+	adrp x0, .Lstr1  // リストの像(.rodata)
+	add x0, x0, :lo12:.Lstr1
 	mov x1, #4  // 長さ
+	mov x2, #0  // 実引数(字面)
 	bl db_open
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L170  // 引数が __ なら呼び全体が __
+	b.eq .L167  // 引数が __ なら呼び全体が __
 	bl t1
-	b .L171
-.L170:
+	b .L168
+.L167:
 	movz x0, #0x8000, lsl #48  // __
-.L171:
+.L168:
 	ldp x29, x30, [sp], #48  // フレームを戻す
 	ret
 
@@ -1310,8 +1322,8 @@ t1:
 	mov x29, sp
 	str x19, [x29, #112]  // 呼ぶ側のために保存(x19〜x28 は呼び出し先が保つ約束)
 	mov x19, x0  // 仮引数 h
-	adrp x0, .Lstr3  // リストの像(.rodata)
-	add x0, x0, :lo12:.Lstr3
+	adrp x0, .Lstr2  // リストの像(.rodata)
+	add x0, x0, :lo12:.Lstr2
 	mov x1, #57  // 長さ
 	str x0, [x29, #32]  // 実引数(ptr)
 	str x1, [x29, #40]  // 実引数(len)
@@ -1321,15 +1333,15 @@ t1:
 	bl db_exec
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L173  // 引数が __ なら呼び全体が __
+	b.eq .L170  // 引数が __ なら呼び全体が __
 	bl pr
-	b .L174
-.L173:
+	b .L171
+.L170:
 	movz x0, #0x8000, lsl #48  // __
-.L174:
+.L171:
 	str x0, [x29, #24]  // 実引数
-	adrp x0, .Lstr4  // リストの像(.rodata)
-	add x0, x0, :lo12:.Lstr4
+	adrp x0, .Lstr3  // リストの像(.rodata)
+	add x0, x0, :lo12:.Lstr3
 	mov x1, #58  // 長さ
 	str x0, [x29, #40]  // 実引数(ptr)
 	str x1, [x29, #48]  // 実引数(len)
@@ -1339,15 +1351,15 @@ t1:
 	bl db_exec
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L175  // 引数が __ なら呼び全体が __
+	b.eq .L172  // 引数が __ なら呼び全体が __
 	bl pr
-	b .L176
-.L175:
+	b .L173
+.L172:
 	movz x0, #0x8000, lsl #48  // __
-.L176:
+.L173:
 	str x0, [x29, #32]  // 実引数
-	adrp x0, .Lstr5  // リストの像(.rodata)
-	add x0, x0, :lo12:.Lstr5
+	adrp x0, .Lstr4  // リストの像(.rodata)
+	add x0, x0, :lo12:.Lstr4
 	mov x1, #28  // 長さ
 	str x0, [x29, #48]  // 実引数(ptr)
 	str x1, [x29, #56]  // 実引数(len)
@@ -1357,33 +1369,29 @@ t1:
 	bl db_exec
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L177  // 引数が __ なら呼び全体が __
+	b.eq .L174  // 引数が __ なら呼び全体が __
 	bl pr
-	b .L178
-.L177:
+	b .L175
+.L174:
 	movz x0, #0x8000, lsl #48  // __
-.L178:
+.L175:
 	str x0, [x29, #40]  // 実引数
-	adrp x0, .Lstr6  // リストの像(.rodata)
-	add x0, x0, :lo12:.Lstr6
-	str x0, [x29, #48]  // 実引数(ptr)
-	mov x0, #0
-	str x0, [x29, #64]  // 実引数
-	ldr x0, [x29, #48]
-	ldr x2, [x29, #64]
+	adrp x0, .Lstr5  // リストの像(.rodata)
+	add x0, x0, :lo12:.Lstr5
 	mov x1, #7  // 長さ
+	mov x2, #0  // 実引数(字面)
 	bl db_open
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L179  // 引数が __ なら呼び全体が __
+	b.eq .L176  // 引数が __ なら呼び全体が __
 	bl pr
-	b .L180
-.L179:
+	b .L177
+.L176:
 	movz x0, #0x8000, lsl #48  // __
-.L180:
+.L177:
 	str x0, [x29, #48]  // 実引数
-	adrp x0, .Lstr7  // リストの像(.rodata)
-	add x0, x0, :lo12:.Lstr7
+	adrp x0, .Lstr6  // リストの像(.rodata)
+	add x0, x0, :lo12:.Lstr6
 	mov x1, #27  // 長さ
 	str x0, [x29, #64]  // 実引数(ptr)
 	str x1, [x29, #72]  // 実引数(len)
@@ -1393,15 +1401,15 @@ t1:
 	bl db_exec
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L181  // 引数が __ なら呼び全体が __
+	b.eq .L178  // 引数が __ なら呼び全体が __
 	bl pr
-	b .L182
-.L181:
+	b .L179
+.L178:
 	movz x0, #0x8000, lsl #48  // __
-.L182:
+.L179:
 	str x0, [x29, #56]  // 実引数
-	adrp x0, .Lstr8  // リストの像(.rodata)
-	add x0, x0, :lo12:.Lstr8
+	adrp x0, .Lstr7  // リストの像(.rodata)
+	add x0, x0, :lo12:.Lstr7
 	mov x1, #18  // 長さ
 	str x0, [x29, #72]  // 実引数(ptr)
 	str x1, [x29, #80]  // 実引数(len)
@@ -1411,15 +1419,15 @@ t1:
 	bl db_exec
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L183  // 引数が __ なら呼び全体が __
+	b.eq .L180  // 引数が __ なら呼び全体が __
 	bl pr
-	b .L184
-.L183:
+	b .L181
+.L180:
 	movz x0, #0x8000, lsl #48  // __
-.L184:
+.L181:
 	str x0, [x29, #64]  // 実引数
-	adrp x0, .Lstr9  // リストの像(.rodata)
-	add x0, x0, :lo12:.Lstr9
+	adrp x0, .Lstr8  // リストの像(.rodata)
+	add x0, x0, :lo12:.Lstr8
 	mov x1, #41  // 長さ
 	str x0, [x29, #88]  // 実引数(ptr)
 	str x1, [x29, #96]  // 実引数(len)
@@ -1430,57 +1438,53 @@ t1:
 	movz x13, #0x8000, lsl #48  // __
 	mov x9, x0
 	cmp x0, x13
-	b.eq .L185  // 引数が __ なら呼び全体が __
+	b.eq .L182  // 引数が __ なら呼び全体が __
 	mov x0, x19
 	mov x1, x9
 	bl t2
-	b .L186
-.L185:
+	b .L183
+.L182:
 	movz x0, #0x8000, lsl #48  // __
-.L186:
+.L183:
 	ldr x9, [x29, #24]
-	str x0, [x29, #72]  // 実引数
-	mov x0, #0
 	movz x13, #0x8000, lsl #48  // __
-	str x0, [x29, #80]  // 実引数
-	str x0, [x29, #88]  // 実引数
 	cmp x9, x13
-	b.eq .L187  // 引数が __ なら呼び全体が __
+	b.eq .L184  // 引数が __ なら呼び全体が __
 	ldr x9, [x29, #32]
 	cmp x9, x13
-	b.eq .L187  // 引数が __ なら呼び全体が __
+	b.eq .L184  // 引数が __ なら呼び全体が __
 	ldr x9, [x29, #40]
 	cmp x9, x13
-	b.eq .L187  // 引数が __ なら呼び全体が __
+	b.eq .L184  // 引数が __ なら呼び全体が __
 	ldr x9, [x29, #48]
 	cmp x9, x13
-	b.eq .L187  // 引数が __ なら呼び全体が __
+	b.eq .L184  // 引数が __ なら呼び全体が __
 	ldr x9, [x29, #56]
 	cmp x9, x13
-	b.eq .L187  // 引数が __ なら呼び全体が __
+	b.eq .L184  // 引数が __ なら呼び全体が __
 	ldr x9, [x29, #64]
 	cmp x9, x13
-	b.eq .L187  // 引数が __ なら呼び全体が __
-	ldr x9, [x29, #72]
-	cmp x9, x13
-	b.eq .L187  // 引数が __ なら呼び全体が __
+	b.eq .L184  // 引数が __ なら呼び全体が __
+	mov x9, x0
+	cmp x0, x13
+	b.eq .L184  // 引数が __ なら呼び全体が __
 	ldr x0, [x29, #24]
 	ldr x1, [x29, #32]
 	ldr x2, [x29, #40]
 	ldr x3, [x29, #48]
 	ldr x4, [x29, #56]
 	ldr x5, [x29, #64]
-	ldr x7, [x29, #80]
 	mov x6, x9
+	mov x7, #0  // 実引数(字面)
 	sub sp, sp, #16  // スタックで渡す実引数 1 語の置き場(呼びの直前に取り、呼びのあとで戻す)
-	ldr x9, [x29, #88]
+	mov x9, #0  // 実引数(字面)
 	str x9, [sp, #0]
 	bl seq9
 	add sp, sp, #16
-	b .L188
-.L187:
+	b .L185
+.L184:
 	movz x0, #0x8000, lsl #48  // __
-.L188:
+.L185:
 	ldr x19, [x29, #112]  // 保存したレジスタを戻す
 	ldp x29, x30, [sp], #128  // フレームを戻す
 	ret
@@ -1494,12 +1498,12 @@ t2:
 	bl db_step
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L190  // 引数が __ なら呼び全体が __
+	b.eq .L187  // 引数が __ なら呼び全体が __
 	bl pr
-	b .L191
-.L190:
+	b .L188
+.L187:
 	movz x0, #0x8000, lsl #48  // __
-.L191:
+.L188:
 	str x0, [x29, #32]  // 実引数
 	ldr x0, [x29, #24]  // s
 	bl db_print_row
@@ -1508,12 +1512,12 @@ t2:
 	bl db_step
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L192  // 引数が __ なら呼び全体が __
+	b.eq .L189  // 引数が __ なら呼び全体が __
 	bl pr
-	b .L193
-.L192:
+	b .L190
+.L189:
 	movz x0, #0x8000, lsl #48  // __
-.L193:
+.L190:
 	str x0, [x29, #48]  // 実引数
 	ldr x0, [x29, #24]  // s
 	bl db_print_row
@@ -1522,65 +1526,62 @@ t2:
 	bl db_step
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L194  // 引数が __ なら呼び全体が __
+	b.eq .L191  // 引数が __ なら呼び全体が __
 	bl pr
-	b .L195
-.L194:
+	b .L192
+.L191:
 	movz x0, #0x8000, lsl #48  // __
-.L195:
+.L192:
 	str x0, [x29, #64]  // 実引数
 	ldr x0, [x29, #16]  // h
 	bl db_rowid
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L196  // 引数が __ なら呼び全体が __
+	b.eq .L193  // 引数が __ なら呼び全体が __
 	bl pr
-	b .L197
-.L196:
+	b .L194
+.L193:
 	movz x0, #0x8000, lsl #48  // __
-.L197:
+.L194:
 	str x0, [x29, #72]  // 実引数
 	ldr x0, [x29, #16]  // h
 	bl db_changes
 	movz x13, #0x8000, lsl #48  // __
 	cmp x0, x13
-	b.eq .L198  // 引数が __ なら呼び全体が __
+	b.eq .L195  // 引数が __ なら呼び全体が __
 	bl pr
-	b .L199
-.L198:
+	b .L196
+.L195:
 	movz x0, #0x8000, lsl #48  // __
-.L199:
+.L196:
 	str x0, [x29, #80]  // 実引数
 	ldr x0, [x29, #16]  // h
 	bl db_close
 	ldr x9, [x29, #32]
-	str x0, [x29, #88]  // 実引数
-	mov x0, #0
 	movz x13, #0x8000, lsl #48  // __
-	str x0, [x29, #96]  // 実引数
 	cmp x9, x13
-	b.eq .L200  // 引数が __ なら呼び全体が __
+	b.eq .L197  // 引数が __ なら呼び全体が __
 	ldr x9, [x29, #40]
 	cmp x9, x13
-	b.eq .L200  // 引数が __ なら呼び全体が __
+	b.eq .L197  // 引数が __ なら呼び全体が __
 	ldr x9, [x29, #48]
 	cmp x9, x13
-	b.eq .L200  // 引数が __ なら呼び全体が __
+	b.eq .L197  // 引数が __ なら呼び全体が __
 	ldr x9, [x29, #56]
 	cmp x9, x13
-	b.eq .L200  // 引数が __ なら呼び全体が __
+	b.eq .L197  // 引数が __ なら呼び全体が __
 	ldr x9, [x29, #64]
 	cmp x9, x13
-	b.eq .L200  // 引数が __ なら呼び全体が __
+	b.eq .L197  // 引数が __ なら呼び全体が __
 	ldr x9, [x29, #72]
 	cmp x9, x13
-	b.eq .L200  // 引数が __ なら呼び全体が __
+	b.eq .L197  // 引数が __ なら呼び全体が __
 	ldr x9, [x29, #80]
 	cmp x9, x13
-	b.eq .L200  // 引数が __ なら呼び全体が __
-	ldr x9, [x29, #88]
-	cmp x9, x13
-	b.eq .L200  // 引数が __ なら呼び全体が __
+	b.eq .L197  // 引数が __ なら呼び全体が __
+	mov x9, x0
+	cmp x0, x13
+	b.eq .L197  // 引数が __ なら呼び全体が __
 	ldr x0, [x29, #32]
 	ldr x1, [x29, #40]
 	ldr x2, [x29, #48]
@@ -1590,14 +1591,14 @@ t2:
 	ldr x6, [x29, #80]
 	mov x7, x9
 	sub sp, sp, #16  // スタックで渡す実引数 1 語の置き場(呼びの直前に取り、呼びのあとで戻す)
-	ldr x9, [x29, #96]
+	mov x9, #0  // 実引数(字面)
 	str x9, [sp, #0]
 	bl seq9
 	add sp, sp, #16
-	b .L201
-.L200:
+	b .L198
+.L197:
 	movz x0, #0x8000, lsl #48  // __
-.L201:
+.L198:
 	ldp x29, x30, [sp], #112  // フレームを戻す
 	ret
 
@@ -1605,7 +1606,7 @@ t2:
 _.main:
 	stp x29, x30, [sp, #-32]!  // フレーム 32 バイト
 	mov x29, sp
-	mov x0, #0
+	mov x0, #0  // 実引数(字面)
 	bl t
 	ldp x29, x30, [sp], #32  // フレームを戻す
 	ret
@@ -5691,21 +5692,20 @@ _sign_dev_snd_ld:
 .Lstr0:
 	.byte 9
 .Lstr1:
-.Lstr2:
 	.byte 112, 46, 100, 98
-.Lstr3:
+.Lstr2:
 	.byte 99, 114, 101, 97, 116, 101, 32, 116, 97, 98, 108, 101, 32, 119, 40, 105, 100, 32, 105, 110, 116, 101, 103, 101, 114, 32, 112, 114, 105, 109, 97, 114, 121, 32, 107, 101, 121, 44, 32, 115, 32, 116, 101, 120, 116, 44, 32, 110, 32, 105, 110, 116, 101, 103, 101, 114, 41
-.Lstr4:
+.Lstr3:
 	.byte 105, 110, 115, 101, 114, 116, 32, 105, 110, 116, 111, 32, 119, 40, 115, 44, 110, 41, 32, 118, 97, 108, 117, 101, 115, 32, 40, 39, 97, 98, 99, 39, 44, 32, 52, 50, 57, 52, 57, 54, 55, 50, 57, 53, 41, 44, 32, 40, 39, 120, 121, 122, 39, 44, 32, 45, 53, 41
-.Lstr5:
+.Lstr4:
 	.byte 105, 110, 115, 101, 114, 116, 32, 105, 110, 116, 111, 32, 119, 40, 105, 100, 41, 32, 118, 97, 108, 117, 101, 115, 32, 40, 49, 41
-.Lstr6:
+.Lstr5:
 	.byte 46, 46, 47, 120, 46, 100, 98
-.Lstr7:
+.Lstr6:
 	.byte 97, 116, 116, 97, 99, 104, 32, 100, 97, 116, 97, 98, 97, 115, 101, 32, 39, 121, 46, 100, 98, 39, 32, 97, 115, 32, 121
-.Lstr8:
+.Lstr7:
 	.byte 115, 101, 108, 101, 99, 116, 32, 49, 59, 32, 115, 101, 108, 101, 99, 116, 32, 50
-.Lstr9:
+.Lstr8:
 	.byte 115, 101, 108, 101, 99, 116, 32, 115, 44, 32, 110, 44, 32, 48, 46, 49, 44, 32, 49, 101, 49, 54, 32, 102, 114, 111, 109, 32, 119, 32, 111, 114, 100, 101, 114, 32, 98, 121, 32, 105, 100
 	.section .rodata
 _sign_dev_gchip:
