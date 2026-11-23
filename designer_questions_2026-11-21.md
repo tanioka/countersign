@@ -142,11 +142,13 @@ H1 の答えが決まれば、メモリ付きの乱数試験の「未決」枠�
 | C8 | **答えあり**: 未定義の名前は断らず、`!_` と分かる値で、書いた所ごとに warning の name-undefined(呼ばない本体でも出す)。旧い「name-undefined で断る」は廃止 | coproduct_spec R21(`say 5` → 5、`inc typo 5` → 6) | 実装は一致 |
 | C1・C2・C11 | **沈黙(確認済み)**: R135 は `?` から始まる行だけを止め、行末の `?` の本体を次の行に書く形(C1)と、行をまたぐ括りを閉じた後ろの `?` の形(C2)は書かない。取り込むファイルが無い形(C11)の断りは、documents・alpha1 のどちらにも名前も扱いも無い | R135 の節、preprocessor.md、coproduct_spec | 実装の今の扱いのまま(実装の決め) |
 
-| D1 | **答えあり(仕様が許す道がある)**: `layer: 1` 以上は、起動時に `heap: max` で一括確保したバンプポインタのアリーナ(`free` 不要)を持てる。必要サイズは、前置 `#`・`##` の使用箇所から**コンパイラが静的に導出する**。layer 0 は前置 `#` 系が使えない(コンパイルエラー) | documents/ja-jp/impl/build/option_ms_schema.md §5.4、§8 の表(2026-11-12) | 実装は前置 `#`・`##`・`###` を入れていない(「ヒープは核に反する」と読んでいた)。仕様は許している。入れるなら、静的な必要サイズの導出と option.ms の `heap` が要る。大きな作業 |
+| D1 | **仕様どうしの食い違い(総点検の読み直しで訂正。最初は「答えあり」と書いたが誤り)**: memory_management.md §2 と option_ms_schema.md §5.4・§8 は、前置 `#`・`##`・`###` を「標準ライブラリの推奨メモリモデル」の確保(Project-Arena・Shared-Heap・Pinned-Area。ライブラリまたはマクロ。`layer: 1` 以上。必要サイズはコンパイラが静的に導出)として書く。一方、前置 `#` は**ファイルが外へ渡す定義の export 印**とする裁定(2026-10-04・10-05、execution_model.md §1。type_system.md 455 行「前置 `#` が export 印で中置 `#` が書き込み」)があり、alpha1 の coproduct_spec は使う所に書いた前置 `#`(`#zq 5`・`p : #zq`・`#(…)`)を export-mark-position で断る。確保は export より前の旧い読みに見える(type_system.md 114・1838 行の「前置 `#`(確保)」も同じ) | memory_management.md・option_ms_schema.md(2026-11-12 は綴りの置き換えだけ)と execution_model.md・alpha1 coproduct_spec の export-mark-position | **実装しない**。入れると alpha1 の断りに背く。確保を言語に残すのか(残すなら綴りは何か)は設計者の決め |
 | D2 | **沈黙(確認済み)**: type_system.md が「関数型を引数位置へ入れ子に書く記法はまだ決まっていない」と明記 | type_system.md §6(.st の節) | 変更なし |
 | D3 | **沈黙(確認済み)**: .st は「ビルド完了時点でディスクへ書き出す」とあるが、置き場所は無い | compiler_pipeline.md §4 | 変更なし |
-| D4 | **答えあり(意味は仕様にある)**: `#` = Project alloc(`Rc<RefCell<T>>` 相当)、`##` = Shared alloc(`Arc<Mutex<T>>` 相当)、`###` = Pin alloc(固定アドレス配置)。3つとも .st に出す export の印でもあり、型は `R -> Implicit(R)`。layer 0 では使えない。「export の段」ではなく**確保の種類**で、`##`・`###` を「未対応の前置演算子」と断る今の実装は未実装であって、仕様の決めではない | option_ms_schema.md §8 の表、type_system.md の前置の表(1776〜1777 行)、「`#`/`##`/`###` で export」(1996・2168 行) | 未実装(D1 と一緒に) |
+| D4 | **仕様どうしの食い違い(D1 と同じ。訂正)**: `##`・`###` は、type_system.md 1996・2168 行では `#` と並ぶ `.st` の export の印(型は `R -> Implicit(R)`)、option_ms_schema.md §8 と memory_management.md では確保の種類(Shared alloc・Pin alloc)。export の「段」の意味(`#` との違い)はどの文書にも書かれていない | 上のとおり | 実装は `#` だけ読み、`##`・`###` は断る(変更なし)。D1 の決めを待つ |
 | D5 | **沈黙(確認済み)**: `asm_volatile` は「ある」とだけ書かれ、綴り・引数・使える所が無い | 0_design_principles.md・system_semantics.md・compiler_pipeline.md | 変更なし |
 | F2・F3 | **答えあり(表から出る)**: `1 + 2 - 3` は `(- (+ 1 2) 3)`(段 14 の `+`・`-` は同じ段で左結合)、`1 < 2 == 3` は `(== (< 1 2) 3)`(`==` は段 8、比べは段 13)。段と結合の向きは operator_table.js だけで決まる(P1)。同じ表で `^` は右結合なので、`2 ^ 3 ^ 2` は `(^ 2 (^ 3 2))`(前は左に入れていて誤り) | alpha1/javascript/operator_table.js の段 8・13・14・15・16、coproduct_spec P1 | 木の出力を直した(`1 * 2 + 3`・`1 + 2 * 3 - 4` も同じ規則)。見本 374 件は一致のまま。比べ(段 13)が 2 つ以上並ぶ形は R119 の連なりなので読まない |
 
-**まだ読んでいない問い**: A2、B2〜B4、C5〜C7・C9・C10・C12、D6、F1・F4〜F14、G1。次の点検で読みます。
+**まだ読んでいない問い**: A2、B2〜B4、C5〜C7・C9・C10・C12、D6、F1・F4〜F14、G1。
+
+(D1・D4 は、実装に進むつもりで該当の文書を全部読み直した時に、最初の判定を訂正した。「仕様が許す」と書いたのは memory_management.md・option_ms_schema.md だけを見ていたため。)次の点検で読みます。
