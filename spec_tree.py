@@ -480,6 +480,10 @@ def fold_chain(g, env):
     if len(g) < 3 or (len(set(g[1::2])) != 1 and not set(g[1::2]) <= {"<", "<=", ">", ">="}): return None     # 大小の比較の連なりは、演算子が違っても左へ入れ子(R119)
     ops = [operand(x, env, True) for x in g[::2]]
     if any(o is None for o in ops): return None
+    if set(g[1::2]) == {"^"}:                                              # `^` は右結合(operator_table.js の assoc: 'right')
+        t = ops[-1]
+        for k_ in range(len(ops) - 2, -1, -1): t = f"(^ {ops[k_]} {t})"
+        return t
     t = ops[0]
     for k_, o in enumerate(ops[1:]): t = f"({g[2 * k_ + 1]} {t} {o})"
     return t
@@ -570,8 +574,28 @@ def tree_of(src, defs=(), kinds="eval"):
     r = resolve_seq(toks, env, root_alone=True)
     if r is None:
         items = fold_tight(toks, env)
-        if items and len(items) == 1 and items[0][0] == "fold": return fold_chain(items[0][1], env)
+        if items and len(items) == 1 and items[0][0] == "fold":
+            t_ = fold_chain(items[0][1], env)
+            return t_ if t_ is not None else prec_tree(toks)
+        return prec_tree(toks)
     return r
+
+# 中置の段(operator_table.js の段 8・13・14・15・16。段と結合の向きは表だけで決まる、coproduct_spec P1)。数の字面だけの式に限る
+PREC = {"==": 8, "!==": 8, "<": 13, "<=": 13, "=": 13, ">=": 13, ">": 13, "!=": 13, "+": 14, "-": 14, "*": 15, "/": 15, "%": 15, "^": 16}
+def prec_tree(toks):
+    """`1 + 2 - 3`・`1 * 2 + 3`・`1 < 2 == 3` のように、段の違う(または同じ段の別の)中置が連なる数の字面の式の木。
+    段の高い方が先に結び、同じ段は左(`^` だけ右)へ入れ子。比べ(段 13)が 2 つ以上並ぶ形(R119 の連なり)・字面以外が混じる形は読まない(None)"""
+    if len(toks) < 5 or len(toks) % 2 == 0: return None
+    if not all(re.fullmatch(r"-?\d+|0x[0-9A-Fa-f]+", t) for t in toks[0::2]): return None
+    ops = toks[1::2]
+    if any(o not in PREC for o in ops) or sum(1 for o in ops if PREC[o] == 13) > 1: return None
+    def build(lo, hi):
+        if lo == hi: return toks[2 * lo]
+        m = min(PREC[ops[i]] for i in range(lo, hi))
+        idx = [i for i in range(lo, hi) if PREC[ops[i]] == m]
+        k = idx[0] if ops[idx[0]] == "^" else idx[-1]                    # 左結合: 最後の演算子で切る。`^` は右結合: 最初の演算子で切る
+        return "(%s %s %s)" % (ops[k], build(lo, k), build(k + 1, hi))
+    return build(0, len(ops))
 
 def root_tree(toks, seps, env):
     """根の演算子(`,` など同じ物の連なり)で切った辺ごとに畳み、右へ入れ子にする"""
