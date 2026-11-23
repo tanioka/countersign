@@ -3819,3 +3819,10 @@ push のたびに動いていた。初回の結果は 62 本中 4 本が失敗�
 Pi にキーボードが無いので、`/dev/uinput` に仮想キーボードを作る `pi_results/stage5/vkbd.py`(python3 標準だけ。sudo)で a・b・q を送り、`input_events.sn`(--real-dev)で読んだ。出力は `1 97 / 2 97 / 1 98 / 2 98 / 1 113 / 0`(押下=1・離す=2、a=97・b=98・q=113 で終了、最後の 0 は q で終えた値)。期待どおり、誤答 0(`pi_results/stage5/events_real_pi.txt`)。
 確かめたこと: evdev の fd を最初に触れた時に開く、押下と離すの符号の変換(Linux の 30/48/16 → 97/98/113)、POP で先頭を捨てる、q で終わる。確かめていない: マウス(相対移動・ボタン)、キーの自動連打(捨てる決め)、Shift の扱い(常に小文字)、input グループが無い時の黙った無視。
 `ydotool` は Raspberry Pi OS の apt に無かった。`wtype` は Wayland のコンポジタに送るだけで evdev に出来事が出ないので、このテストには合わない。
+
+### 実機(Raspberry Pi 4 Model B、aarch64)の pi_check の記録(2026-11-23)
+`pi_results/pi_check_pi4/report.{json,md}`。Pi 4 Model B Rev 1.1、Linux 6.18.60+rpt-rpi-v8、Debian 13、4 コア、semi00(gpio・i2c・spi・input グループ)。123 本: 一致 113、参考 9、許容 1、食い違い 0。
+- 実機で確かめられた(以前は x86_64 の記録しか無かった物): GPIO のプルアップ/ダウン(10)、出力 HIGH→LOW の読み戻し(10)、I2C の存在しないバス(-2)と応答なしの PROBE(-6。Pi 4 の読みが -5 で失敗するのを中継ルーチンが -6 にそろえる)、SPI の戻り(4)、UART、クロック、alarm、ネットワーク(TCP・UDP・拒否 -111・待ち時間切れ -11・TLS_START -38)、sys ファイル、音(TONE)、並列(`_s` と `_p*` の答えが同じ)。
+- 参考のみ(つないでいない): AHT25 の温度 0(センサ無し)、SPI の受信 0(MOSI-MISO 未接続。許容)、画面(/dev/fb0 無し。呼び出しは通る)、入力(idle と live の 3 秒は何も触らず 0 件。キーは別に vkbd.py で確認済み)。DNS は example.com が解決できた(14)。
+- 後日: SPI の MOSI-MISO ループバック(受信 4027538085 を期待)と AHT25 の温度。GPIO の外へつないだ確認も同じ。
+- 並列(Pi 4): `_p4` は直列の 1.95〜3.06 倍。fib4 は 4 本が 4 コアを占めると遅い周(約 0.91 秒)が出る「山」がある(CPU 時間はほぼ同じで、空いたコアが減る効果。以前の仮説どおり)。
