@@ -560,7 +560,8 @@ def tree_of(src, defs=(), kinds="eval"):
         if r_ is None: return None
         for n_ in lit_spread: r_ = r_.replace("[%s]~" % n_, "~%s~" % n_)
         return r_
-    if re.search(r"[A-Za-z_]\w*\s+~-?\d", src): return None                          # 先頭でない `~数` の読みは仕様が言わない(`inc ~1 5`)ので読まない
+    if re.search(r"\s~-\d", src): return None                                       # `~-1` は前置 `-` と `~` の結び方が仕様の見本に無いので読まない
+    # 先頭でない `~数`(`inc ~1 5`)は、R79(前置 `~` は隣の核1つに付き、どの中置より先に結ぶ。`~1 2 3` は `(construct ~1 2 3)`)で `~1` は1つの項。関数の後ろなら関数が `~1` を受けて、残りは別の項
     env = kinds_from(list(defs)) if kinds == "text" else kinds_from_eval(list(defs))
     if env is None: return None
     env_defaults.clear()

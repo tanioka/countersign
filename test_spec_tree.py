@@ -1,7 +1,7 @@
 """spec_tree.py の木の出力の確認。仕様 §1.3 の見本のうち、出す形が仕様と一字違わないことと、読まない形は None(誤った木を出さない)ことを見る。"""
 import spec_tree as T, spec_audit as A
 P = A.PRE.splitlines()
-OK = [("1 + 2 - 3", "(- (+ 1 2) 3)"), ("1 * 2 + 3", "(+ (* 1 2) 3)"), ("1 + 2 * 3", "(+ 1 (* 2 3))"), ("1 < 2 == 3", "(== (< 1 2) 3)"), ("2 ^ 3 ^ 2", "(^ 2 (^ 3 2))"), ("1 + 2 * 3 - 4", "(- (+ 1 (* 2 3)) 4)"), ("1 < 2 < 3 == 4", None), ("inc 3 4", "(construct (apply inc 3) 4)"), ("d 1 2", "(construct (apply d 1) 2)"), ("inc i inc 5", "(apply (compose inc i inc) 5)"),
+OK = [("inc ~1 5", "(construct (apply inc ~1) 5)"), ("inc ~1", "(apply inc ~1)"), ("1 + 2 - 3", "(- (+ 1 2) 3)"), ("1 * 2 + 3", "(+ (* 1 2) 3)"), ("1 + 2 * 3", "(+ 1 (* 2 3))"), ("1 < 2 == 3", "(== (< 1 2) 3)"), ("2 ^ 3 ^ 2", "(^ 2 (^ 3 2))"), ("1 + 2 * 3 - 4", "(- (+ 1 (* 2 3)) 4)"), ("1 < 2 < 3 == 4", None), ("inc 3 4", "(construct (apply inc 3) 4)"), ("d 1 2", "(construct (apply d 1) 2)"), ("inc i inc 5", "(apply (compose inc i inc) 5)"),
       ("inc # 5", "(# (unit inc) 5)"), ("nosuchname 5", "5"), ("inc typo 5", "(apply inc 5)"), ("inc (5 ' 1) 5", "(apply inc 5)"), ("inc (0x10 ' 1) 5", "(construct (apply inc [0x10 ' 1]) 5)"), ("[+ 1] 1 2 3", "(construct (apply [+ 1] 1) 2 3)"), ("inc add 5", "(unit (apply (compose inc add) 5))"), ("add 1 2", "(apply add (construct 1 2))"), ("$inc + 0x80", "(+ $inc 0x80)")]
 OK += [("inc add 5 g 3", "(apply g (apply add (construct (apply inc 5) 3)))"), ("[+] 1 2 inc 3", "(apply inc (apply [+] (construct 1 2 3)))"),     # 合成の連なり: 左から順に値を受け、前の結果を次へ(R11・R41)
        ("inc [+] 5 6", "(apply [+] (construct (apply inc 5) 6))"), ("f2 3 f2 5 6", "(apply f2 (construct (apply f2 (construct 3 5)) 6))"), ("[+] 5 g 3", "(apply g (apply [+] (construct 5 3)))")]
@@ -73,7 +73,7 @@ OK += [("obj :\n\tm :\n\t\t\ty : 2\n\t\t? y", "(: obj (block (: m (block (? [{y 
 for src_, defs_, want_ in [("(shape ' cube) 3", ["shape :\n\tsquare : x ? x * x\n\tcube : x ? x * (square x)"], "(apply [shape ' cube] 3)")]:
     g_ = T.tree_of(src_, P + defs_)
     if g_ != want_: bad += 1; print("NG", src_, g_, want_)     # 構造体の欄の関数を名前の鍵で引いた括りは口を持つ関数(R26・R133)
-NONE = ["f : x ?\n\t\ty : 1\n\t? x + y", "obj :\n\tm : 1\n\tn : 2", "gd 3 4 7", "inc ~1 5", "inc _ 2", "add 1 inc"]
+NONE = ["f : x ?\n\t\ty : 1\n\t? x + y", "obj :\n\tm : 1\n\tn : 2", "gd 3 4 7", "inc _ 2", "add 1 inc"]
 for s, t in OK:
     g = T.tree_of(s, P)
     if g != t: bad += 1; print("NG", s, g, t)
