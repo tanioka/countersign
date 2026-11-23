@@ -86,7 +86,7 @@ for s in cases/*.s; do
   if [ "$B" = asld ]; then as -o build/$b.o "$s" 2>build/$b.err && ld -o build/$b build/$b.o 2>>build/$b.err; else gcc -nostdlib -static -o build/$b "$s" 2>build/$b.err; fi
   if [ -x build/$b ]; then
     t0=$(date +%s%N)
-    ( ulimit -s 8192; timeout 20 ./build/$b > out/$b.out 2>/dev/null; echo $? > out/$b.rc )
+    ( ulimit -s 8192; timeout 20 ./build/$b > out/$b.out 2>out/$b.err; echo $? > out/$b.rc )
     t1=$(date +%s%N); echo $(( (t1 - t0) / 1000000 )) > out/$b.ms
   else echo BUILDFAIL > out/$b.out; echo 255 > out/$b.rc; echo 0 > out/$b.ms; fi
   n=$((n+1))
@@ -122,6 +122,7 @@ def make(d):
     for k, (cat, nm, src, exp, heavy, mode, noeval) in enumerate(C):
         t = fix(src); idx = "%03d" % k
         a = F.obs_strict(t) if mode == "s" else obs_default(t)
+        ws = sorted({k[0] for k in S.WARNINGS}) if a[0] != "refuse" else []        # 評価器が出した知らせの名前(観測の組の4つ目)
         try:
             if mode == "s":
                 sign_asm.STRICT[0] = True
@@ -140,7 +141,7 @@ def make(d):
         if e[0] != "skip" and want is not None and e != want and not (want == ("trap",) and e[0] == "trap"):
             flags.append((idx, nm, f"[{mode}] 期待値 {want} とエミュレータ {e} が食い違う"))
         open(os.path.join(d, "cases", idx + ".s"), "w", encoding="utf-8").write(asm)
-        rows.append([idx, cat, nm, json.dumps(want if want else ["refuse"]), json.dumps(a), json.dumps(e), "1" if heavy else "0"])
+        rows.append([idx, cat, nm, json.dumps(want if want else ["refuse"]), json.dumps(a), json.dumps(e), "1" if heavy else "0", json.dumps(ws)])
     with open(os.path.join(d, "expected.tsv"), "w", encoding="utf-8") as f:
         for r in rows: f.write("\t".join(x.replace("\t", " ").replace("\n", " ") for x in r) + "\n")
     open(os.path.join(d, "run.sh"), "w", newline="\n").write(RUN_SH)
@@ -149,10 +150,11 @@ def make(d):
 
 def compare(d):
     from collections import Counter
-    tot = Counter(); wrong = []; crash = []; slow = []; byc = {}
+    ob = Counter(); tot = Counter(); wrong = []; crash = []; slow = []; byc = {}
     norm = lambda x: tuple(tuple(y) if isinstance(y, list) else y for y in json.loads(x))
     for line in open(os.path.join(d, "expected.tsv"), encoding="utf-8"):
-        idx, cat, nm, want, a, e, heavy = line.rstrip("\n").split("\t")
+        cols = line.rstrip("\n").split("\t"); idx, cat, nm, want, a, e, heavy = cols[:7]
+        ws = json.loads(cols[7]) if len(cols) > 7 else []
         want = norm(want)
         po = os.path.join(d, "out", idx + ".out")
         if not os.path.exists(po): tot["出力なし"] += 1; continue
@@ -172,8 +174,15 @@ def compare(d):
         elif want == ("trap",) and got[0] == "trap": res = "一致"
         else: res = "誤答"; wrong.append((idx, cat, nm, f"期待 {want} / 実機 {got}(rc={rc})"))
         tot[res] += 1; byc.setdefault(cat, Counter())[res] += 1
+        pe = os.path.join(d, "out", idx + ".err"); err = open(pe, encoding="utf-8", errors="replace").read() if os.path.exists(pe) else None
+        if err is not None:                                          # 観測の4つ目(知らせ): 機械語が出せるのは溢れの information だけ。評価器の知らせは別に数える
+            ov_e, ov_m = "int-overflow" in ws, "int-overflow" in err
+            ob["溢れの知らせ 評価器あり・実機あり" if ov_e and ov_m else "溢れの知らせ 評価器あり・実機なし(A3 未決)" if ov_e else "溢れの知らせ 評価器なし・実機あり" if ov_m else "溢れの知らせ 両方なし"] += 1
+            other = [w for w in ws if w != "int-overflow"]
+            if other: ob["評価器だけの知らせ(機械語に出口なし)"] += 1
         if ms > 1000: slow.append((idx, nm, ms))
     print(dict(tot))
+    if ob: print("観測の組(知らせ):", dict(ob))
     for c, k in byc.items(): print(f"  {c}: {dict(k)}")
     for c in crash: print("異常終了:", c)
     for w in wrong: print("誤答:", w)

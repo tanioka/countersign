@@ -198,6 +198,10 @@ def compare(d):
         if r["group"] == "info": detail.append((i, r["name"], "出力(参考)", repr(got)[:200]))
         res.setdefault(r["cat"], {}).setdefault(st, 0); res[r["cat"]][st] += 1
         if st not in ("一致",): detail.append((i, r["cat"], r["name"], st, rc, rd(i + ".err")[:160]))
+    sk = {}                                                          # 観測の組の4つ目(知らせ): 実機が stderr に出した information/warning の名前を数える(評価器の知らせとの照合は stage3 の溢れだけ)
+    for r in rows:
+        for mm in re.findall(r"(?:information|warning|知らせ)[^\n]*?([a-z]+(?:-[a-z]+)+)", rd(r["idx"] + ".err")): sk[mm] = sk.get(mm, 0) + 1
+    if sk: print("stderr の知らせ:", sk)
     tot = {}
     for c_, m in res.items():
         for s, n in m.items(): tot[s] = tot.get(s, 0) + n
