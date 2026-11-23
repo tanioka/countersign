@@ -1,6 +1,25 @@
 # 最適化の本 — Sign を題材に、インタープリタとコンパイラの最適化を解く(目次と各章の要約)
 
-> この文書は目次と各章の要約です。各章の本文は Claude Docs で書いていて、Markdown にしてこのフォルダへ置く作業はこれからです。
+> この文書は目次と各章の要約です。各章の本文は Claude Docs で書いたものを Markdown にして、順に置いています(下の表)。
+
+## 本文
+
+| 章 | ファイル |
+|---|---|
+| はじめに | [00_introduction.md](00_introduction.md) |
+| 第1章 Sign という言語 | [01_sign-language.md](01_sign-language.md) |
+| 第2章 三つの実行経路 | [02_three-routes.md](02_three-routes.md) |
+| 第3章 観測とは何か | [03_observation.md](03_observation.md) |
+| 第4章 何を測るか | [04_what-to-measure.md](04_what-to-measure.md) |
+| 第5章 測定の落とし穴 | [05_measurement-pitfalls.md](05_measurement-pitfalls.md) |
+| 第6章 プロファイルと仮説 | [06_profile-and-hypothesis.md](06_profile-and-hypothesis.md) |
+| 第7章 速い道 run\_pure | [07_fast-path-run-pure.md](07_fast-path-run-pure.md) |
+| 第8章 副作用の判定 | [08_effect-analysis.md](08_effect-analysis.md) |
+| 第9章 末尾呼び出しを評価器で | [09_tail-calls-evaluator.md](09_tail-calls-evaluator.md) |
+| 第10章 純粋関数の答えを記憶する | [10_memoize-pure.md](10_memoize-pure.md) |
+
+(第11章以降は順次置きます。)
+
 
 ## はじめに: 最適化が守るべきもの
 
