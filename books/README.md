@@ -18,4 +18,6 @@ Claude Docs で書いた本を Markdown にして置いています。実行は�
 | 第11巻 Raspberry Pi で Sign を動かす | [11_raspberry-pi.md](11_raspberry-pi.md) |
 | 第12巻 Sign のコンパイラ | [12_compiler.md](12_compiler.md) |
 
+最適化の本(目次と各章の要約のみ): [optimization/README.md](optimization/README.md)
+
 「印の無い記述」「【仕様】【実装】【拡張】の区別」は、各巻の「はじめに」を読んでください。
