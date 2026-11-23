@@ -136,4 +136,10 @@ H1 の答えが決まれば、メモリ付きの乱数試験の「未決」枠�
 | H1 | **沈黙(確認済み)**: `@` は Core の読み込み(memory_management.md: layer 0 は read_volatile、1 以上は通常の読み込み)で、書かれていない番地の中身は仕様が決めていない。C12 の「機械の読みは中身が分からない」と同じ類 | memory_management.md・coproduct_spec の `@` の節 | 評価器 `__`・機械語 0 の差は残る。仕様に答えが無いので別枠のまま |
 | H2 | **沈黙(確認済み)**: Int の溢れが罠のとき information を出すかは、integer_overflow.md §1 に無い(罠は wfi で止まる、とだけ)。V11 の `int-overflow` は `!_` の側の話 | integer_overflow.md・value_spec V11 | A3 が決まれば決まる |
 
-**まだ読んでいない問い**: A2、B1〜B4、C1〜C12、D1〜D6、F1〜F14、G1。次の点検で読みます。
+| B1 | **仕様どうしの食い違い(古い文書の例)**: type_system.md の例 `Point : x y ? [ x : x  y : y ]`(`?` 直後の「`[...]` ブロックで明示」の注意つき)は、alpha1 の R133(欄は同じ括りの名前を隠す)と P2(値の欄の輪は name-cycle)で、仮引数 x を指せず name-cycle になる。文書の例は R133 より前の書き方に見える | type_system.md 2364〜2385 行、coproduct_spec P2・R133 | strict は name-cycle(alpha1 に従う)。設計者の試験は「通る」と期待(2026-11-17 の記録)。決めは設計者 |
+| C3 | **答えあり**: 左辺が鍵でない `:` は `?` 直後のインデントブロックの行にしか書けず、`[5 > 1 : 2]` のような括りの中・構造体ブロックの中・1行の本体は「構文が壊れている」(原理4で停止)。match_case.md の「次の5つは枝の居場所ではないので止まる」の表(`g : x ? [ x > 0 : 1 ]` の行) | documents/ja-jp/impl/syntax/match_case.md 47〜83 行(2026-11-12) | 実装は止める(一致)。断りの名前 `branch-outside-match-case` は今の文書に無く、実装の名前 |
+| C4 | **仕様どうしの食い違い**: type_system.md §6(.st の節)は `z : ? 5` を「仮引数が無い関数」として書く(`z : !_ -> Int`)。alpha1 §2・R119 は、片側の欠けた `?` の点なし(木を書く記法)を読む段で止める(`pointfree-tree-notation`)。`z : ? 5` は後者に当たる | type_system.md 2171 行(2026-11-21 の版)、coproduct_spec R119 | 実装は止める(alpha1 に従う)。設計者に確かめる |
+| C8 | **答えあり**: 未定義の名前は断らず、`!_` と分かる値で、書いた所ごとに warning の name-undefined(呼ばない本体でも出す)。旧い「name-undefined で断る」は廃止 | coproduct_spec R21(`say 5` → 5、`inc typo 5` → 6) | 実装は一致 |
+| C1・C2・C11 | **沈黙(確認済み)**: R135 は `?` から始まる行だけを止め、行末の `?` の本体を次の行に書く形(C1)と、行をまたぐ括りを閉じた後ろの `?` の形(C2)は書かない。取り込むファイルが無い形(C11)の断りは、documents・alpha1 のどちらにも名前も扱いも無い | R135 の節、preprocessor.md、coproduct_spec | 実装の今の扱いのまま(実装の決め) |
+
+**まだ読んでいない問い**: A2、B2〜B4、C5〜C7・C9・C10・C12、D1〜D6、F1〜F14、G1。次の点検で読みます。
