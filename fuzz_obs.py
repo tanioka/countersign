@@ -82,4 +82,51 @@ def main():
     print(tally)
     for t, e1, m1, e2, m2 in bad[:6]: print("---\n" + t + f"評価器 {e1} {m1}\n機械語 {e2} {m2}")
     return 1 if bad else 0
-if __name__ == "__main__": sys.exit(main())
+def eval_warns(t):
+    """strict の評価器の観測(fuzz_sir の形)と、出した知らせの名前の集合。"""
+    a = F.obs_strict(t)
+    return a, ({k[0] for k in S.WARNINGS} if a[0] != "refuse" else set())
+
+def trap_cause(t, lx):
+    """罠で止まった原因の印(x16)。1 = Int の溢れなど、3 = 部分適用の安全装置(`!_` の実引数で関数が余る形。答えを出さずに止める)。"""
+    try:
+        sign_asm.STRICT[0] = True
+        tree, rest = sign_asm.strict_rewrite(S.parse_source(t))
+        cpu = F._ns["Cpu"](sign_asm.generate(tree, "linux" if lx else "bare"))
+        try: cpu.run("_start" if lx else "_.main")
+        except F._ns["Trap"]: return cpu.r.get("x16")
+    except Exception: return None
+    return None
+
+def main3():
+    """値・流れの乱数プログラムを 評価器 / SIR / 機械語 の三者で、(終わり方, 値, 知らせ)の組として比べる。
+    知らせ: 評価器だけが出す(SIR・機械語に知らせの出口は無い)ので、知らせありの件数を別に数える。
+    整数の溢れ(A3)は、評価器が `!_`、機械語が罠になる形を『未決』に数える。"""
+    av = [x for x in sys.argv[1:] if not x.startswith("--")]
+    n = int(av[0]) if av else 300; r = random.Random(int(av[1]) if len(av) > 1 else 1)
+    F.FLOW_RATE[0] = 0.5 if "--flows" in sys.argv else 0.0; F.LIST_RATE[0] = 0.5 if "--lists" in sys.argv else 0.0
+    tally, bad = {}, []
+    def inc(k): tally[k] = tally.get(k, 0) + 1
+    for _ in range(n):
+        t = fix(F.program(r)); a, ws = eval_warns(t); b = F.obs_sir(t)
+        if a[0] == "refuse": inc("評価器が断る(比べない)"); continue
+        lx = F.FLOW_RATE[0] > 0 or a[0] == "flow"
+        c = F.obs_asm(t, lx)
+        if ws: inc("知らせあり(評価器のみ。機械語・SIR に出口なし): " + ",".join(sorted(ws))[:40])
+        if b[0] in ("unsup", "partial", "fuel"): sir = "SIR 未対応"
+        elif b == a: sir = "SIR 一致"
+        else: sir = "SIR 誤答"; bad.append((t, "SIR", a, b))
+        if c == a: m = "機械語 一致"
+        elif c[0] == "trap" and ("int-overflow" in ws or a == ("void",)): m = "機械語 未決(溢れ A3: 評価器は !_ と知らせ・機械語は罠)"
+        elif c[0] == "refuse": m = "機械語 断り"
+        elif c[0] == "trap":
+            cz = trap_cause(t, lx)
+            if cz == 3: m = "機械語 安全装置の罠(x16=3: 部分適用。答えを出さず止める。誤答ではない)"
+            else: m = "機械語 罠(評価器は答える。原因 x16=%s)" % cz; bad.append((t, "機械語の罠", a, c))
+        else: m = "機械語 誤答"; bad.append((t, "機械語", a, c))
+        inc(sir); inc(m)
+    for k in sorted(tally): print(f"  {k}: {tally[k]}")
+    for t, w, a, b in bad[:6]: print("---\n" + t + f"[{w}] 評価器 {a} / 相手 {b}")
+    return 1 if bad else 0
+
+if __name__ == "__main__": sys.exit(main3() if "--three" in sys.argv else main())
