@@ -17,8 +17,18 @@
 | 第8章 副作用の判定 | [08_effect-analysis.md](08_effect-analysis.md) |
 | 第9章 末尾呼び出しを評価器で | [09_tail-calls-evaluator.md](09_tail-calls-evaluator.md) |
 | 第10章 純粋関数の答えを記憶する | [10_memoize-pure.md](10_memoize-pure.md) |
+| 第11章 なぜ中間表現を置くか | [11_why-ir.md](11_why-ir.md) |
+| 第12章 書き換えの正しさ | [12_rewrite-correctness.md](12_rewrite-correctness.md) |
+| 第13章 cases の厳密書き換え | [13_cases-rewrite.md](13_cases-rewrite.md) |
+| 第14章 デッドコードの除去 | [14_dead-code.md](14_dead-code.md) |
+| 第15章 末尾呼び出しを機械語へ | [15_tail-calls-machine-code.md](15_tail-calls-machine-code.md) |
+| 第16章 整数溢れ検査と最適化 | [16_overflow-checks.md](16_overflow-checks.md) |
+| 第17章 ピープホール最適化 | [17_peephole.md](17_peephole.md) |
+| 第18章 器の配置と特殊化 | [18_container-placement.md](18_container-placement.md) |
+| 第19章 共通部分式と不変量の持ち上げ | [19_cse-hoisting.md](19_cse-hoisting.md) |
+| 第20章 式の独立性を見つける | [20_independence.md](20_independence.md) |
 
-(第11章以降は順次置きます。)
+(第21章以降と付録は順次置きます。)
 
 
 ## はじめに: 最適化が守るべきもの
