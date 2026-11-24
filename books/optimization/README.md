@@ -19,7 +19,7 @@
 | 第10章 純粋関数の答えを記憶する | [10_memoize-pure.md](10_memoize-pure.md) |
 | 第11章 なぜ中間表現を置くか | [11_why-ir.md](11_why-ir.md) |
 | 第12章 書き換えの正しさ | [12_rewrite-correctness.md](12_rewrite-correctness.md) |
-| 第13章 cases の厳密書き換え | [13_cases-rewrite.md](13_cases-rewrite.md) |
+| 第13章 `--strict --asm` のための木の書き換え | [13_cases-rewrite.md](13_cases-rewrite.md) |
 | 第14章 デッドコードの除去 | [14_dead-code.md](14_dead-code.md) |
 | 第15章 末尾呼び出しを機械語へ | [15_tail-calls-machine-code.md](15_tail-calls-machine-code.md) |
 | 第16章 整数溢れ検査と最適化 | [16_overflow-checks.md](16_overflow-checks.md) |
