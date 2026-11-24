@@ -2,10 +2,20 @@
 # 実機(Raspberry Pi)・clang の AArch64 アセンブラを要る確認は、無ければ飛ばす作りの試験だけで、ここでは実機を使わない。
 name: tests
 
+# 本(books/)と設計者への質問書だけの変更では走らせない(処理系・コンパイラ・試験に触れないので)。
+# 手動(workflow_dispatch)ではいつでも走らせられる。
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'books/**'
+      - 'designer_questions_*.md'
+      - 'QUESTIONS_FOR_DESIGNER_*.md'
   pull_request:
+    paths-ignore:
+      - 'books/**'
+      - 'designer_questions_*.md'
+      - 'QUESTIONS_FOR_DESIGNER_*.md'
   workflow_dispatch:
 
 concurrency:
