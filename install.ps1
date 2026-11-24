@@ -1,4 +1,4 @@
-﻿# Sign の簡単インストーラ(Windows 11)。
+# Sign の簡単インストーラ(Windows 11)。
 #   入れるもの: インタープリタと std.sn だけ(install_manifest.txt)。コンパイラ(--asm)・試験・本は入れない。
 #   使い方:  irm https://raw.githubusercontent.com/tanioka/countersign/main/install.ps1 | iex   (入れる)
 #            & ([scriptblock]::Create((irm https://raw.githubusercontent.com/tanioka/countersign/main/install.ps1))) -Uninstall   (消す)
@@ -6,6 +6,8 @@
 #            powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall    消す
 #            -Prefix フォルダ  -Ref ブランチ名  -NoPath(PATH を触らない)
 #   手元にリポジトリがあれば(この install.ps1 の隣に sign.py があれば)それを使い、無ければ GitHub から取る。
+# 注意: iex では先頭の param(...) が使えないので、関数に包み、引数は $args から自分で読む。
+function Install-Sign {
 param(
   [string]$Prefix = (Join-Path $env:LOCALAPPDATA "Sign"),
   [string]$Ref = "main",
@@ -122,3 +124,16 @@ try {
 } finally {
   if ($Tmp -and (Test-Path $Tmp)) { Remove-Item -Recurse -Force $Tmp -ErrorAction SilentlyContinue }
 }
+}
+
+$opt = @{}
+for ($i = 0; $i -lt $args.Count; $i++) {
+  switch -Regex ($args[$i]) {
+    '^-Prefix$' { $i++; $opt.Prefix = $args[$i] }
+    '^-Ref$'    { $i++; $opt.Ref = $args[$i] }
+    '^-Uninstall$' { $opt.Uninstall = $true }
+    '^-NoPath$' { $opt.NoPath = $true }
+    default { throw "知らないオプション: $($args[$i])" }
+  }
+}
+Install-Sign @opt
