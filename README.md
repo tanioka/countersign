@@ -49,7 +49,7 @@ python3 sign.py --tree hello.sn          # 仕様 §1.3 の「出力の木」(co
 - **Linux**: `curl -fsSL https://raw.githubusercontent.com/tanioka/countersign/main/install.sh | sh`(`~/.sign` に置き、`~/.local/bin/sign` を作る。消す: `sh install.sh --uninstall`)
 - **Windows 11**: `irm https://raw.githubusercontent.com/tanioka/countersign/main/install.ps1 | iex`(`%LOCALAPPDATA%\Sign` に置き、利用者の PATH に足す。消す: `& ([scriptblock]::Create((irm https://raw.githubusercontent.com/tanioka/countersign/main/install.ps1))) -Uninstall`)
 
-`install.sh` は Linux で試験済み(`test_install.py`)。`install.ps1` は Windows 11 の PowerShell で実機確認の途中です(試験は中身の取り決めを見るだけ)。
+`install.sh` は Linux で試験済み(`test_install.py`)。`install.ps1` は Windows 11 の PowerShell で、入れる(`irm | iex`)・`sign` の実行・消す(`-Uninstall`、PATH からも外れる)を実機で確認済みです(2026-11-24)。`test_install.py` が見るのは中身の取り決めだけで、Windows の動作そのものは自動では試していません。
 
 ## 主なファイル
 
