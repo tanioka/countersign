@@ -52,10 +52,24 @@ def demo(port, flags, cycles=4, period=300, extra=""):
     return r, root
 
 b = B.Broker(port=0, out=io.StringIO())
-threading.Timer(0.5, b.inject, args=("sign/iot/cmd/threshold", b"2000")).start()       # 20.00 ℃ に下げる → LED が点く
-threading.Timer(0.6, b.inject, args=("sign/iot/cmd/threshold", b"abc")).start()        # 整数でない → 無視
-threading.Timer(0.7, b.inject, args=("sign/iot/cmd/other", b"1")).start()              # 別のトピック → 無視
-threading.Timer(1.3, b.inject, args=("sign/iot/cmd/threshold", b"2500")).start()       # 25.00 ℃ に上げる → LED が消える
+def inject_after_subscribe(b, events, wait=60):
+    """プログラムが購読したときを 0 として、命令を注ぐ。固定の待ち(起動の速さ)に頼ると、CI のように起動が遅い所で
+    購読の前に注いでしまい、取りこぼす(retain 無しの命令は後から届かない)。"""
+    def go():
+        limit = time.time() + wait
+        while not b.subs and time.time() < limit: time.sleep(0.01)
+        t0 = time.time()
+        for at, topic, payload in sorted(events):
+            d = t0 + at - time.time()
+            if d > 0: time.sleep(d)
+            b.inject(topic, payload)
+    threading.Thread(target=go, daemon=True).start()
+inject_after_subscribe(b, [
+    (0.5, "sign/iot/cmd/threshold", b"2000"),   # 20.00 ℃ に下げる → LED が点く
+    (0.6, "sign/iot/cmd/threshold", b"abc"),    # 整数でない → 無視
+    (0.7, "sign/iot/cmd/other", b"1"),          # 別のトピック → 無視
+    (1.3, "sign/iot/cmd/threshold", b"2500"),   # 25.00 ℃ に上げる → LED が消える
+])
 r, root = demo(b.port, ["--i2c=aht25:23.5,61", "--gpio=fake"], cycles=5)
 lines = r.stdout.splitlines()
 check("終了(エラー無し)", (r.returncode, "エラー" in r.stdout), (0, False))
