@@ -47,9 +47,9 @@ python3 sign.py --tree hello.sn          # 仕様 §1.3 の「出力の木」(co
 インタープリタと `std.sn` だけを入れます(コンパイラ `--asm`・試験・本は入りません)。Python 3.12 以上が要ります。置き場所は `install_manifest.txt` が決めます。
 
 - **Linux**: `curl -fsSL https://raw.githubusercontent.com/tanioka/countersign/main/install.sh | sh`(`~/.sign` に置き、`~/.local/bin/sign` を作る。消す: `sh install.sh --uninstall`)
-- **Windows 11**: `irm https://raw.githubusercontent.com/tanioka/countersign/main/install.ps1 | iex`(`%LOCALAPPDATA%\Sign` に置き、利用者の PATH に足す。消す: `install.ps1 -Uninstall`)
+- **Windows 11**: `irm https://raw.githubusercontent.com/tanioka/countersign/main/install.ps1 | iex`(`%LOCALAPPDATA%\Sign` に置き、利用者の PATH に足す。消す: `& ([scriptblock]::Create((irm https://raw.githubusercontent.com/tanioka/countersign/main/install.ps1))) -Uninstall`)
 
-`install.sh` は Linux で試験済み(`test_install.py`)。`install.ps1` は **Windows ではまだ一度も走らせていません**(試験は中身の取り決めを見るだけ)。
+`install.sh` は Linux で試験済み(`test_install.py`)。`install.ps1` は Windows 11 の PowerShell で実機確認の途中です(試験は中身の取り決めを見るだけ)。
 
 ## 主なファイル
 
