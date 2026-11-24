@@ -1,6 +1,8 @@
-# Sign の簡単インストーラ(Windows 11)。
+﻿# Sign の簡単インストーラ(Windows 11)。
 #   入れるもの: インタープリタと std.sn だけ(install_manifest.txt)。コンパイラ(--asm)・試験・本は入れない。
-#   使い方:  powershell -ExecutionPolicy Bypass -File install.ps1               入れる(%LOCALAPPDATA%\Sign に置き、sign コマンドを PATH に足す)
+#   使い方:  irm https://raw.githubusercontent.com/tanioka/countersign/main/install.ps1 | iex   (入れる)
+#            & ([scriptblock]::Create((irm https://raw.githubusercontent.com/tanioka/countersign/main/install.ps1))) -Uninstall   (消す)
+#   ファイルで:  powershell -ExecutionPolicy Bypass -File install.ps1               入れる(%LOCALAPPDATA%\Sign に置き、sign コマンドを PATH に足す)
 #            powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall    消す
 #            -Prefix フォルダ  -Ref ブランチ名  -NoPath(PATH を触らない)
 #   手元にリポジトリがあれば(この install.ps1 の隣に sign.py があれば)それを使い、無ければ GitHub から取る。
@@ -17,7 +19,7 @@ $Bin = Join-Path $Prefix "bin"
 $Marker = Join-Path $Prefix ".sign-installed"
 
 if ([string]::IsNullOrWhiteSpace($Prefix) -or $Prefix.TrimEnd('\') -eq $env:USERPROFILE.TrimEnd('\') -or $Prefix.Length -le 3) {
-  Write-Error "置き場所が危ないので止めます: '$Prefix'"
+  throw "置き場所が危ないので止めます: '$Prefix'"
 }
 
 function Remove-FromUserPath([string]$dir) {
@@ -35,7 +37,7 @@ if ($Uninstall) {
   } else {
     Write-Host "$Prefix はこのインストーラが作った物ではないので、触りません"
   }
-  exit 0
+  return
 }
 
 # --- Python 3.12 以上を探す(Microsoft Store の見せかけの python.exe は、実行して確かめて外す) ---
@@ -56,11 +58,12 @@ foreach ($cand in @(@("py", @("-3")), @("python3", @()), @("python", @()))) {
 if (-not $Py) {
   Write-Host "Python 3.12 以上が見つかりません。"
   Write-Host "  winget install Python.Python.3.13   または https://www.python.org/downloads/ から入れてください。"
-  exit 1
+  throw "Python 3.12 以上が必要です"
 }
 
 # --- 元のファイルを用意する ---
-$Here = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Here = $null
+if ($PSCommandPath) { $Here = Split-Path -Parent $PSCommandPath }   # irm | iex では空(ファイルではないため)
 $Tmp = $null
 if ($Here -and (Test-Path (Join-Path $Here "sign.py")) -and (Test-Path (Join-Path $Here "install_manifest.txt"))) {
   $Src = $Here
@@ -78,7 +81,7 @@ if ($Here -and (Test-Path (Join-Path $Here "sign.py")) -and (Test-Path (Join-Pat
 try {
   # --- 置く ---
   if ((Test-Path $Prefix) -and -not (Test-Path $Marker) -and (Get-ChildItem $Prefix -Force | Select-Object -First 1)) {
-    Write-Error "$Prefix には、このインストーラが作った物ではない中身があります。別の場所を -Prefix で指してください。"
+    throw "$Prefix には、このインストーラが作った物ではない中身があります。別の場所を -Prefix で指してください。"
   }
   New-Item -ItemType Directory -Force -Path $Prefix, $Bin | Out-Null
   $n = 0
@@ -86,7 +89,7 @@ try {
     $f = $line.Trim()
     if (-not $f -or $f.StartsWith("#")) { continue }
     $from = Join-Path $Src $f
-    if (-not (Test-Path $from)) { Write-Error "元に $f がありません(install_manifest.txt と合っていません)" }
+    if (-not (Test-Path $from)) { throw "元に $f がありません(install_manifest.txt と合っていません)" }
     Copy-Item $from (Join-Path $Prefix $f) -Force
     $n++
   }
@@ -96,14 +99,14 @@ try {
   $cmd = "@echo off`r`n$Mark`r`nset PYTHONUTF8=1`r`n`"$Py`" `"$(Join-Path $Prefix 'sign.py')`" %*`r`n"
   [IO.File]::WriteAllText((Join-Path $Bin "sign.cmd"), $cmd, [Text.Encoding]::ASCII)
   # ASCII に収まらない道(日本語のユーザー名など)なら、cmd の文字コードに任せず止める
-  if ($cmd -match '[^\x00-\x7F]') { Write-Error "インストール先の道に日本語が含まれています。-Prefix で半角英数の場所を指してください(例: C:\Sign)。" }
+  if ($cmd -match '[^\x00-\x7F]') { throw "インストール先の道に日本語が含まれています。-Prefix で半角英数の場所を指してください(例: C:\Sign)。" }
 
   # --- 動くか確かめる ---
   $chk = Join-Path ([IO.Path]::GetTempPath()) ("sign-chk-" + [Guid]::NewGuid().ToString("N") + ".sn")
   [IO.File]::WriteAllText($chk, "1 + 2`n", (New-Object Text.UTF8Encoding($false)))
   $got = (& (Join-Path $Bin "sign.cmd") $chk 2>&1 | Out-String).Trim()
   Remove-Item $chk -Force -ErrorAction SilentlyContinue
-  if ($got -ne "3") { Write-Error "確かめに失敗しました(1 + 2 が '$got' でした)。$Prefix を見てください。" }
+  if ($got -ne "3") { throw "確かめに失敗しました(1 + 2 が '$got' でした)。$Prefix を見てください。" }
 
   # --- PATH(利用者の分だけ) ---
   if (-not $NoPath) {
