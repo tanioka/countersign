@@ -1,0 +1,22 @@
+# 簡単インストーラ(install.sh・install.ps1)が入れるファイル。インタープリタと std.sn だけ(コンパイラ・試験・本は入れない)。
+# 足りているかは test_install.py が import をたどって確かめる。
+sign.py
+sign_interp.py
+sign_pe.py
+sign_st.py
+sign_gfx.py
+sign_mem.py
+sign_types.py
+sign_audio.py
+sign_bus.py
+sign_check.py
+sign_db.py
+sign_forth.py
+sign_gpio.py
+sign_net.py
+sign_par.py
+sign_sexp.py
+sign_sys.py
+spec_tree.py
+fixblank.py
+std.sn
