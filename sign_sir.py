@@ -321,7 +321,7 @@ def evaluate(funcs, top, fuel=200000):
             if isinstance(a, Rec): return len(a.items)                           # 欄の数(単位の欄も数える)
             if isinstance(a, Str): return len(a)                                 # strict: ||`abc`|| = 3
             if isinstance(a, Chr): return 1                                      # ||\a|| = 1
-            if not isinstance(a, tuple): raise Unsup("整数の長さ")
+            if not isinstance(a, tuple): return 1                                # 1 要素の器は要素そのもの(`[5] ≅ 5`。operator_table.md 17 行)なので、数の要素数は 1(`||0||`・`||-3||`・`||1.5||` も 1)
             return len(a)
         if k == "idx":
             a, i = one(ev(e[1], env)), one(ev(e[2], env))

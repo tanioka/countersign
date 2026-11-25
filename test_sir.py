@@ -116,11 +116,12 @@ def test_floats_promote_and_refuse_undecided():
     assert ev("1.5 < 2") == ("flt", "1.5") and ev("1 < 1.5") == ("val", 1) and ev("2.5 < 1.5") == ("void",)
     assert ev("0.1 * 3") == ("flt", "0.30000000000000004") and ev("-0.0") == ("flt", "-0.0")
     assert ev("0.0 & 7") == ("val", 7) and ev("(1.5 < 1) | 2.5") == ("flt", "2.5")
-    for bad in ("-7 % 2.5", "1 / 0.0", "10.0 / 0", "||1.5||", "1" + "0" * 200 + ".0 * 1" + "0" * 200 + ".0"):
+    for bad in ("-7 % 2.5", "1 / 0.0", "10.0 / 0", "1" + "0" * 200 + ".0 * 1" + "0" * 200 + ".0"):
         try: ev(bad); assert False, bad
         except R.Unsup: pass
     assert ev("[3 4 5] ' 1.5") == ("val", 5) and ev("[3 4 5] ' 0.5") == ("val", 4) and ev("[3 4 5] ' -0.5") == ("val", 5) and ev("[3 4 5] ' 2.5") == ("void",)
     assert ev("`abc` ' 1.5") == ("chr", 99)
+    assert ev("||1.5||") == ("val", 1) and ev("||0||") == ("val", 1) and ev("||__||") == ("val", 0)
     f, top = R.lower(S.parse_source("1.5\n"))
     try: R.raise_ast(f, top); assert False
     except R.Unsup: pass
