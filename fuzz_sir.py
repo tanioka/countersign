@@ -9,6 +9,7 @@ LIST_RATE = [0.0]
 DEF_RATE = [0.0]
 PARTIAL = [False]
 STRINGS = [False]                  # --strings: 文字列・文字の定数(S1。SIR_VALUES.md)
+FLOATS = [False]                   # --floats: Float の字面と算術(S4)
 STRUCTS = [False]                  # --structs: 欄ブロック・欄引き・コンストラクタ(S3・S5)
 NAMES = [False]                    # --names: 定義の無い名前 zz を式に混ぜる(R21 で `!_`)
 FLOW_RATE = [0.0]
@@ -148,7 +149,25 @@ def structs_program(r):
     elif pick < .95: return "Pt : x y ? [\n\tl : x\n\tm : y\n\tn : x + y\n]\n(Pt " + f"{r.choice(['1','2'])} {r.choice(['3','(3 < 2)'])}) ' {r.choice(['l','m','n','o','0','-1'])}\n"
     else: body = r.choice(["w ' z", "(w ' p)", "||w||", "w"])
     return head + body + "\n"
+def floats_program(r):
+    """S4: Float の字面・整数との混ぜ算・比べ・符号・関数。`%`・0 割り・溢れ・添字・長さは SIR が断る(仕様が未決)"""
+    fl = lambda: r.choice(["1.5", "2.0", "0.5", "-0.5", "3.25", "0.1", "0.0", "100.0", "-2.0"])
+    iv = lambda: r.choice(["1", "2", "7", "-3", "0", "9", "(3 < 2)", "__"])
+    a = lambda: r.choice([fl(), fl(), iv(), "x"]) if False else r.choice([fl(), iv()])
+    pick = r.random()
+    if pick < .35: body = f"{a()} {r.choice(['+','-','*','/','/','%'])} {a()}"
+    elif pick < .5: body = f"({a()} {r.choice(['<','>','<=','>=','=','!='])} {a()})"
+    elif pick < .58: body = f"{a()} {r.choice(['<','>','<='])} {a()} {r.choice(['<','>','<='])} {a()}"
+    elif pick < .66: body = r.choice([f"|{fl()}|", f"-({fl()})", f"|{iv()} - {fl()}|"])
+    elif pick < .74: body = f"({a()} | {a()})"
+    elif pick < .8: body = f"({a()} & {a()})"
+    elif pick < .88: return f"f : x ? x {r.choice(['+','*','-','/'])} {a()}\nf {a()}\n"
+    elif pick < .94: return f"f : x y ? x {r.choice(['+','*','<','-'])} y\nf {a()} {a()}\n"
+    elif pick < .97: body = f"[3 4 5] ' {fl()}"
+    else: body = f"||{fl()}||"
+    return body + "\n"
 def program(r):
+    if FLOATS[0]: return floats_program(r)
     if STRUCTS[0]: return structs_program(r)
     if STRINGS[0]: return strings_program(r)
     if PARTIAL[0]: return partial_program(r)
@@ -182,6 +201,9 @@ def obs_strict(t):
     except BaseException as e: return ("refuse", type(e).__name__)
     finally: S.STRICT_GATES = False
     if v.startswith("[") and v.endswith("]") and ": " in v: return ("rec", v)
+    if ("." in v or "e" in v) and v.lstrip("-")[:1].isdigit():
+        try: float(v); return ("flt", v)
+        except ValueError: pass
     if v.startswith("[") and v.endswith("]"):
         try: return ("flow", tuple(int(x) for x in v[1:-1].split(",")))
         except ValueError: pass
@@ -251,6 +273,7 @@ def main():
     PARTIAL[0] = '--partial' in sys.argv
     STRINGS[0] = '--strings' in sys.argv
     STRUCTS[0] = '--structs' in sys.argv
+    FLOATS[0] = '--floats' in sys.argv
     tally, bad = {}, []
     for _ in range(n):
         t = fix(program(r)); b = obs_sir(t)
