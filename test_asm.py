@@ -1866,9 +1866,9 @@ for _nm, _src in [
 ]:
     _a = sign_asm.generate(sign_interp.parse_source(_src), "linux")
     check("段68: " + _nm + ": 答えが処理系と一致", run_asm(_a, linux=True)[1], _want58(_src))
-for _nm, _src in [("1 << 63 は値域の外で罠", "u : a ? a << 63\nu 1\n"), ("1 << 64 も罠", "u : a ? a << 64\nu 1\n")]:
+for _nm, _src in [("1 << 63 は値域の外で `__`", "u : a ? a << 63\nu 1\n"), ("1 << 64 も `__`", "u : a ? a << 64\nu 1\n")]:
     _a = sign_asm.generate(sign_interp.parse_source(_src), "linux")
-    check("段68: " + _nm, run_asm(_a, linux=True)[1], None)
+    check("段68: " + _nm, run_asm(_a, linux=True)[1], "__\n")
 
 def refuses(src):
     try: sign_asm.generate(sign_interp.parse_source(src), "linux")

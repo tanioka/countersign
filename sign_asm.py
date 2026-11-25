@@ -524,7 +524,7 @@ class FnGen:
         import sign_asmpar
         for a, kd in zip(items[1:], self.prog.pkind[h[1]]):
             if kd == "I":
-                if not self.par_arg_ok(a) or self.mu(a) or self.prog.kind(a, self.kinds) != "I": return None
+                if not self.par_arg_ok(a) or self.mu_hard(a) or self.prog.kind(a, self.kinds) != "I": return None
             elif kd == "C":
                 if not self.par_char_arg(a): return None
             elif not self.par_list_arg(a, kd): return None
@@ -536,6 +536,7 @@ class FnGen:
         import sign_asmpar
         c = self.par_call(n)
         if c is None or c[0] not in self.prog.spec_elig(): return None
+        if any(kd == "I" and self.mu(a) for a, kd in zip(c[1], self.prog.pkind[c[0]])): return None          # 投機の包みは溢れの `__` の実引数を見ない
         for a, kd in zip(c[1], self.prog.pkind[c[0]]):
             if kd == "I" and not sign_asmpar.arg_ok(self.prog, self.strip(a)): return None
             if kd == "C" and self.has_seq(a): return None
@@ -629,7 +630,7 @@ class FnGen:
         idx = []
         for i, a in enumerate(args):
             if self.par_call(a) is not None: idx.append(i)
-            elif not self.par_arg_ok(a) or self.mu(a): return []
+            elif not self.par_arg_ok(a) or self.mu_hard(a): return []
         return idx if len(idx) >= 2 else []
 
     def par_light_pre(self, site, Ls):
@@ -1368,7 +1369,7 @@ class FnGen:
                 na = [self.hoist_walk(a, leaves, pre, False, True) for a in y[1][1:]]      # 実引数の中の呼び出し(答えが __ にならない物)を先に
                 if len(leaves) > n0: return ("seq", [y[1][0]] + na) + tuple(y[2:])
         c = self.par_call(y)
-        if c is not None and (allow_mu or not self.mu(y)):
+        if c is not None and (allow_mu or not self.mu_hard(y)):
             leaves.append((y, c)); return ("id", pre + str(len(leaves) - 1))
         if y[0] == "bin" and y[1] in ("+", "-", "*", "/", "%", "<<", ">>", "||", ";;", "&&"):
             return ("bin", y[1], self.hoist_walk(y[2], leaves, pre, allow_mu, deep), self.hoist_walk(y[3], leaves, pre, allow_mu, deep))
@@ -6434,7 +6435,7 @@ def add_par(text, p):
     """--par: 包み・実行環境(スレッドの池・待ち行列・合流)・.bss を足し、起動で主スレッドの TLS を作り、終了を exit_group にする。"""
     import sign_asmpar
     el = p.par_elig(); body = []
-    for f in sorted(p.par_used): body += sign_asmpar.wrapper(f, symbol_of(f), sign_asmpar.nwords(p.pkind[f]))
+    for f in sorted(p.par_used): body += sign_asmpar.wrapper(f, symbol_of(f), sign_asmpar.nwords(p.pkind[f]), sign_asmpar.int_words(p.pkind[f]))
     spec = bool(p.spec_used)
     clones = []
     if spec and SPEC_ABORT[0]:      # 再帰する関数と、それを(間接にも)呼ぶ関数が複製の対象(呼ぶ側も複製しないと元の再帰へ入ってしまう)
@@ -6453,7 +6454,7 @@ def add_par(text, p):
     for f in sorted(p.par_used):                      # 投機専用の複製を呼ぶ並列の包み(投機の中で合流が自分で走らせる左の半分も、確認つきの複製へ入る)
         if symbol_of(f) in csym:
             pwsym.add(symbol_of(f))
-            body += [l.replace("_sign_pw_%s:" % symbol_of(f), "_sign_pw_%s__sp:" % symbol_of(f)).replace("\tbl %s" % symbol_of(f), "\tbl %s__sp" % symbol_of(f)) for l in sign_asmpar.wrapper(f, symbol_of(f), sign_asmpar.nwords(p.pkind[f]))]
+            body += [l.replace("_sign_pw_%s:" % symbol_of(f), "_sign_pw_%s__sp:" % symbol_of(f)).replace("\tbl %s" % symbol_of(f), "\tbl %s__sp" % symbol_of(f)) for l in sign_asmpar.wrapper(f, symbol_of(f), sign_asmpar.nwords(p.pkind[f]), sign_asmpar.int_words(p.pkind[f]))]
     body = ["\t.text"] + body + sign_asmpar.runtime(PAR[0], spec)
     if spec:        # 罠は、投機の中なら巻き戻す(外なら今までどおり止まる)
         chk = ["\tmrs x16, tpidr_el0", "\tldr x16, [x16, #16]", "\tcbnz x16, _sign_spec_rollback"]
