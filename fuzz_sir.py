@@ -112,7 +112,15 @@ def strings_program(r):
     elif pick < .75: head += f"u : s ' {r.choice(['0', '1', '4', '-1'])}\n"; body = r.choice(["u", "(u | 5)", "||u||", "(c | u)"])             # 値が字面でない定義は機械語が断る(定義の本体が文字列の添字)
     elif pick < .8: return head + f"f : x ? x + {n()}\nf {num(r)}\n"
     elif pick < .9: return head + f"f : x ?\n\t{n()} > x : {n()}\n\t{n()}\n\nf {r.choice(['1', '3', '9'])}\n"
-    else: return head + f"f : x ? ||x||\nf {r.choice(['s', 'c', '`ab`', '5'])}\n"
+    elif pick < .93: return head + f"f : x ? ||x||\nf {r.choice(['s', 'c', '`ab`', '5'])}\n"
+    else:                                                                       # S2: 文字列・文字を関数へ渡す・返す
+        arg = lambda: r.choice(["s", "t", "c", "d", "`ab`", "\\\\z", "(s ' 1)", "(s ' 9)", "(t ' 0)", "5", "__"])
+        body = r.choice(["x", "||x||", "(x ' 0)", "(x ' -1)", "(x ' 5)", "(x + 1)", "||x|| + 1", "(x = x)", "|x|", "(x | 7)", "(3 & x)", "(||x|| > 1)"])
+        two = r.random() < .3
+        if two: return head + f"f : x y ? {r.choice(['||x|| + ||y||', '(x ' + str(r.choice([0, 1, -1])) + ')', 'y', '(y ' + chr(39) + ' 0)', 'x'])}\nf {arg()} {arg()}\n"
+        pre = f"g : x ? {r.choice(['x', '(x ' + chr(39) + ' 1)', '||x||'])}\n" if r.random() < .3 else ""
+        call = f"f {arg()}" if not pre else r.choice([f"f (g {arg()})", f"||g {arg()}||", f"g {arg()}"])
+        return head + pre + f"f : x ? {body}\n{call}\n"
     return head + body + "\n"
 def program(r):
     if STRINGS[0]: return strings_program(r)
@@ -227,7 +235,6 @@ def main():
         if "--asm" in sys.argv:
             lx = lx or "`" in t or "\\" in t                                       # 文字列・文字は実機の印字で見る
             c = obs_asm(t, lx)
-            if b[0] == "str": tally["文字列の答えは機械語と比べない"] = tally.get("文字列の答えは機械語と比べない", 0) + 1; continue
             k = "後段 一致" if c == b else ("後段 断り" if c[0] == "refuse" else "後段 罠" if c[0] == "trap" else "後段 誤答")
             tally[k] = tally.get(k, 0) + 1
             if k == "後段 誤答": bad.append((t, "機械語 " + str(c), b))
