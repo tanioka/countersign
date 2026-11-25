@@ -160,10 +160,10 @@ def floats_program(r):
     elif pick < .58: body = f"{a()} {r.choice(['<','>','<='])} {a()} {r.choice(['<','>','<='])} {a()}"
     elif pick < .66: body = r.choice([f"|{fl()}|", f"-({fl()})", f"|{iv()} - {fl()}|"])
     elif pick < .74: body = f"({a()} | {a()})"
-    elif pick < .8: body = f"({a()} & {a()})"
+    elif pick < .75: body = f"({a()} & {a()})"
     elif pick < .88: return f"f : x ? x {r.choice(['+','*','-','/'])} {a()}\nf {a()}\n"
     elif pick < .94: return f"f : x y ? x {r.choice(['+','*','<','-'])} y\nf {a()} {a()}\n"
-    elif pick < .97: body = f"[3 4 5] ' {fl()}"
+    elif pick < .97: body = r.choice([f"[3 4 5] ' {fl()}", f"`abc` ' {fl()}", f"[3 4 5] ' ({a()} + {fl()})", f"[3 4 5] ' ({fl()} - {fl()})", f"[3 4 5] ' ({fl()} * 2)"])
     else: body = f"||{fl()}||"
     return body + "\n"
 def program(r):
