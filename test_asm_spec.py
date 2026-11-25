@@ -53,19 +53,19 @@ def has_spec(src, **kw): return "_sign_spec_alloc" in run(src, 4, True, **kw)[2]
 
 # (1)(2) 答えと罠
 matrix("| 左が決める・右は罠", FIB + "h : n ? (slow n) = 45 | (ov n)\nh 10\n", b"45\n")
-matrix("| 左が __・右は罠(直列と同じに止まる)", FIB + "h : n ? (slow n) = 99 | (ov n)\nh 10\n", None, trap=True)
+matrix("| 左が __・右は罠(直列と同じに止まる)", FIB + "h : n ? (slow n) = 99 | (ov n)\nh 10\n", b"__\n")
 matrix("| 左が __・右が答え", FIB + "h : n ? (slow n) = 99 | (cnt 20)\nh 10\n", b"20\n")
 matrix("& 左が __ なら __", FIB + "h : n ? ((slow n) = 99) & (cnt 20)\nh 10\n", b"__\n")
 matrix("& 左が決まれば右", FIB + "h : n ? ((slow n) = 45) & (cnt 20)\nh 10\n", b"20\n")
-matrix("& 左が決まる・右は罠(直列と同じに止まる)", FIB + "h : n ? ((slow n) = 45) & (ov n)\nh 10\n", None, trap=True)
+matrix("& 左が決まる・右は罠(直列と同じに止まる)", FIB + "h : n ? ((slow n) = 45) & (ov n)\nh 10\n", b"__\n")
 matrix("& 左が __・右は罠(止まらない)", FIB + "h : n ? ((slow n) = 99) & (ov n)\nh 10\n", b"__\n")
 matrix("枝 条件が成り立つ", FIB + "h : n ?\n\t(slow n) = 45 : cnt 30\n\t7\nh 10\n", b"30\n")
 matrix("枝 条件が外れる", FIB + "h : n ?\n\t(slow n) = 5 : cnt 30\n\t7\nh 10\n", b"7\n")
-matrix("枝 成り立つ・値は罠(止まる)", FIB + "h : n ?\n\t(slow n) = 45 : ov 3\n\t7\nh 10\n", None, trap=True)
+matrix("枝 成り立つ・値は罠(止まる)", FIB + "h : n ?\n\t(slow n) = 45 : ov 3\n\t7\nh 10\n", b"__\n")
 matrix("枝 外れる・投機の罠は捨てる", FIB + "h : n ?\n\t(slow n) = 5 : ov 3\n\t7\nh 10\n", b"7\n")
 matrix("枝 次の行も投機", FIB + "h : n ?\n\t(slow n) = 5 : cnt 30\n\t(slow n) = 45 : cnt 31\n\t7\nh 10\n", b"31\n")
 matrix("枝 最後の行は既定", FIB + "h : n ?\n\t(slow n) = 1 : cnt 30\n\t(slow n) = 2 : cnt 31\n\t9\nh 10\n", b"9\n")
-matrix("左が __ になる n・右の罠が要る(止まる)", FIB + "h : n ? (slow n) = 45 | (ov n)\nh 11\n", None, trap=True)
+matrix("左が __ になる n・右の罠が要る(止まる)", FIB + "h : n ? (slow n) = 45 | (ov n)\nh 11\n", b"__\n")
 # 協力して止める: 捨てられた投機は、再帰する関数の入口で気づいて巻き戻して抜ける(入れ物の失敗の印が立つ)
 sign_asm.SPEC_ABORT[0] = True
 _tx = run(FIB + "h : n ?\n\t(slow n) = 5 : slow 22\n\t(slow 20) + (cnt 30)\nh 12\n", 4, True)[2]
@@ -85,18 +85,18 @@ matrix("先読み 全部外れて既定", FIB + "h : n ?\n\t(slow n) = 5 : cnt 3
 matrix("先読み 全部外れて既定が無い(__)", FIB + "h : n ?\n\t(slow n) = 5 : cnt 30\n\t(slow n) = 6 : cnt 31\nh 10\n", b"__\n")
 matrix("先読み 1 行目が成り立つ(後ろは捨てる)", FIB + "h : n ?\n\t(slow n) = 45 : cnt 30\n\t(slow n) = 6 : cnt 31\n\t(slow n) = 45 : cnt 32\n\t7\nh 10\n", b"30\n")
 fl2 = matrix("先読み 外れる行の値は罠(捨てる)", FIB + "h : n ?\n\t(slow n) = 5 : ov 3\n\t(slow n) = 6 : ov 4\n\t(slow n) = 45 : cnt 31\n\t7\nh 10\n", b"31\n")
-matrix("先読み 成り立つ行の値は罠(止まる)", FIB + "h : n ?\n\t(slow n) = 5 : cnt 30\n\t(slow n) = 45 : ov 3\n\t7\nh 10\n", None, trap=True)
+matrix("先読み 成り立つ行の値は罠(止まる)", FIB + "h : n ?\n\t(slow n) = 5 : cnt 30\n\t(slow n) = 45 : ov 3\n\t7\nh 10\n", b"__\n")
 matrix("先読み 既定の値も投機", FIB + "h : n ?\n\t(slow n) = 5 : cnt 30\n\t(slow n) = 6 : cnt 31\n\tslow 12\nh 10\n", b"132\n")
-check("先読み: 罠は巻き戻った(失敗の印が立つ)", fl2 > 0, True)
+# 溢れは罠でなく `__`(設計者の答え 2026-11-25)になったので、Int の純粋な関数に罠の源が無く、「罠で巻き戻る」試験は今は組めない(捨てた投機の巻き戻しは上の試験で見る)
 sign_asm.SPEC_LOOK[0] = 1
 fl = matrix("巻き戻しの試し(左が 45)", FIB + "h : n ? (slow n) = 45 | (ov n)\nh 10\n", b"45\n")
-check("巻き戻しが実際に起きた(入れ物の失敗の印。順番のどれかで)", fl > 0, True)
-check("投機のコードが出ている", has_spec(FIB + "h : n ? (slow n) = 45 | (ov n)\nh 10\n"), True)
+check("投機のコードが出ている", has_spec(FIB + "h : n ? (slow n) = 45 | (cnt 9)\nh 10\n"), True)
 check("--par-spec 無しでは投機のコードが出ない", "_sign_spec_alloc" in sign_asm.generate(sign_interp.parse_source(FIB + "h : n ? (slow n) = 45 | (ov n)\nh 10\n"), "linux", par=4), False)
 
 matrix("右が仮引数の算術の実引数で再帰関数を呼ぶ関数(slow n)", FIB + "h : n ? (cnt 40) = 0 | (slow (n + 1))\nh 9\n", b"%d\n" % (55 - 10))
 matrix("枝の値が slow n", FIB + "h : n ?\n\t(cnt 40) = 0 : slow n\n\t(slow (n - 1))\nh 10\n", b"%d\n" % (34 - 9))
-check("slow を使う所に投機のコードが出ている", has_spec(FIB + "h : n ? (cnt 40) = 0 | (slow (n + 1))\nh 9\n"), True)
+check("slow を使う所: n + 1 は溢れで `__` になりうるので、投機にしない(設計者の答え 2026-11-25。答えは上の試験で直列と同じ)", has_spec(FIB + "h : n ? (cnt 40) = 0 | (slow (n + 1))\nh 9\n"), False)
+check("slow を使う所に投機のコードが出ている(引数が溢れない)", has_spec(FIB + "h : n ? (cnt 40) = 0 | (slow n)\nh 9\n"), True)
 
 # 今ある --par の答えを変えない(投機が入る所と入らない所が混ざる)
 matrix("--par の連なり・| の右は入れない・投機が混ざる", FIB + "g : n ? ((fib n) | 5) + ((fib (n - 1)) | 7) * 2\nh : n ? (slow n) = 45 | (cnt 9)\n(g 12) + (h 10)\n")

@@ -3065,7 +3065,8 @@ def arith(op, a, b):
 def arith_checked(op, a, b):
     r = _arith_plain(op, a, b)
     if type(r) is int and (r > INT_MAX or r < -INT_MAX):
-        raise SignError(f"Int の溢れ(罠): {show(a)} {op} {show(b)} の答え {r} は Int の値域 -{INT_MAX} 〜 {INT_MAX} の外です(integer_overflow.md §1.1・§1.2)")
+        info("int-overflow", f"Int(64 bit)の溢れなので _ です: {show(a)} {op} {show(b)} の答え {r} は -{INT_MAX} 〜 {INT_MAX} の外です(設計者の答え 2026-11-25: 溢れは罠でなく `!_`)")
+        return UNIT
     return r
 
 class IterList(list):                          # stack_abi §4.6: 規則(レンジ・Iterator)。{start, step, end} を持つ値で、要素は List と同じに読める。Reader(`$` の関数の番地)を右に並べるとループ
@@ -4866,7 +4867,7 @@ def _ev(n, env):
         if not isinstance(v, int): return UNIT
         if isinstance(v, UInt): return UInt(~v & UMASK)
         r = ~v
-        if INTCHK[0] and type(r) is int and (r > INT_MAX or r < -INT_MAX): raise SignError(f"Int の溢れ(罠): !!{v} の答え {r} は Int の値域 -{INT_MAX} 〜 {INT_MAX} の外です(integer_overflow.md §1.2)")
+        if INTCHK[0] and type(r) is int and (r > INT_MAX or r < -INT_MAX): return UNIT
         return r
     if k == "abs":
         if STRICT_GATES and n[1] == ("not", ("hole",)):          # R27: `|_|` は `||_||` と同じ口の穴(並び全体を受けて絶対値)

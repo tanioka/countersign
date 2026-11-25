@@ -459,8 +459,21 @@ def nonvoid(e):
     if k == "op":
         if not (nonvoid(e[2]) and nonvoid(e[3])): return False
         if e[1] in ("/", "%"): return e[3][0] == "int" and e[3][1] != 0
-        return True
+        v = const_int_val(e)                                                  # 設計者の答え 2026-11-25: Int の溢れは `!_`。溢れないと言えるのは、定数に畳めて値域に収まる式だけ
+        return v is not None
     return False
+
+def const_int_val(e):
+    """整数の字面だけでできた式の値(値域に収まるとき)。畳めない・値域の外・void になる形は None。"""
+    if e[0] == "int": return e[1] if I64_MIN <= e[1] <= I64_MAX else None
+    if e[0] == "neg":
+        v = const_int_val(e[1]); return -v if v is not None else None
+    if e[0] == "op" and e[1] in ("+", "-", "*"):
+        a, b = const_int_val(e[2]), const_int_val(e[3])
+        if a is None or b is None: return None
+        v = a + b if e[1] == "+" else a - b if e[1] == "-" else a * b
+        return v if I64_MIN <= v <= I64_MAX else None
+    return None
 
 def has_call(e):
     if not isinstance(e, tuple): return False
