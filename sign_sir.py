@@ -252,7 +252,10 @@ def evaluate(funcs, top, fuel=200000):
             if isinstance(a, Rec) or isinstance(b, Rec): raise Unsup("欄ブロックの算術")
             if isinstance(a, Chr) or isinstance(b, Chr): raise Unsup("文字の算術(`\\a + 1` は文字。仕様の答えを SIR は持たない)")
             if isinstance(a, Str) or isinstance(b, Str):
-                if e[1] == "*": raise Unsup("文字列の `*`(繰り返し。S1 の外)")
+                if e[1] == "*" and isinstance(a, Str) and isinstance(b, int):          # 連結の n 乗(type_system.md 910)。n = 0 は空の余積で `!_`、負は射なし(`!_`)。回数が文字列・文字・Float・`!_` なら射なし(`!_`)。左が文字列でないとき(`3 * s`)は `!_`
+                    if b <= 0: return None
+                    if len(a) * b > 100000: raise Unsup("文字列の繰り返しが大きい(実装の上限の扱いを入れない)")
+                    return Str(str(a) * b)
                 return None                                                    # 算術は String を飲まない(list_model.md 4.1)。`s + 1`・`1 + s`・`s + __`・`s - s`・`s / 2` は `!_`。`!_` は外の演算の口で消える(`5 + (s + 1)` は 5)
             if a is None or b is None: return b if a is None else a
             op = e[1]

@@ -2988,6 +2988,7 @@ def _arith_core(op, a, b):
     if is_unit(b): return a if is_num(a) else UNIT
     if isinstance(a, (str, list)) and not isinstance(a, Char) and isinstance(b, int):
         if op in ("*", "^") and b > 0 and len(a) * b > SIZE_LIMIT: raise SignError(f"結果が大きすぎます(実装の上限は {SIZE_LIMIT:,} 要素)")    # 実装の守り: 並べきれない大きさで異常終了しない
+        if op == "*" and isinstance(a, str) and b <= 0: return UNIT     # type_system.md 910: `s * n` の n = 0 は空の余積で単位元 `!_`、負は射なし(`!_`)。以前は空の文字列を返していて仕様とずれていた
         if op == "*": return a * b                             # 繰り返し
         if op == "^" and isinstance(a, list): return [list(a) for _ in range(b)]
         if op == "/" and isinstance(a, list) and b > 0:
