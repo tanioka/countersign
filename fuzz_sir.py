@@ -7,6 +7,7 @@ from fixblank import fix
 
 LIST_RATE = [0.0]
 DEF_RATE = [0.0]
+PARTIAL = [False]
 NAMES = [False]                    # --names: 定義の無い名前 zz を式に混ぜる(R21 で `!_`)
 FLOW_RATE = [0.0]
 NOVOID = [False]
@@ -81,7 +82,21 @@ def defaults_program(r):
     call = "gd " + " ".join(arg() for _ in range(r.randint(nreq, nreq + nd + (1 if r.random() < .2 else 0))))   # 口より 1 つ多い呼びは、余りが流れになる
     if r.random() < .4: call = f"({call}) {r.choice('+-*')} {num(r)}"
     return head + call + "\n"
+def partial_program(r):
+    """行の値(枝の値・既定の行)が部分適用になりうる関数。実引数が単位になる呼び・足りない呼びを行の値に置く。"""
+    vals = ["add (3 < 2)", "add 1", "add 1 2", "x", "7", "(x + 1)", "add __ 4", "k (3 < 2)", "k 2"]
+    n = r.randint(1, 3); rows = []
+    for i in range(n):
+        c = r.choice(["x > 0", "x < 3", "x = 5", "x > 100", "(3 < 2)"])
+        rows.append(f"\t{c} : {r.choice(vals)}")
+    if r.random() < .8: rows.append(f"\t{r.choice(vals)}")
+    head = "add : a b ? a + b\nk : a ? a * 2\nf : x ?\n" + "\n".join(rows) + "\n\n"
+    call = f"f {r.choice(['5', '3', '0', '(0 - 4)'])}"
+    if r.random() < .3: call = f"({call}) {r.choice('+-*')} {num(r)}"
+    if r.random() < .15: call += " " + num(r)
+    return head + call + "\n"
 def program(r):
+    if PARTIAL[0]: return partial_program(r)
     if DEF_RATE[0] and r.random() < DEF_RATE[0]: return defaults_program(r)
     if FLOW_RATE[0] and r.random() < FLOW_RATE[0]: return flow_program(r)
     if r.random() < LIST_RATE[0]: return list_program(r)
@@ -173,6 +188,7 @@ def main():
     LIST_RATE[0] = 0.5 if '--lists' in sys.argv else 0.0
     DEF_RATE[0] = 1.0 if '--defaults' in sys.argv else 0.0
     NAMES[0] = '--names' in sys.argv
+    PARTIAL[0] = '--partial' in sys.argv
     tally, bad = {}, []
     for _ in range(n):
         t = fix(program(r)); b = obs_sir(t)
@@ -182,7 +198,7 @@ def main():
         if a[0] in ("refuse", "other") or b == ("partial",) or b == ("fuel",): k = "比べない: " + ("評価器が断る" if a[0]=="refuse" else "評価器の値が整数でない" if a[0]=="other" else "部分適用" if b==("partial",) else "燃料"); tally[k] = tally.get(k, 0) + 1; continue
         if a == b: tally["一致"] = tally.get("一致", 0) + 1
         else: bad.append((t, a, b))
-        lx = FLOW_RATE[0] > 0 or b[0] == "flow"
+        lx = FLOW_RATE[0] > 0 or b[0] == "flow" or PARTIAL[0]      # 余りの実引数がある呼びは、実行時に単位かどうかで値か流れかが変わる。非 linux の観測は流れを読めないので、linux で見る
         if "--asm" in sys.argv:
             c = obs_asm(t, lx)
             k = "後段 一致" if c == b else ("後段 断り" if c[0] == "refuse" else "後段 罠" if c[0] == "trap" else "後段 誤答")
