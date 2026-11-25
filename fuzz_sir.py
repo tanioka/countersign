@@ -164,7 +164,7 @@ def floats_program(r):
     elif pick < .88: return f"f : x ? x {r.choice(['+','*','-','/'])} {a()}\nf {a()}\n"
     elif pick < .94: return f"f : x y ? x {r.choice(['+','*','<','-'])} y\nf {a()} {a()}\n"
     elif pick < .97: body = r.choice([f"[3 4 5] ' {fl()}", f"`abc` ' {fl()}", f"[3 4 5] ' ({a()} + {fl()})", f"[3 4 5] ' ({fl()} - {fl()})", f"[3 4 5] ' ({fl()} * 2)"])
-    else: body = f"||{fl()}||"
+    else: body = r.choice([f"||{fl()}||", f"||{iv()}||", f"||{a()} + {a()}||", f"(||{iv()}|| + 1)", f"||{a()} * 2|| - 3"])
     return body + "\n"
 def program(r):
     if FLOATS[0]: return floats_program(r)
