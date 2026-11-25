@@ -250,7 +250,27 @@ def evaluate(funcs, top, fuel=200000):
             a, b = one(ev(e[2], env)), one(ev(e[3], env))
             if isinstance(a, tuple) or isinstance(b, tuple): raise Unsup("リストの算術")
             if isinstance(a, Rec) or isinstance(b, Rec): raise Unsup("欄ブロックの算術")
-            if isinstance(a, Chr) or isinstance(b, Chr): raise Unsup("文字の算術(`\\a + 1` は文字。仕様の答えを SIR は持たない)")
+            if isinstance(a, Chr) or isinstance(b, Chr):                         # 文字の域の射(type_system.md 1543–1590)。左辺が規則を選ぶ。域は U+0001〜U+007F(ascii)。`!_` は両側で吸収
+                o = e[1]
+                if a is None or b is None: return None
+                if isinstance(a, (float, Rec)) or isinstance(b, (float, Rec)): raise Unsup("文字と Float・欄ブロックの算術")
+                if isinstance(a, Str) or isinstance(b, Str): return None                  # 文字列は算術を飲まない(`s * \a` は回数が文字で射なし)
+                def dom(r):
+                    if r == 0: raise Unsup("ずらした先が U+0000(仕様は `!_`。strict は文字 U+0000 を返す。M1)")
+                    return Chr(r) if 1 <= r <= 127 else None
+                if isinstance(a, Chr) and isinstance(b, Chr):
+                    if o == "+": return dom(a.c + b.c)
+                    if o == "-": return a.c - b.c
+                    return None                                                       # `c * d`・`c / d`・`c % d` は射なし
+                if isinstance(a, Chr):                                                # `c ⊕ n`
+                    if o == "+": return dom(a.c + b)
+                    if o == "-": return dom(a.c - b)
+                    if o == "*":
+                        if b <= 0: return None
+                        if b > 100000: raise Unsup("文字の繰り返しが大きい")
+                        return Str(chr(a.c) * b)
+                    return None                                                       # `c / n`・`c % n`・`c ^ n` は射なし
+                b = b.c                                                             # `n ⊕ c`: 左が Int の域。文字は符号位置の数として読む
             if isinstance(a, Str) or isinstance(b, Str):
                 if e[1] == "*" and isinstance(a, Str) and isinstance(b, int):          # 連結の n 乗(type_system.md 910)。n = 0 は空の余積で `!_`、負は射なし(`!_`)。回数が文字列・文字・Float・`!_` なら射なし(`!_`)。左が文字列でないとき(`3 * s`)は `!_`
                     if b <= 0: return None
