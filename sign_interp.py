@@ -6239,6 +6239,16 @@ def run(src, env=None):
                     if not any(id(o_) == id(x_) for x_, _m in DROP_DUP): DROP_DUP.append((next(m_ for m_ in nodes if (m_[1] if m_[0] == "export" else m_) is o_), None))      # 先に書いた方も落とす
                     continue
                 seen_[d_[1]] = d_
+    if fresh and not STRICT_GATES:                                # 既定のモードも同じ(設計者の答え 2026-11-25、Sign#302 の 2 (c))。ファイルのいちばん外の同じ名前は、どちらも使わず `!_`(取り込みとの同名は別件)
+        seen_d = {}
+        for node in nodes:
+            d_ = node[1] if node[0] == "export" else node
+            if d_[0] == "def" and isinstance(d_[1], str) and d_[2] != ("hole",):
+                if d_[1] in seen_d:
+                    o_ = seen_d[d_[1]]
+                    DROP_DUP.append((node, f"名前 `{d_[1]}` はこの枚の {1 + next(i for i, m_ in enumerate(nodes) if (m_[1] if m_[0] == 'export' else m_) is o_)} 番目の文と {1 + nodes.index(node)} 番目の文の両方で定義されています。どちらも使われず、名前は `!_` です(設計者の答え 2026-11-25)"))
+                    if not any(id(o_) == id(x_) for x_, _m in DROP_DUP): DROP_DUP.append((next(m_ for m_ in nodes if (m_[1] if m_[0] == "export" else m_) is o_), None))
+                else: seen_d[d_[1]] = d_
     if DROP_DUP:
         _drop = {id(n_) for n_, _m in DROP_DUP}; nodes = [n_ for n_ in nodes if id(n_) not in _drop]
         for _n, _m in DROP_DUP:
