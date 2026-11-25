@@ -101,13 +101,15 @@ def strings_program(r):
     al = "abcdefgh"
     s1 = "".join(r.choice(al) for _ in range(r.randint(1, 6))); s2 = "".join(r.choice(al) for _ in range(r.randint(1, 4)))
     c1 = r.choice(al); c2 = r.choice(al)
-    head = f"s : `{s1}`\nt : `{s2}`\nc : \\{c1}\nd : \\{c2}\n"
+    head = f"s : `{s1}`\nt : `{s2}`\nc : \\{c1}\nd : \\{c2}\nk : 1\n"
     n = lambda: r.choice(["||s||", "||t||", "||c||", "||`" + s1 + "`||", num(r), "(||s|| - ||t||)", "(||s|| * 3)", "(||s|| / 2)"])
     pick = r.random()
     if pick < .25: body = f"{n()} {r.choice('+-*/%')} {n()}"
     elif pick < .4: body = f"({n()} {r.choice(['<','>','=','!='])} {n()}) & {n()}"
     elif pick < .5: body = r.choice(["c", "d", "(c | d)", "(5 & c)", "(__ | d)", "(c & d)", "(c = d)", "(c < d)", "(c + 1)"])
-    elif pick < .6: body = r.choice(["s", "t", "(s | t)", "(s ' 1)", "(s ' 9)", "(s = t)", "(s + 1)", "||s + 1||"])
+    elif pick < .6: body = r.choice(["s", "t", "(s | t)", "(s = t)", "(s + 1)", "||s + 1||", "(1 + s)", "(s - t)", "(s / 2)", "|s|", "-s", "(s * 2)", "(5 + (s + 1))", "(s == s)", "(s = s)"])
+    elif pick < .72: i = r.choice(["0", "1", "2", "-1", "-2", "-3", "5", "9", "-9", "__", "(2 - 5)", "9223372036854775807", "k"]); body = r.choice([f"(s ' {i})", f"(t ' {i})", f"||s ' {i}||", f"((s ' {i}) | 7)", f"(3 & (s ' {i}))", f"((s ' {i}) + 1)"])
+    elif pick < .75: head += f"u : s ' {r.choice(['0', '1', '4', '-1'])}\n"; body = r.choice(["u", "(u | 5)", "||u||", "(c | u)"])             # 値が字面でない定義は機械語が断る(定義の本体が文字列の添字)
     elif pick < .8: return head + f"f : x ? x + {n()}\nf {num(r)}\n"
     elif pick < .9: return head + f"f : x ?\n\t{n()} > x : {n()}\n\t{n()}\n\nf {r.choice(['1', '3', '9'])}\n"
     else: return head + f"f : x ? ||x||\nf {r.choice(['s', 'c', '`ab`', '5'])}\n"
@@ -165,6 +167,8 @@ def _got(got):
         v = got[1].strip()
         if v == "__": return ("void",)
         if v.lstrip("-").isdigit(): return ("val", int(v))
+        if len(v) >= 3 and v[0] == v[-1] == "`": return ("str", v[1:-1])
+        if len(v) == 2 and v[0] == "\\" and v[1].isalnum(): return ("chr", ord(v[1]))
         if v.startswith("[") and v.endswith("]"):
             try: return ("flow", tuple(int(x) for x in v[1:-1].split(",")))
             except ValueError: pass
@@ -221,14 +225,13 @@ def main():
         else: bad.append((t, a, b))
         lx = FLOW_RATE[0] > 0 or b[0] == "flow" or PARTIAL[0]      # 余りの実引数がある呼びは、実行時に単位かどうかで値か流れかが変わる。非 linux の観測は流れを読めないので、linux で見る
         if "--asm" in sys.argv:
+            lx = lx or "`" in t or "\\" in t                                       # 文字列・文字は実機の印字で見る
             c = obs_asm(t, lx)
-            if b[0] == "chr" and c == ("val", b[1]): c = b                         # 機械語の文字は整数と同じ字で出る
             if b[0] == "str": tally["文字列の答えは機械語と比べない"] = tally.get("文字列の答えは機械語と比べない", 0) + 1; continue
             k = "後段 一致" if c == b else ("後段 断り" if c[0] == "refuse" else "後段 罠" if c[0] == "trap" else "後段 誤答")
             tally[k] = tally.get(k, 0) + 1
             if k == "後段 誤答": bad.append((t, "機械語 " + str(c), b))
             d = obs_asm_sir(t, lx)
-            if b[0] == "chr" and d == ("val", b[1]): d = b
             k2 = "SIR経由 戻せない" if d[0] == "unsup" else "SIR経由 一致" if d == b else ("SIR経由 断り" if d[0] == "refuse" else "SIR経由 罠" if d[0] == "trap" else "SIR経由 誤答")
             tally[k2] = tally.get(k2, 0) + 1
             if k2 == "SIR経由 誤答": bad.append((t, "SIR経由の機械語 " + str(d), b))

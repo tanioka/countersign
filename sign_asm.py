@@ -2440,7 +2440,8 @@ class FnGen:
             self.gen(n[3]); t = self.tmp(); self.emit("str x0, [x29, #%d]" % self.off(t), "足す数")
             self.gen_char_value(n[2])
             self.emit("ldr x10, [x29, #%d]" % self.off(t))
-            self.emit("cbz x0, %s" % unit, "文字が __ なら __")
+            cz = self.prog.label()
+            self.emit("cbz x0, %s" % cz, "文字が __ なら、数が __ のときだけ __。数があれば答えはその数(Int。`(s ' 9) + 1` は 1、`(s ' 9) - 1` も 1。strict・既定の読み)で、文字の種類では持てないので罠にする")
             self.niche(); self.emit("cmp x10, x13"); self.emit("b.eq %s" % unit, "数が __ なら __")
             if CW == 1: self.emit("add x11, x10, #128"); self.emit("cmp x11, #256"); self.emit("b.hi %s" % unit, "動きが ±128 を超えれば文字の範囲の外")
             else: emit_imm(self.lines, "x12", 0x110000); self.emit("add x11, x10, x12"); self.emit("lsl x12, x12, #1"); self.emit("cmp x11, x12"); self.emit("b.hi %s" % unit, "動きが ±U+110000 を超えれば文字の範囲の外")
@@ -2448,6 +2449,8 @@ class FnGen:
             self.char_range(unit)
             self.emit("cbnz x0, %s" % done); self.emit("b .Ltrap", "U+0000 の文字は Char の `__` と区別できない(罠)")
             self.lines.append("%s:" % unit); self.emit("mov x0, #0", "__")
+            self.emit("b %s" % done)
+            self.lines.append("%s:" % cz); self.niche(); self.emit("cmp x10, x13"); self.emit("b.eq %s" % unit); self.emit("b .Ltrap", "文字が __ で数がある: 答えは Int になる(Char の器に入らない)")
             self.lines.append("%s:" % done)
             return
         if n[0] == "bin" and n[1] == "'": return self.gen_index(n[2], n[3])

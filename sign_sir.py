@@ -183,7 +183,10 @@ def evaluate(funcs, top, fuel=200000):
         if k == "op":
             a, b = one(ev(e[2], env)), one(ev(e[3], env))
             if isinstance(a, tuple) or isinstance(b, tuple): raise Unsup("リストの算術")
-            if textual(a) or textual(b): raise Unsup("文字列・文字の算術")
+            if isinstance(a, Chr) or isinstance(b, Chr): raise Unsup("文字の算術(`\a + 1` は文字。仕様の答えを SIR は持たない)")
+            if isinstance(a, Str) or isinstance(b, Str):
+                if e[1] == "*": raise Unsup("文字列の `*`(繰り返し。S1 の外)")
+                return None                                                    # 算術は String を飲まない(list_model.md 4.1)。`s + 1`・`1 + s`・`s + __`・`s - s`・`s / 2` は `!_`。`!_` は外の演算の口で消える(`5 + (s + 1)` は 5)
             if a is None or b is None: return b if a is None else a
             op = e[1]
             if op == "+": return clamp(a + b)
@@ -195,7 +198,8 @@ def evaluate(funcs, top, fuel=200000):
         if k == "cmp":
             a, b = one(ev(e[2], env)), one(ev(e[3], env))
             if isinstance(a, tuple) or isinstance(b, tuple): raise Unsup("リストの比べ")
-            if textual(a) or textual(b): raise Unsup("文字列・文字の比べ")
+            if isinstance(a, Str) and isinstance(b, Str) and e[1] in ("=", "=="): return a if a == b else None      # 同じ文字列なら左、違えば `!_`(strict の観測)
+            if textual(a) or textual(b): raise Unsup("文字列・文字の比べ(`=`・`==` の文字列どうしだけ入れた)")
             if a is None or b is None: return None
             op = e[1]
             ok = {"<": a < b, ">": a > b, "<=": a <= b, ">=": a >= b, "=": a == b, "==": a == b, "!=": a != b, "!==": a != b}[op]
@@ -221,7 +225,12 @@ def evaluate(funcs, top, fuel=200000):
             return len(a)
         if k == "idx":
             a, i = one(ev(e[1], env)), one(ev(e[2], env))
-            if textual(a) or textual(i): raise Unsup("文字列・文字の添字(`'` は仕様 V12 のまだ。機械語も範囲外の答えが strict と違う)")
+            if isinstance(a, Chr) or textual(i): raise Unsup("文字・文字を添字にする形(文字の添字、文字列・文字の鍵)")
+            if isinstance(a, Str):                                                 # String は List(Char) と同型(type_system.md 110 行)。範囲外は `!_`(idiom_to_instructions.md 767 行)、負は後ろから(type_system.md 423 行)
+                if i is None: return None
+                if isinstance(i, tuple): raise Unsup("文字列の添字がリスト")
+                if i < 0: i += len(a)
+                return Chr(ord(a[i])) if 0 <= i < len(a) else None
             if a is None or i is None: return None
             if not isinstance(a, tuple) or isinstance(i, tuple): raise Unsup("添字の型")
             if i < 0: i += len(a)
@@ -229,12 +238,14 @@ def evaluate(funcs, top, fuel=200000):
         if k == "abs":
             a = one(ev(e[1], env))
             if isinstance(a, tuple): raise Unsup("リストの絶対値")
-            if textual(a): raise Unsup("文字列・文字の絶対値")
+            if isinstance(a, Str): return None                                     # `|s|` は `!_`(strict の観測。算術は String を飲まない)
+            if textual(a): raise Unsup("文字の絶対値")
             return None if a is None else abs(a)
         if k == "neg":
             a = one(ev(e[1], env))
             if isinstance(a, tuple): raise Unsup("リストの符号")
-            if textual(a): raise Unsup("文字列・文字の符号")
+            if isinstance(a, Str): return None                                     # `-s` は `!_`
+            if textual(a): raise Unsup("文字の符号")
             return None if a is None else clamp(-a)
         if k == "chain":
             ts, ops = e[2], e[1]
@@ -338,14 +349,22 @@ def has_call(e):
     return False
 
 def check_textual(funcs, top):
-    """文字列・文字は、機械語へ戻せる所だけ戻す(S1): `||…||` の直下、口の無い定義の本体そのもの、いちばん上の答え。それ以外(算術・比べ・&|・行・実引数・並びの中)は断る。
-    口の無い定義が文字列・文字なら、その名前の呼びも同じ扱い。機械語の文字列・文字は整数と同じ字で出る(答えの種類は SIR 側の観測が持つ)"""
+    """文字列・文字は、機械語へ戻せる所だけ戻す: `||…||` の直下、口の無い定義の本体そのもの、いちばん上の答え、文字列の添字 `s ' i`(文字になる。答え・`||…||` の直下・口の無い定義の本体だけ)。それ以外(算術・比べ・&|・行・実引数・並びの中)は断る。
+    文字列・文字の値を持つ口の無い定義(`s : …`・`t : s ' 0`)の名前の呼びも同じ扱い。機械語の文字は整数と同じ字で出て、文字の `__` は U+0000 になる。答えの見方は、実機の印字(linux)で比べる(bare の戻り値は読まない)"""
+    def is_str(b, sc): return b[0] == "str" or (b[0] == "call" and b[1] in sc and funcs[b[1]][1][0] == "str")
     sc = {n for n, (ps, b) in funcs.items() if not ps and b[0] in ("str", "chr")}
+    while True:                                                               # `t : s ' 0` のように、文字列の添字が本体の定義も同じ扱い
+        more = {n for n, (ps, b) in funcs.items() if not ps and n not in sc and b[0] == "idx" and is_str(b[1], sc)}
+        if not more: break
+        sc |= more
     def walk(e, ok):
         if not isinstance(e, tuple): return
         k = e[0]
         if k in ("str", "chr") and not ok: raise Unsup("文字列・文字を機械語に戻せない位置に置く")
         if k == "call" and e[1] in sc and not ok: raise Unsup("文字列・文字の名前を機械語に戻せない位置に置く")
+        if k == "idx" and is_str(e[1], sc):
+            if not ok: raise Unsup("文字列の添字を機械語に戻せない位置に置く")
+            walk(e[1], True); walk(e[2], False); return
         for x in e[1:]:
             if isinstance(x, tuple) and x and isinstance(x[0], str): walk(x, k == "len")
             elif isinstance(x, (list, tuple)):
@@ -354,11 +373,11 @@ def check_textual(funcs, top):
                     elif isinstance(y, tuple):
                         for z in y: walk(z, False)
     for n, (ps, b) in funcs.items():
-        if not ps and b[0] in ("str", "chr"): continue
+        if not ps and n in sc: walk(b, True); continue
         walk(b, False)
     if top[0] == "str" or (top[0] == "call" and top[1] in sc and funcs[top[1]][1][0] == "str"):
-        raise Unsup("文字列を答えにする(機械語は答えの文字列を見せない。文字は整数と同じ字で出る)")
-    walk(top, True) if top[0] in ("str", "chr", "call") else walk(top, False)
+        raise Unsup("文字列を答えにする(S1 は文字の答えと長さだけ)")
+    walk(top, True) if top[0] in ("str", "chr", "call", "idx") else walk(top, False)
 
 def raise_ast(funcs, top):
     """SIR を旧 AST の列にする。void の単位の読みが要る形(void になりうる被演算子・呼びの実引数)は Unsup。整数だけ。"""

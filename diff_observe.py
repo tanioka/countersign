@@ -37,25 +37,36 @@ def obs_sir(t):
         return R.evaluate(f, top) if False else (lambda r: ("unsup", "fuel") if r == ("fuel",) else r)(R.evaluate(f, top))
     except R.Unsup as e: return ("unsup", str(e))
 
-def obs_asm_sir(t):
+def parse_exit(got):
+    """linux 目標の実機の印字を観測にする。文字列・文字の答えは bare の戻り値(x0 の生の値)では読めない(Char の `__` は U+0000、文字列は番地)ので、印字を読む"""
+    v = got[1].strip()
+    if v == "__": return ("void",)
+    if v.lstrip("-").isdigit(): return ("val", int(v))
+    if len(v) >= 3 and v[0] == v[-1] == "`": return ("str", v[1:-1])
+    if len(v) == 2 and v[0] == "\\" and v[1].isalnum(): return ("chr", ord(v[1]))
+    return ("refuse", "印字 " + v[:20])
+
+def obs_asm_sir(t, lin=False):
     """SIR を旧 AST に戻し、strict_rewrite を通さずに generate へ(段階 C の試作)。"""
     try:
         f, top = R.lower(S.parse_source(t)); nodes = R.raise_ast(f, top)
     except R.Unsup as e: return ("unsup", str(e)[:30])
-    try: got = ns["run_asm"](sign_asm.generate(nodes))
+    try: got = ns["run_asm"](sign_asm.generate(nodes, "linux"), linux=True) if lin else ns["run_asm"](sign_asm.generate(nodes))
     except sign_asm.AsmError as e: return ("refuse", str(e)[:40])
     except Exception as e: return ("refuse", "例外 " + str(e)[:30])
+    if got[0] == "exit": return parse_exit(got)
     if got[0] == "trap": return ("trap",)
     if got[0] != "ok": return ("refuse", str(got)[:30])
     return ("void",) if got[1] == "__" else ("val", got[1])
 
-def obs_asm(t):
+def obs_asm(t, lin=False):
     try:
         tree, rest = sign_asm.strict_rewrite(S.parse_source(t))
         if rest: return ("refuse", "strict_rewrite: " + rest[0][1][:30])
-        got = ns["run_asm"](sign_asm.generate(tree))
+        got = ns["run_asm"](sign_asm.generate(tree, "linux"), linux=True) if lin else ns["run_asm"](sign_asm.generate(tree))
     except sign_asm.AsmError as e: return ("refuse", str(e)[:40])
     except Exception as e: return ("refuse", "例外 " + str(e)[:30])
+    if got[0] == "exit": return parse_exit(got)
     if got[0] == "trap": return ("trap",)
     if got[0] != "ok": return ("refuse", str(got)[:30])
     return ("void",) if got[1] == "__" else ("val", got[1])
@@ -83,6 +94,13 @@ EXTRA = [
     ("文字列: 長さの計算", "s : `hello`\n||s|| * 2 - 1\n"), ("文字列: 長さを関数へ", "f : n ? n + 1\nf ||`abc`||\n"), ("文字列: 長さを行の条件", "s : `abc`\nf : x ?\n\t||s|| > x : 1\n\t0\n\nf 2\n"),
     ("文字列: 答えにする", "s : `abc`\ns\n"), ("文字列: 添字", "s : `abc`\ns ' 1\n"), ("文字列: 範囲外の添字", "s : `abc`\ns ' 5\n"), ("文字列: 足す", "s : `abc`\ns + 1\n"),
     ("文字列: 関数へ渡す", "f : x ? ||x||\nf `ab`\n"), ("文字列: 比べ", "`a` = `a`\n"), ("文字列: 非 ASCII", "s : `héllo`\n||s||\n"),
+    ("文字列: 負の添字", "s : `abc`\ns ' -1\n"), ("文字列: 負の端", "s : `abc`\ns ' -3\n"), ("文字列: 負の外", "s : `abc`\ns ' -4\n"), ("文字列: 長さの添字", "s : `abc`\ns ' 3\n"),
+    ("文字列: 巨大な添字", "s : `abc`\ns ' 9223372036854775807\n"), ("文字列: 単位の添字", "s : `abc`\ns ' __\n"), ("文字列: 式の添字", "s : `abc`\ns ' (2 - 5)\n"),
+    ("文字列: 名前の鍵は欄(R64)", "s : `abc`\nk : 1\ns ' k\n"), ("文字列: 添字の長さ", "s : `abc`\n||s ' 1||\n"), ("文字列: 添字の名前", "s : `abc`\nt : s ' 0\nt\n"), ("文字列: 外れた添字の名前", "s : `abc`\nt : s ' 7\nt\n"),
+    ("文字列: 添字を | の左", "s : `abc`\n(s ' 9) | 7\n"), ("文字列: 添字を & の右", "s : `abc`\n3 & (s ' 1)\n"), ("文字列: 文字の足し算", "s : `abc`\n(s ' 1) + 1\n"),
+    ("文字列: 1 + s", "s : `abc`\n1 + s\n"), ("文字列: s - s", "s : `abc`\ns - s\n"), ("文字列: s / 2", "s : `abc`\ns / 2\n"), ("文字列: 外の足し算で消える", "s : `abc`\n5 + (s + 1)\n"),
+    ("文字列: 絶対値", "s : `abc`\n|s|\n"), ("文字列: 符号", "s : `abc`\n-s\n"), ("文字列: 繰り返し", "s : `abc`\ns * 2\n"), ("文字列: 長さ(足し算)", "s : `abc`\n||s + 1||\n"),
+    ("文字列: 同じ", "s : `abc`\nt : `abc`\ns = t\n"), ("文字列: 違う", "s : `abc`\nt : `abd`\ns = t\n"), ("文字列: == 違う", "s : `abc`\nt : `abd`\ns == t\n"),
     ("文字: 答え", "\\a\n"), ("文字: 名前", "c : \\a\nc\n"), ("文字: 長さ", "||\\a||\n"), ("文字: 足す", "\\a + 1\n"), ("文字: 比べ", "\\a < \\b\n"),
     ("文字: & の右", "5 & \\a\n"), ("文字: | の右", "zz | \\a\n"), ("文字: & の左", "\\a & 5\n"), ("文字: 関数の本体", "f : x ? \\a\nf 1\n"), ("文字: 行の値", "f : x ?\n\tx > 0 : \\a\n\t\\b\n\nf 1\n"),
     ("ノルム: 単位は 0", "||__||\n"), ("ノルム: 外れた比べは 0", "3 + ||(3 < 2)||\n"),
@@ -106,12 +124,10 @@ for name, t in ns["CASES"] + EXTRA:
     elif a[0] == "refuse": front["評価器が断る"] += 1
     elif b == ("partial",): front["SIR: 部分適用(実引数が void)"] += 1
     else: front["食い違い"] += 1; bad.append(("前段", name, a, b))
-    if b[0] == "str": back["文字列の答えは機械語が見せない(比べない)"] += 1; continue     # 旧経路は文字列の答えに番地を返す(strict の `abc` と別。SIR 経由は断る)
-    c = obs_asm(t2)
-    if b[0] == "chr" and c == ("val", b[1]): c = b                       # 機械語の文字は整数と同じ字で出る。SIR が文字と言う答えだけ読み替える
+    lin = "`" in t2 or "\\" in t2                                      # 文字列・文字を含む見本は、実機の印字(linux)で見る(bare の戻り値は Char の `__` が 0、文字列が番地になる)
+    c = obs_asm(t2, lin)
     if b not in (("partial",),):
-        d = obs_asm_sir(t2)
-        if b[0] == "chr" and d == ("val", b[1]): d = b
+        d = obs_asm_sir(t2, lin)
         k2 = "戻せない" if d[0] == "unsup" else "一致" if d == b else "断り" if d[0] == "refuse" else "罠" if d[0] == "trap" else "誤答"
         via[k2] += 1
         if k2 == "誤答": bad.append(("SIR経由", name, b, d))
