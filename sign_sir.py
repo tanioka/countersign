@@ -56,6 +56,7 @@ def lower(nodes):
     return funcs, body_top
 
 INFUNC = [False]
+INROWS = [0]                       # 行(cases)の中を下げている間は 0 でない
 
 def lit_list(items):
     """整数の字面だけの並び(2 つ以上)は整数のリスト値。"""
@@ -86,7 +87,8 @@ def expr(n, params, arity):
         if n[1] in arity:
             if arity[n[1]] == 0: return ("call", n[1], [])
             raise Unsup("関数の名前を値として置く")
-        raise Unsup("名前 " + n[1])
+        if INROWS[0]: raise Unsup("行・枝の中の未定義の名前(R128・R139 の門 G22 と、行の値の読みが strict と分かれる)")
+        return ("void",)                                                      # 見える範囲に定義の無い名前は `!_`(R21。読む段が name-undefined の warning を出す。SIR の観測は値だけで、知らせは持たない)。取り込み `@` は SIR の外なので、範囲の取り込みで名前が増えることは無い
     if k == "bin":
         op = n[1]
         if op in ("+", "-", "*", "/", "%"): return ("op", op, expr(n[2], params, arity), expr(n[3], params, arity))
@@ -110,7 +112,9 @@ def expr(n, params, arity):
         if (len(xs) == 3 and rng) or all(o == "=" for o in ops) or all(o == "==" for o in ops): return ("chain", list(ops), xs)
         raise Unsup("比べの連鎖の形(R119)")
     if k == "cases":
-        return ("rows", [(None if c is None else expr(c, params, arity), expr(v, params, arity)) for c, v in n[1]])
+        INROWS[0] += 1
+        try: return ("rows", [(None if c is None else expr(c, params, arity), expr(v, params, arity)) for c, v in n[1]])
+        finally: INROWS[0] -= 1
     if k == "seq":
         items = n[1]
         h = unblock(items[0])
@@ -360,6 +364,9 @@ def raise_ast(funcs, top):
             for x in xs[1:]: acc = ("block", ("bin", "|", ("cmp", [acc, r(x, False)], [op]), r(x, False)))      # `a op b` は成り立てば a、外れれば void。`|` で右
             return acc
         if k == "flow":
+            items = [x for x in e[1] if x[0] != "void"]                                # 字面の単位は並びで消える(`inc 2 zz` の余りの未定義の名前)
+            if not items: return ("id", "__")
+            if len(items) < len(e[1]): return r(("flow", items), in_flow)
             if len(e[1]) == 1: return r(e[1][0], in_flow)
             return ("seq", [blk(r(x, True)) for x in e[1]])                          # 流れ: 部分適用は asm の strict_call_check が枝を分けるか罠にする
         raise Unsup("旧 AST に戻せない形 " + k)
