@@ -136,3 +136,10 @@
 ## 4.9 S4: Float(2026-11-25、未実装)
 - strict は `1.5 + 2`=3.5、`3 / 2`=1、`1.5 < 2`=1.5、`||1.5||`=1、`7 % 2.5`=2.0 と読む。
 - 仕様の側が未決: Float の NaN と `!_` の繋ぎ(integer_overflow.md 178–179「Float を入れる片で決める」)、Float の niche(value_representation.md 136–137「まだ決めていない」)、Float は layer 2 以上(build_system.md)。決まっていない所を実装で決めない規則に従い、S4 は設計者の答えを待つ。`designer_questions` へ載せる(L1: NaN と `!_`、L2: Float の niche、L3: 整数と Float の混ぜ算の型)。
+
+## 4.10 S4: Float の実装(2026-11-25。4.9 を置き換える)
+言語弁護士の調べで、Float の大半は仕様に在った。4.9 の「保留」は一部だけに狭まる。
+- **仕様に在る(実装した)**: Float の字面(type_system.md 108・312)。昇格格子: 数値は降格せず、`Int ⊕ Float` は `Float`(`5 + 1.5` は `6.5`。同 920–931)。`Float` は IEEE 754(`/` は丸めない除算。`3 / 2.0` は `1.5`。同 975・integer_overflow.md 166)。`Float` も比べの対象で、成り立てば左を返す(comparison.md 45–60。`1.5 < 2` は `1.5`、`1 < 1.5` は `1`)。`(0.0 / 0.0) + 1.0` は NaN のまま・`!_ + 1.0` は `1.0`(integer_overflow.md 178)。
+- **strict の観測と一致**: `+ - * /`・比べ・連鎖・符号・絶対値・`&` `|`・関数の実引数。`fuzz_sir.py --floats --asm` 種 1〜3(各 3000)で食い違い 0・誤答 0。
+- **断る(仕様が未決・定めていない)**: ① `±∞`・NaN を作る形(0 割り・溢れ)。NaN と `!_` の繋ぎが未決(integer_overflow.md 178–179)。② Float の `%`。仕様は `x % 0.0` が NaN とだけ言い、符号の規則を定めない。strict は床の剰余(`-7 % 2.5` = 0.5)で、IEEE の `fmod`(-2.0)と違う。**仕様は剰余を 0 へ丸めた商で定める**(`a = (a/b)*b + a%b`)ので Float では別の問いになる。③ Float の添字(`list ' 1.5` は最近接へ丸める。type_system.md §4.1。strict は 5 と答える)・`||1.5||`(strict は 1。仕様の根拠を見つけていない)。
+- 機械語へは戻さない(`raise_ast` が Unsup)。機械語に FPU の値が無く、Float の niche も未決(value_representation.md 136)。

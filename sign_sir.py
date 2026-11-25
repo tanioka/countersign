@@ -103,6 +103,9 @@ def expr(n, params, arity):
                 if len(n[1]) != 1: raise Unsup("文字の形")
                 return ("chr", ord(n[1]))
             return ("str", str(n[1]))
+        if isinstance(n[1], float):                                                # S4: Float の字面(type_system.md 昇格格子・IEEE 754)。有限だけ
+            if n[1] != n[1] or n[1] in (float("inf"), float("-inf")): raise Unsup("有限でない Float の字面")
+            return ("flt", n[1])
         if not isinstance(n[1], int) or isinstance(n[1], bool): raise Unsup("整数でない字面")
         return ("int", n[1])
     if k == "struct":
@@ -225,6 +228,7 @@ def evaluate(funcs, top, fuel=200000):
         if steps[0] > fuel: raise Fuel()
         k = e[0]
         if k == "int": return e[1]
+        if k == "flt": return e[1]
         if k == "void": return None
         if k == "str": return Str(e[1])
         if k == "struct":
@@ -252,6 +256,13 @@ def evaluate(funcs, top, fuel=200000):
                 return None                                                    # 算術は String を飲まない(list_model.md 4.1)。`s + 1`・`1 + s`・`s + __`・`s - s`・`s / 2` は `!_`。`!_` は外の演算の口で消える(`5 + (s + 1)` は 5)
             if a is None or b is None: return b if a is None else a
             op = e[1]
+            if isinstance(a, float) or isinstance(b, float):                    # S4: 整数 ⊕ Float は Float へ昇格(type_system.md 昇格格子)、IEEE 754。`%` は仕様が Float の剰余を `x % 0.0` の NaN しか定めない(strict は床の剰余)ので断る。0 割り・溢れの `±∞`・NaN は `!_` との繋ぎが未決(integer_overflow.md 1.1 の NOTE)なので断る
+                if op == "%": raise Unsup("Float の `%`(仕様は符号の規則を定めない)")
+                if op == "/" and b == 0: raise Unsup("Float の 0 割り(`±∞`・NaN と `!_` の繋ぎが未決)")
+                x, y = float(a), float(b)
+                z = x + y if op == "+" else x - y if op == "-" else x * y if op == "*" else x / y
+                if z != z or z in (float("inf"), float("-inf")): raise Unsup("Float の溢れ(`±∞`・NaN は `!_` との繋ぎが未決)")
+                return z
             if op == "+": return clamp(a + b)
             if op == "-": return clamp(a - b)
             if op == "*": return clamp(a * b)
@@ -307,7 +318,7 @@ def evaluate(funcs, top, fuel=200000):
                 if i < 0: i += len(a)
                 return Chr(ord(a[i])) if 0 <= i < len(a) else None
             if a is None or i is None: return None
-            if not isinstance(a, tuple) or isinstance(i, tuple): raise Unsup("添字の型")
+            if not isinstance(a, tuple) or isinstance(i, (tuple, float)): raise Unsup("添字の型(Float の添字は最近接へ丸める規則がある。まだ入れない)")
             if i < 0: i += len(a)
             return a[i] if 0 <= i < len(a) else None
         if k == "abs":
@@ -321,7 +332,7 @@ def evaluate(funcs, top, fuel=200000):
             if isinstance(a, tuple): raise Unsup("リストの符号")
             if isinstance(a, Str): return None                                     # `-s` は `!_`
             if textual(a): raise Unsup("文字の符号")
-            return None if a is None else clamp(-a)
+            return None if a is None else (-a if isinstance(a, float) else clamp(-a))
         if k == "chain":
             ts, ops = e[2], e[1]
             vals = []
@@ -393,6 +404,7 @@ def evaluate(funcs, top, fuel=200000):
     if isinstance(v, Rec): return ("rec", show_rec(v))
     if isinstance(v, Str): return ("str", str(v))
     if isinstance(v, Chr): return ("chr", v.c)
+    if isinstance(v, float): return ("flt", repr(v))
     if isinstance(v, tuple): return ("flow", v)                                 # 整数の並び(リスト)は流れと同じ字で出る
     return ("void",) if v is None else ("val", v)
 
@@ -400,7 +412,7 @@ def evaluate(funcs, top, fuel=200000):
 def nonvoid(e):
     """e は void にならない(被演算子に置いても単位の読みが要らない)と静的に言える。"""
     k = e[0]
-    if k in ("int", "var"): return True
+    if k in ("int", "flt", "var"): return True
     if k in ("neg", "abs"): return nonvoid(e[1])
     if k == "op":
         if not (nonvoid(e[2]) and nonvoid(e[3])): return False
@@ -565,6 +577,7 @@ def raise_ast(funcs, top):
     check_textual(funcs, top)
     def r(e, in_flow):
         k = e[0]
+        if k == "flt": raise Unsup("Float は機械語へ戻さない(機械語に FPU の値が無い)")
         if k in ("struct", "field"): raise Unsup("欄ブロック・欄引きは機械語へ戻せない(機械語に欄の表がない)")
         if k == "str": return ("lit", e[1])
         if k == "chr": return ("lit", Char(chr(e[1])))

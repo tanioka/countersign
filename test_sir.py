@@ -103,6 +103,24 @@ def test_structs_fields_and_constructors():
 def test_fuzz_structs():
     r = subprocess.run([sys.executable, "fuzz_sir.py", "800", "71", "--structs", "--asm"], capture_output=True, text=True, timeout=900)
     assert r.returncode == 0, r.stdout[-1200:]
+def test_floats_promote_and_refuse_undecided():
+    # S4: Float の字面・昇格・比べ(strict と同じ)。`%`・0 割り・溢れ・添字・長さは断る(仕様が未決)。機械語へは戻さない
+    import sign_sir as R, sign_interp as S
+    def ev(src):
+        f, top = R.lower(S.parse_source(src + "\n")); return R.evaluate(f, top)
+    assert ev("1.5 + 2") == ("flt", "3.5") and ev("3 / 2.0") == ("flt", "1.5") and ev("3 / 2") == ("val", 1)
+    assert ev("1.5 < 2") == ("flt", "1.5") and ev("1 < 1.5") == ("val", 1) and ev("2.5 < 1.5") == ("void",)
+    assert ev("0.1 * 3") == ("flt", "0.30000000000000004") and ev("-0.0") == ("flt", "-0.0")
+    assert ev("0.0 & 7") == ("val", 7) and ev("(1.5 < 1) | 2.5") == ("flt", "2.5")
+    for bad in ("-7 % 2.5", "1 / 0.0", "10.0 / 0", "[3 4 5] ' 1.5", "||1.5||", "1" + "0" * 200 + ".0 * 1" + "0" * 200 + ".0"):
+        try: ev(bad); assert False, bad
+        except R.Unsup: pass
+    f, top = R.lower(S.parse_source("1.5\n"))
+    try: R.raise_ast(f, top); assert False
+    except R.Unsup: pass
+def test_fuzz_floats():
+    r = subprocess.run([sys.executable, "fuzz_sir.py", "800", "81", "--floats", "--asm"], capture_output=True, text=True, timeout=900)
+    assert r.returncode == 0, r.stdout[-1200:]
 def test_flow_composition_left_to_right():
     # 余った関数が続く流れは合成で、左の関数から実行する(V3、strict の Pipe)。strict の値と同じ
     import sign_sir as R, sign_interp as S
