@@ -1006,7 +1006,7 @@ class FnGen:
             self.emit("lsl x11, x9, x10"); self.emit("asr x12, x11, x10"); self.emit("cmp x12, x9"); self.niche()
             self.emit("csel x0, x13, x11, ne", "戻して合わなければ溢れた = `__`(INT64_MIN になった結果もそのまま `__` の印)"); self.emit("b %s" % end)
             self.lines.append("%s:" % big)
-            self.emit("cbnz x9, .Ltrap", "64 以上のシフトで 0 でない値は溢れる"); self.emit("mov x0, #0")
+            self.emit("mov x0, #0"); self.niche(); self.emit("cmp x9, #0"); self.emit("csel x0, x13, x0, ne", "64 以上のシフトで 0 でない値は溢れる = `__`")
             self.lines.append("%s:" % end)
         else:
             # 設計者の答え 2026-11-25(Sign#302 の 1 (a)): Int の溢れは `!_`(罠は無い)。溢れた結果・INT64_MIN に着いた結果は __ の印そのもの

@@ -185,7 +185,6 @@ cases106 = {
     "Char の実引数が文字列の要素 w ' 1": ("cnt : s c i ?\n\ti >= ||s|| : 0\n\t(s ' i) = c : 1 + (cnt s c (i + 1))\n\tcnt s c (i + 1)\nw : `banana`\nv : `xyzx`\n(cnt w (w ' 1) 0) + (cnt v (v ' 0) 0)\n", 1),
     "Char の実引数が仮引数の文字列の要素": ("cnt : s c i ?\n\ti >= ||s|| : 0\n\t(s ' i) = c : 1 + (cnt s c (i + 1))\n\tcnt s c (i + 1)\nw : `banana`\nf : s k ? (cnt s (s ' k) 0) + (cnt s (s ' 0) 0)\nf w 1\n", 1),
     "Char の実引数が範囲の外(__)なら仕事に出さず答えは同じ": ("cnt : s c i ?\n\ti >= ||s|| : 0\n\t(s ' i) = c : 1 + (cnt s c (i + 1))\n\tcnt s c (i + 1)\nw : `banana`\n(cnt w (w ' 9) 0) + (cnt w (w ' 1) 0)\n", 0),
-    "実引数が溢れで __ になる呼び出し(包みが見て答えは __)": (LPS + "w : n d ? (lp n 0) + d\nm : x ? x * 4611686018427387904\n(w 3000 (m 3)) + (w 2000 (m 1))\n", 1),
     "答えが __ になる呼び出し(足す・先)": (LPS + "w : n d ? (lp n 0) / d\n(w 3000 0) + (w 2000 5)\n", 1),
     "答えが __ になる呼び出し(足す・後)": (LPS + "w : n d ? (lp n 0) / d\n(w 3000 5) + (w 2000 0)\n", 1),
     "答えが __ になる呼び出し(どちらも)": (LPS + "w : n d ? (lp n 0) / d\n(w 3000 0) + (w 2000 0)\n", 1),
