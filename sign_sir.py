@@ -183,7 +183,7 @@ def evaluate(funcs, top, fuel=200000):
         if k == "op":
             a, b = one(ev(e[2], env)), one(ev(e[3], env))
             if isinstance(a, tuple) or isinstance(b, tuple): raise Unsup("リストの算術")
-            if isinstance(a, Chr) or isinstance(b, Chr): raise Unsup("文字の算術(`\a + 1` は文字。仕様の答えを SIR は持たない)")
+            if isinstance(a, Chr) or isinstance(b, Chr): raise Unsup("文字の算術(`\\a + 1` は文字。仕様の答えを SIR は持たない)")
             if isinstance(a, Str) or isinstance(b, Str):
                 if e[1] == "*": raise Unsup("文字列の `*`(繰り返し。S1 の外)")
                 return None                                                    # 算術は String を飲まない(list_model.md 4.1)。`s + 1`・`1 + s`・`s + __`・`s - s`・`s / 2` は `!_`。`!_` は外の演算の口で消える(`5 + (s + 1)` は 5)
@@ -217,7 +217,9 @@ def evaluate(funcs, top, fuel=200000):
             return acc
         if k == "list": return e[1]
         if k == "len":
-            a = one(ev(e[1], env))
+            a = ev(e[1], env)
+            if isinstance(a, PF): return None                                   # `||f||`(f が余った関数)は囲みごと `!_`(仕様 R27)。`||_||` の 0 とは別
+            a = one(a)
             if a is None: return 0                                              # `||_||` は 0(value_spec 83 行、U〔答え〕2026-10-28 00:17)。以前は単位にしていて、strict と食い違った
             if isinstance(a, Str): return len(a)                                 # strict: ||`abc`|| = 3
             if isinstance(a, Chr): return 1                                      # ||\a|| = 1
@@ -285,9 +287,9 @@ def evaluate(funcs, top, fuel=200000):
             for x in e[2]:
                 v = ev(x, env)
                 if isinstance(v, (PF, Flow)): raise Unsup("実引数が部分適用・並び")
-                if textual(v): raise Unsup("文字列・文字を関数へ渡す(S2)")
                 args.append(v)
             ds = getattr(funcs, "defaults", {}).get(e[1])
+            if ds is not None and any(textual(v) for v in args): raise Unsup("既定値のある関数へ文字列・文字を渡す")
             if ds is not None:                                                  # 既定値のある関数(R107): 足りない・単位の口は既定値で埋める。既定値の無い口が足りない・単位なら部分適用になるので断る
                 full = list(args) + [None] * (len(ds) - len(args))
                 for i, d in enumerate(ds):
@@ -349,35 +351,63 @@ def has_call(e):
     return False
 
 def check_textual(funcs, top):
-    """文字列・文字は、機械語へ戻せる所だけ戻す: `||…||` の直下、口の無い定義の本体そのもの、いちばん上の答え、文字列の添字 `s ' i`(文字になる。答え・`||…||` の直下・口の無い定義の本体だけ)。それ以外(算術・比べ・&|・行・実引数・並びの中)は断る。
-    文字列・文字の値を持つ口の無い定義(`s : …`・`t : s ' 0`)の名前の呼びも同じ扱い。機械語の文字は整数と同じ字で出て、文字の `__` は U+0000 になる。答えの見方は、実機の印字(linux)で比べる(bare の戻り値は読まない)"""
-    def is_str(b, sc): return b[0] == "str" or (b[0] == "call" and b[1] in sc and funcs[b[1]][1][0] == "str")
-    sc = {n for n, (ps, b) in funcs.items() if not ps and b[0] in ("str", "chr")}
-    while True:                                                               # `t : s ' 0` のように、文字列の添字が本体の定義も同じ扱い
-        more = {n for n, (ps, b) in funcs.items() if not ps and n not in sc and b[0] == "idx" and is_str(b[1], sc)}
-        if not more: break
-        sc |= more
-    def walk(e, ok):
+    """文字列・文字は、機械語へ戻せる所だけ戻す。戻せる位置(ok): `||…||` の直下、文字列の添字 `s ' i` の底(添字そのものは数)、答え、口の無い定義の本体そのもの、
+    文字列・文字が来る仮引数への実引数、文字列・文字をそのまま返す関数(本体が仮引数・字面・添字)の呼び。それ以外(算術・比べ・&|・行・並びの中)は断る。
+    文字列・文字が来る仮引数は、その仮引数に来る実引数が全部文字列・文字のときだけ(混ざれば断る。機械語は仮引数の種類を呼びの実引数から決める)。
+    機械語の文字は整数と同じ字で出て、文字の `__` は U+0000。答えの見方は実機の印字(linux)"""
+    tf, tp = set(), set()                                                         # tf: 文字列・文字を返す関数の名前。tp: 文字列・文字が来る (関数, 仮引数)
+    def tv(e, f):
+        k = e[0]
+        if k in ("str", "chr"): return True
+        if k == "call": return e[1] in tf
+        if k == "var": return (f, e[1]) in tp
+        if k == "idx": return tv(e[1], f)
+        return False
+    def kids(e):
+        for x in e[1:]:
+            if isinstance(x, tuple) and x and isinstance(x[0], str): yield x
+            elif isinstance(x, (list, tuple)):
+                for y in x:
+                    if isinstance(y, tuple) and y and isinstance(y[0], str): yield y
+                    elif isinstance(y, tuple):
+                        for z in y:
+                            if isinstance(z, tuple) and z and isinstance(z[0], str): yield z
+    def calls(e, f):
+        if not isinstance(e, tuple): return
+        if e[0] == "call": yield e, f
+        for c in kids(e): yield from calls(c, f)
+    allcalls = [c for n, (ps, b) in funcs.items() for c in calls(b, n)] + list(calls(top, None))
+    while True:
+        ch = False
+        for n, (ps, b) in funcs.items():
+            if n not in tf and tv(b, n): tf.add(n); ch = True
+        for c, ctx in allcalls:
+            g = funcs[c[1]][0]
+            for i, a in enumerate(c[2]):
+                if i < len(g) and (c[1], g[i]) not in tp and tv(a, ctx): tp.add((c[1], g[i])); ch = True
+        if not ch: break
+    dfl = getattr(funcs, "defaults", {})
+    for c, ctx in allcalls:
+        g = funcs[c[1]][0]
+        for i, a in enumerate(c[2]):
+            if i < len(g) and (c[1], g[i]) in tp and not tv(a, ctx): raise Unsup("文字列・文字と、そうでない実引数が同じ仮引数に来る")
+        if any((c[1], q) in tp for q in g) and c[1] in dfl: raise Unsup("既定値のある関数へ文字列・文字を渡す")
+    def walk(e, f, ok):
         if not isinstance(e, tuple): return
         k = e[0]
         if k in ("str", "chr") and not ok: raise Unsup("文字列・文字を機械語に戻せない位置に置く")
-        if k == "call" and e[1] in sc and not ok: raise Unsup("文字列・文字の名前を機械語に戻せない位置に置く")
-        if k == "idx" and is_str(e[1], sc):
+        if k == "var" and (f, e[1]) in tp and not ok: raise Unsup("文字列・文字の仮引数を機械語に戻せない位置に置く")
+        if k == "call":
+            g = funcs[e[1]][0]
+            if e[1] in tf and not ok: raise Unsup("文字列・文字を返す関数の呼びを機械語に戻せない位置に置く")
+            for i, a in enumerate(e[2]): walk(a, f, i < len(g) and (e[1], g[i]) in tp)
+            return
+        if k == "idx" and tv(e[1], f):
             if not ok: raise Unsup("文字列の添字を機械語に戻せない位置に置く")
-            walk(e[1], True); walk(e[2], False); return
-        for x in e[1:]:
-            if isinstance(x, tuple) and x and isinstance(x[0], str): walk(x, k == "len")
-            elif isinstance(x, (list, tuple)):
-                for y in x:
-                    if isinstance(y, tuple) and y and isinstance(y[0], str): walk(y, False)
-                    elif isinstance(y, tuple):
-                        for z in y: walk(z, False)
-    for n, (ps, b) in funcs.items():
-        if not ps and n in sc: walk(b, True); continue
-        walk(b, False)
-    if top[0] == "str" or (top[0] == "call" and top[1] in sc and funcs[top[1]][1][0] == "str"):
-        raise Unsup("文字列を答えにする(S1 は文字の答えと長さだけ)")
-    walk(top, True) if top[0] in ("str", "chr", "call", "idx") else walk(top, False)
+            walk(e[1], f, True); walk(e[2], f, False); return
+        for c in kids(e): walk(c, f, k == "len")
+    for n, (ps, b) in funcs.items(): walk(b, n, tv(b, n))
+    walk(top, None, tv(top, None))
 
 def raise_ast(funcs, top):
     """SIR を旧 AST の列にする。void の単位の読みが要る形(void になりうる被演算子・呼びの実引数)は Unsup。整数だけ。"""
@@ -433,7 +463,10 @@ def raise_ast(funcs, top):
             return ("seq", [("id", e[1])] + [blk(r(x, False)) for x in e[2]])          # void になりうる実引数は strict の部分適用。asm 側の strict_call_check が罠か断りにする
         if k == "list": return ("seq", [r(("int", v), False) for v in e[1]])
         if k == "idx": return ("bin", "'", blk(r(e[1], False)), blk(r(e[2], False)))
-        if k == "len": return ("norm", blk(r(e[1], False)))
+        if k == "len":
+            x = e[1]
+            if x[0] == "call" and x[2] and not all(nonvoid(t) for t in x[2]): raise Unsup("`||g 実引数||` の実引数が単位になりうる(余った関数のノルムは `!_`。機械語は 0)")
+            return ("norm", blk(r(e[1], False)))
         if k == "fold":
             op = e[1]
             xs = [x for x in e[2] if x[0] != "void"]                                  # 字面の void は畳みで飛ばされる

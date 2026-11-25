@@ -6732,6 +6732,11 @@ def strict_rewrite(tree):
             if not (isinstance(l_, tuple) and l_[0] == "lit" and isinstance(r_, tuple) and r_[0] == "lit"):
                 return ("bin", "&", ("bin", "==", l_, l_), ("bin", "&", ("bin", "==", r_, r_), ("cmp", [l_, r_], ["!="])))
             return ("cmp", [l_, r_], ["!="])
+        if k == "norm" and "7" not in off:                       # 7. `||g 実引数||` の実引数が `!_` になりうる: g は余った関数(部分適用)になり、`||関数||` は囲みごと `!_`(仕様 R27)。機械語は 0 を返すので断る
+            inner = unwrap(n[1])
+            if isinstance(inner, tuple) and inner and inner[0] == "seq" and len(inner[1]) >= 2 and isinstance(inner[1][0], tuple) and inner[1][0][0] == "id" \
+                    and inner[1][0][1] in funcs and inner[1][0][1] not in params and any(maybe_void(a) for a in inner[1][1:]):
+                rest.append((7, "`||g 実引数||` の実引数が `!_` になりうる(余った関数のノルムは `!_`。機械語は 0)", src(n)))
         if k == "seq" and _fold_minmax(n) is not None: return _fold_minmax(n)    # 6. 順序の比べの畳みは最大・最小(`!_` を返さず、strict の値になる)
         if k == "seq" and len(n[1]) == 2 and "2" not in off:
             h, m = n[1]

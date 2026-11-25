@@ -50,7 +50,7 @@ def test_strings_lower_and_refuse():
     assert ev("\\a\n") == ("chr", 97)
     assert ev("s : `abc`\ns ' 1\n") == ("chr", 98) and ev("s : `abc`\ns ' -1\n") == ("chr", 99)
     assert ev("s : `abc`\ns ' 5\n") == ("void",) and ev("s : `abc`\ns + 1\n") == ("void",) and ev("s : `abc`\n5 + (s + 1)\n") == ("val", 5)
-    for bad in ["s : `abc`\ns * 2\n", "s : `abc`\n(s ' 1) + 1\n", "f : x ? ||x||\nf `ab`\n", "\\a < \\b\n", "s : `h\u00e9`\n||s||\n"]:
+    for bad in ["s : `abc`\ns * 2\n", "s : `abc`\n(s ' 1) + 1\n", "\\a < \\b\n", "s : `h\u00e9`\n||s||\n"]:
         try: ev(bad); assert False, bad
         except R.Unsup: pass
     f, top = R.lower(S.parse_source("5 & \\a\n"))
@@ -64,3 +64,22 @@ def test_old_route_char_unit_plus_int_traps():
         tree, rest = sign_asm.strict_rewrite(S.parse_source("s : `abc`\n(s ' 9) + 1\n"))
         assert not rest and ".Ltrap" in sign_asm.generate(tree, "linux")
     finally: sign_asm.STRICT[0] = False
+def test_norm_of_partial_application_is_void():
+    # `||g 1||`(g は 2 口で余った関数)は囲みごと `!_`(R27)。`||_||` の 0 とは別。SIR が 0 と答えていた
+    import sign_sir as R, sign_interp as S
+    f, top = R.lower(S.parse_source("g : x y ? x + y\n||g 1||\n"))
+    assert R.evaluate(f, top) == ("void",)
+def test_strings_through_functions():
+    import sign_sir as R, sign_interp as S
+    def ev(src):
+        f, top = R.lower(S.parse_source(src)); return R.evaluate(f, top), f, top
+    assert ev("f : x ? ||x||\nf `abcd`\n")[0] == ("val", 4)
+    assert ev("f : x ? x ' 1\nf `abc`\n")[0] == ("chr", 98)
+    assert ev("f : x ? x\nf `abc`\n")[0] == ("str", "abc")
+    v, f, top = ev("f : x ? x + 1\nf `abc`\n")
+    assert v == ("void",)
+    try: R.raise_ast(f, top); assert False
+    except R.Unsup: pass
+def test_fuzz_strings_functions():
+    r = subprocess.run([sys.executable, "fuzz_sir.py", "600", "61", "--strings", "--asm"], capture_output=True, text=True, timeout=900)
+    assert r.returncode == 0, r.stdout[-1200:]
