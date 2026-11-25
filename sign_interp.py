@@ -352,20 +352,23 @@ class FieldEnv(Env):
     """P2・R133(--strict): 括りと構造体のブロックの欄の範囲。欄は同じ範囲の中から順序に依らず引け(引かれた時に1回読む)、外の同じ名前を隠す。
     欄どうしの値の輪は name-cycle で止める"""
     def __init__(self, parent, fields):
-        super().__init__(parent); self.fnodes = dict(fields); self.busy = set()
+        super().__init__(parent); self.fnodes = dict(fields); self.busy = set(); self.cur = []
     def force(self, name):
-        if name in self.busy:
-            raise Gate(f"name-cycle: 欄 {name} の値を求める途中で、同じ括りの欄がもう一度 {name} を引きました(欄どうしの値の輪。P2。§4 R133)")
-        self.busy.add(name)
+        if name in self.busy:                                  # 値の輪(`a : b` と `b : a`)。設計者の答え 2026-11-25(Sign#302 の 3): 知らせて `!_`(以前は name-cycle で断っていた)
+            info("name-cycle", f"欄 `{name}` の値を求める途中で、同じ括りの欄がもう一度 `{name}` を引きました(欄どうしの値の輪)。この欄は `!_` です(設計者の答え 2026-11-25。P2・R133)")
+            return UNIT
+        self.busy.add(name); self.cur.append(name)
         try: v = ev_place(self.fnodes[name], self, rhs=True)
-        finally: self.busy.discard(name)
+        finally: self.busy.discard(name); self.cur.pop()
         self.vars[name] = v
         return v
     def get(self, name):
         if name in self.vars: return self.vars[name]
+        if self.cur and name == self.cur[-1]: return self.parent.get(name)          # 右辺の、`?` の下にない自分の名前は 1 つ外を指す(`x : x`。設計者の答え 2026-11-25 の 3)。`?` の下(値が後で呼ばれる)は欄そのもの
         if name in self.fnodes: return self.force(name)
         return super().get(name)
     def owner(self, name):
+        if self.cur and name == self.cur[-1]: return self.parent.owner(name)
         if name in self.fnodes and name not in self.vars: self.force(name)
         return super().owner(name)
 
@@ -6230,14 +6233,16 @@ def run(src, env=None):
                 if d_[1] in seen_:
                     o_ = seen_[d_[1]]
                     if isinstance(o_, str): raise locate(Gate(f"name-duplicate: 名前 {d_[1]} が自分の定義と、取り込み `{o_}` の公開の両方にあります(枚を跨ぐ同じ名前は断ります。P2。どちらかの名前を変えます)"), d_)
-                    # 同じ枚の中の同名は、先に書いた方が勝ち、2つ目は使わない(止めずに information。compiler_pipeline.md §4・documents が優先)。落とすのは行そのもの
+                    # 同じ枚の中の同名は、知らせて `!_`(設計者の答え 2026-11-25、Sign#302 の 2 (c)。以前は先勝ちで 2 つ目を落としていた)。名前は定義されなかったことになる(`!_`)ので、両方の行を落とす
                     i1_ = 1 + next(i for i, m_ in enumerate(nodes) if (m_[1] if m_[0] == "export" else m_) is o_)
-                    DROP_DUP.append((node, f"名前 `{d_[1]}` はこの枚の {i1_} 番目の文と {1 + nodes.index(node)} 番目の文の両方で定義されています。先に書いた {i1_} 番目が勝ち、{1 + nodes.index(node)} 番目は使われません(compiler_pipeline.md §4。行番号は言えません)"))
+                    DROP_DUP.append((node, f"名前 `{d_[1]}` はこの枚の {i1_} 番目の文と {1 + nodes.index(node)} 番目の文の両方で定義されています。どちらも使われず、名前は `!_` です(設計者の答え 2026-11-25。行番号は言えません)"))
+                    if not any(id(o_) == id(x_) for x_, _m in DROP_DUP): DROP_DUP.append((next(m_ for m_ in nodes if (m_[1] if m_[0] == "export" else m_) is o_), None))      # 先に書いた方も落とす
                     continue
                 seen_[d_[1]] = d_
     if DROP_DUP:
         _drop = {id(n_) for n_, _m in DROP_DUP}; nodes = [n_ for n_ in nodes if id(n_) not in _drop]
-        for _n, _m in DROP_DUP: info("name-duplicate", _m)
+        for _n, _m in DROP_DUP:
+            if _m: info("name-duplicate", _m)
         DROP_DUP.clear()
     if OPT:                                                       # --opt: 部分計算(sign_pe.py)で残余プログラムにしてから走らせる
         import sign_pe

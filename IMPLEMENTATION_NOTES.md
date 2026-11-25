@@ -3891,3 +3891,8 @@ A1・A4・A6 は仕様に答えがあり実装も一致(問いを閉じてよい
 - `sign_asm.py`: `VIA_SIR` の既定を True に。SIR に下げられない形(`Unsup`)と、SIR の木を `generate` が断った形(`AsmError`)は、黙って旧経路(`strict_rewrite`)でやり直す。`--no-sir` で旧経路だけ。`--via-sir` を明示したときだけ道を stderr に出す。
 - 根拠は STAGE2_STRICT_IR.md の検討(9 生成器 × 1500 本で誤答 0、得約 1150 本・失 2 本。失の 2 本は機械語が断ったときの旧経路への戻りで解消)。既存の asm テストは全部通る。`test_via_sir_flag` を新しい既定に直した。
 - 旧経路(`strict_rewrite`)はまだ消さない: 欄ブロック・Float・器の入れ子など、SIR が戻せない形の逃げ先。
+
+### 設計者の答え(Sign#302、2026-11-25)への対応 その 1: A5 と B1
+- **A5(同名)= (c) 知らせて `!_`(枚を跨ぐ同名も同じ)**: `--strict` の同じ枚の同名は、以前は先勝ちで 2 つ目を落としていた。答えに従い、どちらの行も落として名前を `!_` にし、information `name-duplicate` を出す(`sign_interp.py` の `run`)。SIR の `lower` も同じ(`sign_sir.py`)。SIR の旧い実装は後勝ちで strict と違っていた(fuzz に重複が無く見えていなかった)。**未対応**: 取り込みの公開との同名(今は断り)と、既定のモード(今は後勝ち。再定義を使う見本が無いか確かめてから)。設計者の答えは枚を跨ぐ同名も同じと言う。
+- **B1(コンストラクタ)= (b) を絞った形**: 欄の右辺の、`?` の下にない自分の名前は 1 つ外を指す(`Point : x y ? [ x : x  y : y ]` が通る。`x : x + 1` も)。欄どうしの値の輪(`a : b` と `b : a`)は name-cycle で断らず、information を出して `!_`。(`sign_interp.py` の `FieldEnv`)。**未対応**: 「仮引数の名前だけの行は `x : x` の略」(今は `[ x ⏎ y ]` が並び `[1 2]`。どの形が欄の略になるか、設計者の文言を待つ)。
+- テスト: test_laws.py(V9 の期待を直し、B1 の法則を足した)、test_sir.py(test_designer_302_duplicates_and_constructor_names)。test_laws は 3170/3170。

@@ -110,6 +110,14 @@ def test_structs_fields_and_constructors():
     f, top = R.lower(S.parse_source(P + "p ' a\n"))
     try: R.raise_ast(f, top); assert False
     except R.Unsup: pass
+def test_designer_302_duplicates_and_constructor_names():
+    # 設計者の答え 2026-11-25(Sign#302): 同じ枚の同名は知らせて `!_`(2 (c))、欄の右辺の自分の名前は 1 つ外を指す・値の輪は `!_`(3)。strict と SIR が同じ
+    import sign_sir as R, sign_interp as S
+    def ev(src):
+        f, top = R.lower(S.parse_source(src + "\n")); return R.evaluate(f, top)
+    assert ev("x : 5\nx : 6\nx") == ("void",) and ev("f : x ? 1\nf : x ? 2\nf 0") == ("val", 0) and ev("a : 1\na : 2\nb : 7\nb + a") == ("val", 7)
+    assert ev("Point : x y ? [\n\tx : x\n\ty : y\n]\n(Point 1 2) ' y") == ("val", 2) and ev("Point : x y ? [\n\tx : x + 1\n\ty : y\n]\n(Point 3 2) ' x") == ("val", 4)
+    assert ev("p :\n\ta : b\n\tb : a\np") == ("rec", "[a: !_, b: !_]")
 def test_fuzz_structs():
     r = subprocess.run([sys.executable, "fuzz_sir.py", "800", "71", "--structs", "--asm"], capture_output=True, text=True, timeout=900)
     assert r.returncode == 0, r.stdout[-1200:]

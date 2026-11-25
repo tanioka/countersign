@@ -54,6 +54,11 @@ def int_default(d):
 def lower(nodes):
     """旧 AST の節の列 → (Funcs = {関数名: (仮引数名の列, 本体の SIR)}, 最後の行の SIR か None)。下げられなければ Unsup"""
     funcs, arity = Funcs(), {}
+    cnt = {}
+    for n in nodes:
+        if n[0] == "def" and n[2] != ("hole",): cnt[n[1]] = cnt.get(n[1], 0) + 1
+    dup = {k for k, v in cnt.items() if v > 1}
+    if dup: nodes = [n for n in nodes if not (n[0] == "def" and n[1] in dup)]       # 同じ枚の同名は知らせて `!_`(設計者の答え 2026-11-25、Sign#302 の 2 (c))。strict と同じに、どちらの定義も無かったことにする
     for n in nodes:
         if n[0] == "def":
             if isinstance(n[2], tuple) and n[2][0] == "lam":
