@@ -83,6 +83,26 @@ def test_strings_through_functions():
 def test_fuzz_strings_functions():
     r = subprocess.run([sys.executable, "fuzz_sir.py", "600", "61", "--strings", "--asm"], capture_output=True, text=True, timeout=900)
     assert r.returncode == 0, r.stdout[-1200:]
+def test_structs_fields_and_constructors():
+    # S3・S5: 欄ブロックと `'` の欄引き・コンストラクタ。strict の答えと同じ。機械語へは戻さない(Unsup)
+    import sign_sir as R, sign_interp as S
+    P = "p :\n\ta : 1\n\tb : 2\n\tc : 7\n"
+    def ev(src):
+        f, top = R.lower(S.parse_source(src)); return R.evaluate(f, top)
+    assert ev(P + "p") == ("rec", "[a: 1, b: 2, c: 7]")
+    assert ev(P + "p ' a") == ("val", 1) and ev(P + "p ' -1") == ("val", 7) and ev(P + "p ' 3") == ("void",)
+    assert ev(P + "p ' `b`") == ("val", 2) and ev(P + "k : 1\np ' k") == ("void",) and ev(P + "||p||") == ("val", 3)
+    assert ev("p :\n\ta : 1\n\tb : (3 < 2)\n\tc : b\np") == ("rec", "[a: 1, b: !_, c: !_]")
+    assert ev("Pt : x y ? [\n\tl : x\n\tn : x + y\n]\n(Pt 3 4) ' n") == ("val", 7)
+    for bad in (P + "p + 1", "p :\n\ta : 1\n\ta : 2\np ' a"):
+        try: ev(bad); assert False
+        except R.Unsup: pass
+    f, top = R.lower(S.parse_source(P + "p ' a\n"))
+    try: R.raise_ast(f, top); assert False
+    except R.Unsup: pass
+def test_fuzz_structs():
+    r = subprocess.run([sys.executable, "fuzz_sir.py", "800", "71", "--structs", "--asm"], capture_output=True, text=True, timeout=900)
+    assert r.returncode == 0, r.stdout[-1200:]
 def test_flow_composition_left_to_right():
     # 余った関数が続く流れは合成で、左の関数から実行する(V3、strict の Pipe)。strict の値と同じ
     import sign_sir as R, sign_interp as S
