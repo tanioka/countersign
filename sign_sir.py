@@ -302,6 +302,10 @@ def evaluate(funcs, top, fuel=200000):
             return len(a)
         if k == "idx":
             a, i = one(ev(e[1], env)), one(ev(e[2], env))
+            if isinstance(i, float):                                               # Address を要求する位置の Float は最近接へ丸める(type_system.md 4.1・`fcvtas`: 同じ近さなら 0 から遠い方)
+                if abs(i) >= 2.0 ** 62: raise Unsup("Float の添字が大きすぎる(飽和の規則を入れない)")
+                import math
+                i = int(math.copysign(math.floor(abs(i) + 0.5), i))
             if isinstance(a, Rec):                                                 # 欄ブロックの添字: 整数は位置(負は後ろから)、文字列は欄の名前。範囲外・単位・名前なしは `!_`
                 if i is None: return None
                 if isinstance(i, Str):
@@ -318,7 +322,7 @@ def evaluate(funcs, top, fuel=200000):
                 if i < 0: i += len(a)
                 return Chr(ord(a[i])) if 0 <= i < len(a) else None
             if a is None or i is None: return None
-            if not isinstance(a, tuple) or isinstance(i, (tuple, float)): raise Unsup("添字の型(Float の添字は最近接へ丸める規則がある。まだ入れない)")
+            if not isinstance(a, tuple) or isinstance(i, tuple): raise Unsup("添字の型")
             if i < 0: i += len(a)
             return a[i] if 0 <= i < len(a) else None
         if k == "abs":
