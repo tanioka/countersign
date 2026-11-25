@@ -52,7 +52,9 @@ def test_strings_lower_and_refuse():
     assert ev("s : `abc`\ns ' 5\n") == ("void",) and ev("s : `abc`\ns + 1\n") == ("void",) and ev("s : `abc`\n5 + (s + 1)\n") == ("val", 5)
     assert ev("s : `abc`\ns * 2\n") == ("str", "abcabc") and ev("s : `abc`\ns * 0\n") == ("void",) and ev("s : `abc`\ns * -1\n") == ("void",)
     assert ev("s : `abc`\n2 * s\n") == ("void",) and ev("s : `abc`\ns * s\n") == ("void",) and ev("s : `abc`\n||s * 3||\n") == ("val", 9)
-    for bad in ["s : `abc`\n(s ' 1) + 1\n", "\\a < \\b\n", "s : `h\u00e9`\n||s||\n"]:
+    assert ev("s : `abc`\n(s ' 1) + 1\n") == ("chr", 99) and ev("\\a - \\b\n") == ("val", -1) and ev("3 * \\a\n") == ("val", 291)
+    assert ev("\\a * 3\n") == ("str", "aaa") and ev("\\a + \\b\n") == ("void",) and ev("\\a + 100\n") == ("void",) and ev("\\a / 2\n") == ("void",)
+    for bad in ["\\a - 97\n", "\\a < \\b\n", "s : `h\u00e9`\n||s||\n"]:
         try: ev(bad); assert False, bad
         except R.Unsup: pass
     f, top = R.lower(S.parse_source("5 & \\a\n"))
