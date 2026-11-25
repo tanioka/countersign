@@ -2,7 +2,7 @@
 
 - エミュレータは、出した『文字』を読んで動かす(機械語ではない)。使う命令だけを持つ。
 - 組めるかは clang(--target=aarch64-linux-gnu)のアセンブラで確かめる(clang が無ければ飛ばす)。
-- 処理系の答えは `sign.py --check-int`(Int の溢れを罠にする仕様どおりの動き)。
+- 処理系の答えは `sign.py --check-int`(Int の溢れは `!_`。設計者の答え 2026-11-25)。
 """
 import os, re, struct, subprocess, sys, tempfile
 
@@ -1364,7 +1364,7 @@ check("arena: 記述子の置き場が足りなければ何も書かず __", cal
 
 check("規則 刻み 0 は罠(処理系は『進みません』のエラー)", run_asm(asm_of("f : a s b ? [a ~+ s ~ b]\nf 1 0 9\n", "linux"), linux=True), ("trap", None))
 check("規則 個数の計算の溢れは罠", run_asm(asm_of("f : a b ? ||[a ~ b]||\nf (0 - 9223372036854775807) 9223372036854775807\n", "linux"), linux=True), ("trap", None))
-check("組み立ての要素の溢れは罠", run_asm(asm_of("f : a ? a * 4611686018427387904 a\nf 3\n", "linux"), linux=True), ("trap", None))
+check("組み立ての要素の溢れは `__` で並びから消える(設計者の答え 2026-11-25)", run_asm(asm_of("f : a ? a * 4611686018427387904 a\nf 3\n", "linux"), linux=True), ("exit", "3\n", 0))
 
 # ---- 単体の実行ファイルの足場(Linux): 結果を印字して exit ----
 for name, src, want in [("印字", "sq : n ? n * n\nsq 12\n", "144\n"), ("負の数", "-9223372036854775807\n", "-9223372036854775807\n"),
@@ -1373,7 +1373,7 @@ for name, src, want in [("印字", "sq : n ? n * n\nsq 12\n", "144\n"), ("負の
 check("linux 足場: __ を印字", run_asm(asm_of("5 / 0\n", "linux"), linux=True), ("exit", "__\n", 0))
 check("linux 足場: __ になりうる式の値の印字", run_asm(asm_of("f : n ?\n\tn < 2 : n\nf 1\n", "linux"), linux=True), ("exit", "1\n", 0))
 check("linux 足場: __ になりうる式の __", run_asm(asm_of("f : n ?\n\tn < 2 : n\nf 7\n", "linux"), linux=True), ("exit", "__\n", 0))
-check("linux 足場: 溢れは印字せず止まる", run_asm(asm_of("9223372036854775807 + 1\n", "linux"), linux=True), ("trap", None))
+check("linux 足場: 溢れは `__`(罠ではない。設計者の答え 2026-11-25)", run_asm(asm_of("9223372036854775807 + 1\n", "linux"), linux=True), ("exit", "__\n", 0))
 
 # ---- アセンブラで組める(clang があれば) ----
 cc = subprocess.run(["which", "clang"], capture_output=True, text=True).stdout.strip()
@@ -1621,7 +1621,7 @@ check("段45: 作業領域あふれは x16=2 の罠", _x16, 2)
 _i45 = Cpu(sign_asm.generate(sign_interp.parse_source("f : n ?\n\tn = 0 : 1\n\tn * (f (n - 1))\nf 30\n"), "bare"))
 try: _i45.run("_.main"); _y = None
 except Trap: _y = _i45.r.get("x16", 0)
-check("段46: Int の溢れの罠は x16 = 1", _y, 1)
+check("段46: Int の溢れは罠でなく `__`(設計者の答え 2026-11-25。x16 は動かない)", _y, None)
 
 # ---- 段 49: 渡すだけの辺がある輪を乱数で処理系と比べる(sweep_passthru.py。2 つの種)----
 for _seed in (1, 2):
@@ -1866,9 +1866,9 @@ for _nm, _src in [
 ]:
     _a = sign_asm.generate(sign_interp.parse_source(_src), "linux")
     check("段68: " + _nm + ": 答えが処理系と一致", run_asm(_a, linux=True)[1], _want58(_src))
-for _nm, _src in [("1 << 63 は値域の外で罠", "u : a ? a << 63\nu 1\n"), ("1 << 64 も罠", "u : a ? a << 64\nu 1\n")]:
+for _nm, _src in [("1 << 63 は値域の外で `__`", "u : a ? a << 63\nu 1\n"), ("1 << 64 も `__`", "u : a ? a << 64\nu 1\n")]:
     _a = sign_asm.generate(sign_interp.parse_source(_src), "linux")
-    check("段68: " + _nm, run_asm(_a, linux=True)[1], None)
+    check("段68: " + _nm, run_asm(_a, linux=True)[1], "__\n")
 
 def refuses(src):
     try: sign_asm.generate(sign_interp.parse_source(src), "linux")

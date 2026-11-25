@@ -391,8 +391,18 @@ class FnGen:
         return None
 
     def mu(self, n):
-        """n は `__` になりうるか(Program.maybe)。"""
+        """n は `__` になりうるか(Program.maybe)。Int の溢れで生まれる `__` も含む(設計者の答え 2026-11-25)。"""
         return self.prog.maybe(n)
+
+    def mu_hard(self, n):
+        """n は、溢れ以外の理由(`__` の字面・比べ・0 割り・範囲の外の添字…)で `__` になりうるか。`__` を受けられない位置(規則の端・入れ子の要素・累積の要素)は、
+        これが偽のとき溢れの `__` だけを実行時に調べて止める(`ovf_guard`)。"""
+        return self.prog.maybe(n, False)
+
+    def ovf_guard(self, n):
+        """値 x0 が、溢れで生まれた `__` なら止める(受けられない位置に `__` を渡さない。`__` を受けられる位置は `mu` が検査を出す)。"""
+        if self.mu(n) and not self.mu_hard(n):
+            self.prog.trap_used = True; self.niche(); self.emit("cmp x0, x13"); self.emit("b.eq .Ltrap", "溢れで __ になった値は、この位置では受けられない")
 
     def niche(self, reg="x13"):
         emit_imm(self.lines, reg, NICHE_BITS, "__")
@@ -514,7 +524,7 @@ class FnGen:
         import sign_asmpar
         for a, kd in zip(items[1:], self.prog.pkind[h[1]]):
             if kd == "I":
-                if not self.par_arg_ok(a) or self.mu(a) or self.prog.kind(a, self.kinds) != "I": return None
+                if not self.par_arg_ok(a) or self.mu_hard(a) or self.prog.kind(a, self.kinds) != "I": return None
             elif kd == "C":
                 if not self.par_char_arg(a): return None
             elif not self.par_list_arg(a, kd): return None
@@ -526,6 +536,7 @@ class FnGen:
         import sign_asmpar
         c = self.par_call(n)
         if c is None or c[0] not in self.prog.spec_elig(): return None
+        if any(kd == "I" and self.mu(a) for a, kd in zip(c[1], self.prog.pkind[c[0]])): return None          # 投機の包みは溢れの `__` の実引数を見ない
         for a, kd in zip(c[1], self.prog.pkind[c[0]]):
             if kd == "I" and not sign_asmpar.arg_ok(self.prog, self.strip(a)): return None
             if kd == "C" and self.has_seq(a): return None
@@ -619,7 +630,7 @@ class FnGen:
         idx = []
         for i, a in enumerate(args):
             if self.par_call(a) is not None: idx.append(i)
-            elif not self.par_arg_ok(a) or self.mu(a): return []
+            elif not self.par_arg_ok(a) or self.mu_hard(a): return []
         return idx if len(idx) >= 2 else []
 
     def par_light_pre(self, site, Ls):
@@ -976,9 +987,7 @@ class FnGen:
                 self.emit("sdiv x11, x9, x10")
                 self.emit("msub x0, x11, x10, x9", "余り = 被除数 - 商 × 割る数")
         elif op in ("&&", "||", ";;"):                       # ビット演算(operator_table.md): 2 の補数の 64 ビットで。結果が INT64_MIN になれば値域の外(罠)
-            self.prog.trap_used = True
-            self.emit({"&&": "and x0, x9, x10", "||": "orr x0, x9, x10", ";;": "eor x0, x9, x10"}[op])
-            self.niche(); self.emit("cmp x0, x13"); self.emit("b.eq .Ltrap", "結果が __ の印と同じ値(INT64_MIN)は値域の外")
+            self.emit({"&&": "and x0, x9, x10", "||": "orr x0, x9, x10", ";;": "eor x0, x9, x10"}[op], "結果が INT64_MIN なら、それが `__` の印(値域の外は `!_`。設計者の答え 2026-11-25)")
         elif op == ">>":                                     # 算術右シフト。数が負なら __。64 以上は符号だけが残る
             ok, sh = self.prog.label(), self.prog.label()
             self.emit("cmp x10, #0"); self.emit("b.ge %s" % ok, "シフト数が負なら __")
@@ -994,31 +1003,25 @@ class FnGen:
             self.niche("x0"); self.emit("b %s" % done)
             self.lines.append("%s:" % ok)
             self.emit("cmp x10, #63"); self.emit("b.hi %s" % big)
-            self.emit("lsl x11, x9, x10"); self.emit("asr x12, x11, x10"); self.emit("cmp x12, x9"); self.emit("b.ne .Ltrap", "戻して合わなければ溢れた")
-            self.niche(); self.emit("cmp x11, x13"); self.emit("b.eq .Ltrap", "INT64_MIN になった")
-            self.emit("mov x0, x11"); self.emit("b %s" % end)
+            self.emit("lsl x11, x9, x10"); self.emit("asr x12, x11, x10"); self.emit("cmp x12, x9"); self.niche()
+            self.emit("csel x0, x13, x11, ne", "戻して合わなければ溢れた = `__`(INT64_MIN になった結果もそのまま `__` の印)"); self.emit("b %s" % end)
             self.lines.append("%s:" % big)
-            self.emit("cbnz x9, .Ltrap", "64 以上のシフトで 0 でない値は溢れる"); self.emit("mov x0, #0")
+            self.emit("mov x0, #0"); self.niche(); self.emit("cmp x9, #0"); self.emit("csel x0, x13, x0, ne", "64 以上のシフトで 0 でない値は溢れる = `__`")
             self.lines.append("%s:" % end)
         else:
-            self.prog.trap_used = True
+            # 設計者の答え 2026-11-25(Sign#302 の 1 (a)): Int の溢れは `!_`(罠は無い)。溢れた結果・INT64_MIN に着いた結果は __ の印そのもの
+            self.niche()
             if op == "+":
                 self.emit("adds x9, x9, x10")
-                self.emit("ccmp xzr, x9, #1, vc", "溢れずに INT64_MIN に着いた結果も罠")
-                self.emit("b.vs .Ltrap")
-                self.emit("mov x0, x9")
+                self.emit("csel x0, x13, x9, vs", "溢れたら __")
             elif op == "-":
                 self.emit("subs x9, x9, x10")
-                self.emit("ccmp xzr, x9, #1, vc")
-                self.emit("b.vs .Ltrap")
-                self.emit("mov x0, x9")
+                self.emit("csel x0, x13, x9, vs", "溢れたら __")
             else:
                 self.emit("mul x11, x9, x10")
                 self.emit("smulh x12, x9, x10", "積の上の語")
                 self.emit("cmp x12, x11, asr #63", "上の語が下の語の符号の伸びでなければ溢れた")
-                self.emit("ccmp xzr, x11, #1, eq")
-                self.emit("b.vs .Ltrap")
-                self.emit("mov x0, x11")
+                self.emit("csel x0, x13, x11, ne", "溢れたら __")
         if done: self.lines.append("%s:" % done)
 
     # ---- リスト(Int の要素。読むだけ) ----
@@ -1325,6 +1328,7 @@ class FnGen:
         for nm, v, (y, c) in zip(names, vals, leaves):
             self.slot[nm] = v; self.kinds[nm] = "I"
             if self.mu(y): self.prog.maybe_ids.add(nm)
+            if self.mu_hard(y): self.prog.maybe_ids_h.add(nm)
         return names
 
     def pv_prefix(self):
@@ -1365,7 +1369,7 @@ class FnGen:
                 na = [self.hoist_walk(a, leaves, pre, False, True) for a in y[1][1:]]      # 実引数の中の呼び出し(答えが __ にならない物)を先に
                 if len(leaves) > n0: return ("seq", [y[1][0]] + na) + tuple(y[2:])
         c = self.par_call(y)
-        if c is not None and (allow_mu or not self.mu(y)):
+        if c is not None and (allow_mu or not self.mu_hard(y)):
             leaves.append((y, c)); return ("id", pre + str(len(leaves) - 1))
         if y[0] == "bin" and y[1] in ("+", "-", "*", "/", "%", "<<", ">>", "||", ";;", "&&"):
             return ("bin", y[1], self.hoist_walk(y[2], leaves, pre, allow_mu, deep), self.hoist_walk(y[3], leaves, pre, allow_mu, deep))
@@ -1426,7 +1430,7 @@ class FnGen:
                         if self.prog.kind(x, self.kinds) == "C": self.gen_char_value(x); t = self.tmp(); ets.append(("chr", t)); self.emit("str x0, [x29, #%d]" % self.off(t), "累積に足す文字")
                         else: ets.append(("lit", x))
                     else:
-                        self.gen(it); t = self.tmp(); ets.append(t)
+                        self.gen(it); self.ovf_guard(it); t = self.tmp(); ets.append(t)
                         self.emit("str x0, [x29, #%d]" % self.off(t), "累積に足す要素")
                 t1 = self.tmp(); t2 = self.tmp()
                 self.emit("ldr x0, [x29, #%d]" % self.off(self.slot[cacc]), "累積の器(自分の作業領域)")
@@ -1521,7 +1525,7 @@ class FnGen:
             if ovf_l is not None and ovf_l != unit_l and ovf_l != ".Ltrap_work":
                 self.lines.append("%s:" % ovf_l); self.emit("bl _sign_overflow", "作業領域に入らない伸び: 原因を 1 行出す(結果は __)")
             if unit_l:
-                self.lines.append("%s:" % unit_l); self.unit_result(rk)
+                self.lines.append("%s:" % unit_l); self.call_unit(rk, args, gws)
             return
         sib = (tail and f != self.name and self.entry and not gws and not unit_l and not fl_relay and not fl_mask and not ringcall
                and not self.sret and not self.alloca and not self.pre_alloca and self.name not in self.prog.maskfns
@@ -1579,7 +1583,7 @@ class FnGen:
             self.emit("b %s" % done)
             if ovf_l is not None and ovf_l != unit_l and ovf_l != ".Ltrap_work":
                 self.lines.append("%s:" % ovf_l); self.emit("bl _sign_overflow", "作業領域に入らない伸び: 原因を 1 行出す(結果は __)")
-            self.lines.append("%s:" % unit_l); self.unit_result(rk)
+            self.lines.append("%s:" % unit_l); self.call_unit(rk, args, gws)
             self.lines.append("%s:" % done)
         if fl_relay:
             self.emit("ldr x2, [x29, #%d]" % self.off(fcell), "旗を置き直す"); self.free()
@@ -1671,6 +1675,13 @@ class FnGen:
     # ---- 分岐 ----
     INV = {"lt": "ge", "ge": "lt", "le": "gt", "gt": "le", "eq": "ne", "ne": "eq"}
     CC = {"<": "lt", "<=": "le", ">": "gt", ">=": "ge", "=": "eq", "!=": "ne", "==": "eq", "!==": "ne"}     # 符号あり(Int)の条件コード。operator_table.js の asm 欄
+
+    def call_unit(self, rk, args, gws):
+        """呼びの引数が `__` だったときの結果。規則(R)は `__` を運べないので、引数が溢れの `__` にだけなりうる(溢れ以外の理由では `__` にならない)なら、
+        溢れた時点で止める(ovf_guard と同じ。非答え)。そうでなければ従来どおり unit_result(R は断り)。"""
+        if rk == "R" and not gws and not any(self.mu_hard(a) for a in args):
+            self.prog.trap_used = True; self.emit("b .Ltrap", "溢れで __ になった引数は、規則を返す呼びでは受けられない")
+        else: self.unit_result(rk)
 
     def unit_result(self, vk):
         """種類 vk の `__` を x0(と x1)へ。Int は niche、文字は U+0000、器は len = 0。"""
@@ -1794,11 +1805,11 @@ class FnGen:
         for x in (lo, step, hi):
             if x is None: continue
             if self.prog.kind(x, self.kinds) != "I": raise AsmError("規則の端点・歩幅は Int だけです")
-            if self.mu(x): raise AsmError("端点・歩幅が `__` になりうる規則はまだ出せません(`__` の規則は起点を niche にして運ぶ)")
+            if self.mu_hard(x): raise AsmError("端点・歩幅が `__` になりうる規則はまだ出せません(`__` の規則は起点を niche にして運ぶ)")
         cells = []
         for x in (lo, step, hi):
             if x is None: continue
-            self.gen(x); t = self.tmp(); cells.append(t)
+            self.gen(x); self.ovf_guard(x); t = self.tmp(); cells.append(t)
             self.emit("str x0, [x29, #%d]" % self.off(t))
         self.emit("ldr x9, [x29, #%d]" % self.off(cells[0]), "start")
         self.emit("ldr x12, [x29, #%d]" % self.off(cells[-1]), "end")
@@ -2178,7 +2189,7 @@ class FnGen:
             xs = self.strip(x)
             kx = self.prog.kind(xs, self.kinds)
             if kx == "I":                                  # スカラーの要素: 内容の領域に 1 語を置き、記述子は {そのセル | 1, 1}(ptr の bit0 が印)
-                if self.mu(xs): raise AsmError("入れ子の要素のスカラーが `__` になりうる形はまだ出せません(`__` は入れ子に入らず並びから消える)")
+                if self.mu_hard(xs): raise AsmError("入れ子の要素のスカラーが `__` になりうる形はまだ出せません(`__` は入れ子に入らず並びから消える)")
                 plan.append(("sc", xs)); continue
             if kx != "L": raise AsmError("入れ子の要素にできるのは Int のリストと Int だけです(文字列・もう一段の入れ子はまだ)")
             inner = self.prog.builds(xs)
@@ -2193,7 +2204,7 @@ class FnGen:
                         if k2 not in ("L", "N"): raise AsmError("展開(~)できるのはリストと入れ子のリストだけです(文字列・Int はまだ)")
                         self.prog.check_spread(x2, inner)
                     sub.append((t2, x2))
-                if any(t == "scalar" and self.mu(x) for t, x in sub) and sum(1 for t, x in sub if t == "scalar" and not self.mu(x)) < 2:
+                if any(t == "scalar" and self.mu_hard(x) for t, x in sub) and sum(1 for t, x in sub if t == "scalar" and not self.mu(x)) < 2:
                     raise AsmError("入れ子の内側の要素が `__` になりうる形は、`__` にならない要素が 2 個以上あるときだけ出せます(全部が消えると内側が `__` に、1 個だけ残ると内側が Int になり、入れ子の種類が実行時に変わる)")
                 plan.append(("build", sub))
             elif self.prog.builder_call(xs) is not None:
@@ -2201,7 +2212,7 @@ class FnGen:
                 if self.prog.unit_possible(g): raise AsmError("入れ子の要素に、`__` を返しうる関数の結果(%s)は置けません(`__` は入れ子に入らず並びから消える)" % g)
                 for a, kd in zip(xs[1][1:], self.prog.pkind[g]):
                     sa = self.strip(a)
-                    ok = (not self.mu(a)) if kd == "I" else (sa[0] == "id" or self.prog.list_values(sa) is not None or self.prog.str_value(sa) is not None or self.prog.nested_values(sa) is not None) if kd in WIDE else True
+                    ok = (not self.mu_hard(a)) if kd == "I" else (sa[0] == "id" or self.prog.list_values(sa) is not None or self.prog.str_value(sa) is not None or self.prog.nested_values(sa) is not None) if kd in WIDE else True
                     if not ok: raise AsmError("入れ子の要素に置く %s の引数が `__` になりうる形はまだ出せません(`__` は入れ子に入らず並びから消える)" % g)
                 plan.append(("call", xs))
             else:
@@ -2227,6 +2238,8 @@ class FnGen:
         for i, (kd, d) in enumerate(plan):
             if kd == "call":
                 self.load_list(d, "x0", "x1")
+                if any(self.mu(a) for a in d[1][1:]):
+                    self.prog.trap_used = True; self.emit("cbz x1, .Ltrap", "引数が溢れで __ になると結果が空(`__`)。入れ子の要素には置けない")
                 self.emit("str x0, [x29, #%d]" % self.off(cells[i][0]), "結果の先頭(この関数の一時の置き場)"); self.emit("str x1, [x29, #%d]" % self.off(cells[i][1]), "結果の長さ")
                 self.emit("ldr x9, [x29, #%d]" % self.off(tot)); self.emit("add x9, x9, x1", "写す長さを足す")
                 self.emit("str x9, [x29, #%d]" % self.off(tot))
@@ -2234,7 +2247,9 @@ class FnGen:
                 for k, (t, x) in enumerate(d):
                     if (i, k) in mc:
                         sk = self.prog.label()
-                        self.gen(x); self.emit("str x0, [x29, #%d]" % self.off(mc[(i, k)]), "`__` になりうる要素(1 度だけ評価)")
+                        self.gen(x)
+                        if sum(1 for t2, x2 in d if t2 == "scalar" and not self.mu(x2)) < 2: self.ovf_guard(x)       # 残りが 2 個未満なら、溢れで消えると内側の種類が変わる
+                        self.emit("str x0, [x29, #%d]" % self.off(mc[(i, k)]), "`__` になりうる要素(1 度だけ評価)")
                         self.niche(); self.emit("cmp x0, x13"); self.emit("b.eq %s" % sk, "__ は並びから消える")
                         self.emit("ldr x9, [x29, #%d]" % self.off(tot)); self.emit("add x9, x9, #1"); self.emit("str x9, [x29, #%d]" % self.off(tot))
                         self.lines.append("%s:" % sk)
@@ -2283,7 +2298,7 @@ class FnGen:
                 self.emit("ldr x11, [x29, #%d]" % self.off(cur)); self.emit("ldr x10, [x29, #%d]" % self.off(self.scon))
                 self.emit("sub x12, x10, x11"); self.emit("lsr x12, x12, #3", "内側のリストの長さ")
             elif kd == "sc":
-                self.gen(d)
+                self.gen(d); self.ovf_guard(d)
                 self.emit("ldr x9, [x29, #%d]" % self.off(self.scon)); self.emit("str x0, [x9]", "スカラーの値のセル")
                 self.emit("orr x11, x9, #1", "記述子の ptr = セル | 1(bit0 = スカラーの印)"); self.emit("mov x12, #1")
                 self.emit("add x9, x9, #8"); self.emit("str x9, [x29, #%d]" % self.off(self.scon))
@@ -2755,7 +2770,9 @@ class Program:
         self.grow = {}        # 関数 → (累積を伸ばす引数, 1 回で伸びる個数, 食う引数)
         self.nlabel = 0
         self.par_nsites = 0; self.par_used = set(); self.spec_used = set()          # --par: 並列の候補の所の数・包みが要る関数
-        self.ret_maybe = {}    # 関数 → 返値が `__` になりうるか
+        self.ret_maybe = {}    # 関数 → 返値が `__` になりうるか(溢れの `__` も数える)
+        self.ret_maybe_h = {}  # 同じく、溢れ以外の理由だけ
+        self.maybe_ids_h = set()
         self.bodies = {}
         self.lists = {}        # 名前 → (像のラベル, 要素の並び)(字面の並びの定義)
         self.rodata = {}       # (文字列か, 要素の並び) → ラベル(同じ中身は 1 つに畳む)
@@ -3635,7 +3652,7 @@ class Program:
         if not rest: return None
         if self.pkind[f][j] == "L":
             if any(self.item_info(it)[0] != "scalar" for it in rest): return None
-            if any(self.maybe(it) for it in rest): raise AsmError("%s: 累積に足す要素が `__` になりうる形はまだ出せません(並びから消えるので長さが変わる)" % f)
+            if any(self.maybe(it, False) for it in rest): raise AsmError("%s: 累積に足す要素が `__` になりうる形はまだ出せません(並びから消えるので長さが変わる)" % f)
             return len(rest)
         env = dict(zip(self.fns[f], self.pkind[f]))
         d = 0
@@ -3663,7 +3680,7 @@ class Program:
         if self.pkind[f][pa] != "L": return None
         rest = its[1:]
         if any(self.item_info(it)[0] != "scalar" for it in rest): return None
-        if any(self.maybe(it) for it in rest): raise AsmError("%s: 累積に足す要素が `__` になりうる形はまだ出せません(並びから消えるので長さが変わる)" % f)
+        if any(self.maybe(it, False) for it in rest): raise AsmError("%s: 累積に足す要素が `__` になりうる形はまだ出せません(並びから消えるので長さが変わる)" % f)
         return pa, len(rest)
 
     def ring_grow_call(self, f, g, args):
@@ -5094,17 +5111,26 @@ class Program:
             self._spec_elig = sign_asmpar.terminating(self, self.par_elig()) if SPEC[0] else {}
         return self._spec_elig
 
-    def maybe(self, n):
+    def no_overflow(self, op, l, r):
+        """`l op r` は溢れず、結果が INT64_MIN にもならないと静的に言えるか(両辺が定数のとき、その値で)。"""
+        a, b = self.const_int(l), self.const_int(r)
+        if a is None or b is None: return False
+        v = a + b if op == "+" else a - b if op == "-" else a * b if op == "*" else None
+        return v is not None and -INT_MAX <= v <= INT_MAX
+
+    def maybe(self, n, ovf=True):
         """n の値は `__` になりうるか(静的な見積もり。外れる側に倒さない)。
-        関数の本体が走るのは実引数が全部 `__` でないときだけ(処理系と同じ)なので、仮引数は `__` にならない。"""
+        関数の本体が走るのは実引数が全部 `__` でないときだけ(処理系と同じ)なので、仮引数は `__` にならない。
+        ovf: Int の溢れで生まれる `__`(設計者の答え 2026-11-25、Sign#302 の 1: 溢れは `!_`)を数えるか。偽なら溢れ以外の理由だけ。"""
+        m = lambda x: self.maybe(x, ovf)
         k = n[0]
-        if k == "block": return self.maybe(n[1])
-        if k == "dyn": return self.maybe(n[2])
+        if k == "block": return m(n[1])
+        if k == "dyn": return m(n[2])
         if k == "lit": return False
-        if k == "neg": return self.maybe(n[1])
+        if k == "neg": return m(n[1])
         if k == "id":
-            if n[1] == "__" or n[1] in self.maybe_ids: return True
-            if n[1] in self.dyn: return self.maybe(self.dyn[n[1]])          # 起動で評価した定義の値が `__` になりうるか(セルには `__` の印のまま置く)
+            if n[1] == "__" or n[1] in (self.maybe_ids if ovf else self.maybe_ids_h): return True
+            if n[1] in self.dyn: return m(self.dyn[n[1]])          # 起動で評価した定義の値が `__` になりうるか(セルには `__` の印のまま置く)
             return n[1] in self.consts and self.consts[n[1]] is None
         if k == "cmp": return True
         if k == "norm": return False
@@ -5112,16 +5138,18 @@ class Program:
         if k == "bin":
             op, l, r = n[1], n[2], n[3]
             if op == "-" and any((o[0] == "lit" and isinstance(o[1], Char) and len(o) == 2) or (o[0] == "id" and o[1] in self.chars) for o in (self.strip(l), self.strip(r))): return True        # 文字 - 文字: 片方が範囲の外なら __
-            if op in ("+", "-", "*", "||", ";;", "&&"): return self.maybe(l) and self.maybe(r)
+            if op in ("+", "-", "*", "||", ";;", "&&"):
+                if ovf and not self.no_overflow(op, l, r): return True       # 溢れる(か、結果が INT64_MIN になる)かもしれなければ `__` になりうる
+                return m(l) and m(r)
             if op in ("<<", ">>"): return True               # シフト数が負なら __
             if op in ("/", "%"):
                 rr = r
                 while rr[0] == "block": rr = rr[1]
                 nonzero = (rr[0] == "lit" and rr[1] != 0) or (rr[0] == "neg" and rr[1][0] == "lit" and rr[1][1] != 0)
-                return (self.maybe(l) and self.maybe(r)) or not nonzero
-            if op == "#": return self.maybe(l)                # 番地が答え。左が __ なら __(右は評価しない)
-            if op == "|": return self.maybe(l) and self.maybe(r)
-            if op == "&": return self.maybe(l) or self.maybe(r)
+                return (m(l) and m(r)) or not nonzero
+            if op == "#": return m(l)                # 番地が答え。左が __ なら __(右は評価しない)
+            if op == "|": return m(l) and m(r)
+            if op == "&": return m(l) or m(r)
             if op == "'":
                 # 空でない器(仮引数・名前。`__` の器の呼びは走らない)の先頭 `p ' 0` と末尾 `p ' -1` は必ず在る
                 nonempty = self.nonempty
@@ -5133,15 +5161,15 @@ class Program:
         if k == "cases":
             rows = n[1]
             if not rows or rows[-1][0] is not None: return True
-            return any(self.maybe(v) for _, v in rows)
+            return any(m(v) for _, v in rows)
         if k == "seq":
             items = n[1]
             if self.list_values(n) is not None: return False
             if items[0][0] == "id" and items[0][1] in self.fns:
-                return self.ret_maybe.get(items[0][1], False) or any(self.maybe(a) for a in items[1:])
+                return (self.ret_maybe if ovf else self.ret_maybe_h).get(items[0][1], False) or any(m(a) for a in items[1:])
             its = self.builds(n)
             if its is not None:         # 組み立てた並び: `__` にならない要素が 1 つでもあれば、全部は消えない
-                return not any(self.item_info(it)[0] == "scalar" and not self.maybe(self.item_info(it)[1]) for it in its)
+                return not any(self.item_info(it)[0] == "scalar" and not m(self.item_info(it)[1]) for it in its)
             return True
         return True
 
@@ -5178,12 +5206,13 @@ class Program:
 
     def solve_maybe(self):
         """関数ごとの『返値が __ になりうるか』を、動かなくなるまで繰り返して決める(増える一方なので止まる)。"""
-        changed = True
-        while changed:
-            changed = False
-            for f, body in self.live_bodies():
-                if not self.ret_maybe.get(f, False) and self.maybe(body):
-                    self.ret_maybe[f] = True; changed = True
+        for ovf, tab in ((False, self.ret_maybe_h), (True, self.ret_maybe)):
+            changed = True
+            while changed:
+                changed = False
+                for f, body in self.live_bodies():
+                    if not tab.get(f, False) and self.maybe(body, ovf):
+                        tab[f] = True; changed = True
 
     def width_expr(self, a, f):
         """番地の項 a(関数 f の中)の幅(byte)。`1x…` `2x…` `4x…` `8x…` の字面・それを定義した名前・幅の分かった仮引数、
@@ -6406,7 +6435,7 @@ def add_par(text, p):
     """--par: 包み・実行環境(スレッドの池・待ち行列・合流)・.bss を足し、起動で主スレッドの TLS を作り、終了を exit_group にする。"""
     import sign_asmpar
     el = p.par_elig(); body = []
-    for f in sorted(p.par_used): body += sign_asmpar.wrapper(f, symbol_of(f), sign_asmpar.nwords(p.pkind[f]))
+    for f in sorted(p.par_used): body += sign_asmpar.wrapper(f, symbol_of(f), sign_asmpar.nwords(p.pkind[f]), sign_asmpar.int_words(p.pkind[f]))
     spec = bool(p.spec_used)
     clones = []
     if spec and SPEC_ABORT[0]:      # 再帰する関数と、それを(間接にも)呼ぶ関数が複製の対象(呼ぶ側も複製しないと元の再帰へ入ってしまう)
@@ -6425,7 +6454,7 @@ def add_par(text, p):
     for f in sorted(p.par_used):                      # 投機専用の複製を呼ぶ並列の包み(投機の中で合流が自分で走らせる左の半分も、確認つきの複製へ入る)
         if symbol_of(f) in csym:
             pwsym.add(symbol_of(f))
-            body += [l.replace("_sign_pw_%s:" % symbol_of(f), "_sign_pw_%s__sp:" % symbol_of(f)).replace("\tbl %s" % symbol_of(f), "\tbl %s__sp" % symbol_of(f)) for l in sign_asmpar.wrapper(f, symbol_of(f), sign_asmpar.nwords(p.pkind[f]))]
+            body += [l.replace("_sign_pw_%s:" % symbol_of(f), "_sign_pw_%s__sp:" % symbol_of(f)).replace("\tbl %s" % symbol_of(f), "\tbl %s__sp" % symbol_of(f)) for l in sign_asmpar.wrapper(f, symbol_of(f), sign_asmpar.nwords(p.pkind[f]), sign_asmpar.int_words(p.pkind[f]))]
     body = ["\t.text"] + body + sign_asmpar.runtime(PAR[0], spec)
     if spec:        # 罠は、投機の中なら巻き戻す(外なら今までどおり止まる)
         chk = ["\tmrs x16, tpidr_el0", "\tldr x16, [x16, #16]", "\tcbnz x16, _sign_spec_rollback"]

@@ -243,12 +243,26 @@ def terminating(p, el):
 
 
 # ------------------------------------------------------------ 包み(仕事の入れ物から実引数を読んで関数を呼ぶ)
-def wrapper(f, symbol, nparams):          # nparams = 渡す語の数(リスト・文字列は 2 語)
+def int_words(kinds):
+    """仮引数の種類の並びのうち、Int の語の位置(包みが `__` の実引数を見る所)。"""
+    out, w = [], 0
+    for k in kinds:
+        if k == "I": out.append(w)
+        w += 1 if k in ("I", "C") else 2
+    return out
+
+
+def wrapper(f, symbol, nparams, ints=()):          # nparams = 渡す語の数(リスト・文字列は 2 語)。ints = Int の語の位置
     ln = ["_sign_pw_%s:" % symbol,
           "\tstp x29, x30, [sp, #-32]!", "\tmov x29, sp", "\tstr x0, [x29, #16]",
           "\tmrs x10, cntvct_el0", "\tstr x10, [x29, #24]", "\tmov x9, x0"]
     ln += ["\tldr x%d, [x9, #%d]" % (i, 40 + 8 * i) for i in range(nparams)]
-    ln += ["\tbl %s" % symbol, "\tldr x9, [x29, #16]", "\tstr x0, [x9, #16]",
+    if ints:                                          # 溢れで `__` になった実引数(設計者の答え 2026-11-25)なら、関数は走らず答えが `__`(直列の呼びと同じ)
+        ln += ["\tmovz x10, #0x8000, lsl #48"] + ["\tcmp x%d, x10" % i for i in ints[:1]] + ["\tb.eq 1f"]
+        for i in ints[1:]: ln += ["\tcmp x%d, x10" % i, "\tb.eq 1f"]
+        ln += ["\tbl %s" % symbol, "\tb 2f", "1:", "\tmovz x0, #0x8000, lsl #48", "2:"]
+    else: ln += ["\tbl %s" % symbol]
+    ln += ["\tldr x9, [x29, #16]", "\tstr x0, [x9, #16]",
            "\tmrs x10, cntvct_el0", "\tldr x11, [x29, #24]", "\tsub x10, x10, x11", "\tstr x10, [x9, #32]",
            "\tldp x29, x30, [sp], #32", "\tret", ""]
     return ln
