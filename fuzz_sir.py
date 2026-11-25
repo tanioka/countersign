@@ -7,6 +7,7 @@ from fixblank import fix
 
 LIST_RATE = [0.0]
 DEF_RATE = [0.0]
+NAMES = [False]                    # --names: 定義の無い名前 zz を式に混ぜる(R21 で `!_`)
 FLOW_RATE = [0.0]
 NOVOID = [False]
 def num(r):
@@ -14,6 +15,7 @@ def num(r):
 def atom(r, ps):
     c = r.random()
     if ps and c < .4: return r.choice(ps)
+    if NAMES[0] and c < .15: return "zz"
     if c < .5 and not NOVOID[0]: return "__"
     return num(r)
 def expr(r, ps, d):
@@ -170,6 +172,7 @@ def main():
     NOVOID[0] = '--novoid' in sys.argv
     LIST_RATE[0] = 0.5 if '--lists' in sys.argv else 0.0
     DEF_RATE[0] = 1.0 if '--defaults' in sys.argv else 0.0
+    NAMES[0] = '--names' in sys.argv
     tally, bad = {}, []
     for _ in range(n):
         t = fix(program(r)); b = obs_sir(t)

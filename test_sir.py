@@ -33,3 +33,6 @@ def test_via_sir_flag():
 def test_fuzz_defaults():
     r = subprocess.run([sys.executable, "fuzz_sir.py", "300", "23", "--defaults", "--asm"], capture_output=True, text=True, timeout=900)
     assert r.returncode == 0, r.stdout[-1200:]
+def test_fuzz_names():
+    r = subprocess.run([sys.executable, "fuzz_sir.py", "500", "29", "--names", "--asm"], capture_output=True, text=True, timeout=900)
+    assert r.returncode == 0, r.stdout[-1200:]
