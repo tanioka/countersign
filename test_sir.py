@@ -93,6 +93,15 @@ def test_flow_composition_left_to_right():
     assert ev("(sb __ 3) (g __) 5 7") == ("flow", (-1, 7))
     assert ev("1 (sb 10 (3 > 5)) (g __) 5 9") == ("flow", (1, 6, 9))
     assert ev("(g __) (sb 10 (3 > 5)) 5") == ("val", 4)
+def test_plan_flow_tree_uniform_kinds():
+    # 単位になりうる実引数を含む流れは、単位かどうかの場合分けの木にする。葉の種類(値 1 つ・並び)が揃うときだけ。混ざれば今の道(罠)に戻す
+    import sign_sir as R, sign_interp as S
+    H = "g : x ? x + 1\nk : x y ? x + y\nsb : a b ? a - b\n"
+    f, top = R.lower(S.parse_source(H + "f : x ? 1 (k 4 (x > 5)) 5\nf 3\n"))
+    nodes = R.raise_ast(f, top)                                                  # 例外なく戻せる(種類が揃う: 葉はどれも並び)
+    assert nodes
+    f, top = R.lower(S.parse_source(H + "f : x ? (sb 10 (x > 5)) (g __) 5\nf 3\n"))
+    assert R.plan_flow(f, [("call", "sb", [("int", 10), ("cmp", ">", ("var", "x"), ("int", 5))]), ("call", "g", []), ("int", 5)]) is None       # 値 1 つの葉と並びの葉が混ざる
 def test_fuzz_flows_defaults_more_seeds():
     for a, seed in (("--flows", "3"), ("--flows", "7"), ("--defaults", "3")):
         r = subprocess.run([sys.executable, "fuzz_sir.py", "400", seed, a, "--asm"], capture_output=True, text=True, timeout=900)
