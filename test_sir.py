@@ -83,14 +83,18 @@ def test_strings_through_functions():
 def test_fuzz_strings_functions():
     r = subprocess.run([sys.executable, "fuzz_sir.py", "600", "61", "--strings", "--asm"], capture_output=True, text=True, timeout=900)
     assert r.returncode == 0, r.stdout[-1200:]
-def test_flow_of_consecutive_partials_refused():
-    # 余った関数が続く流れは合成(左の関数から実行。V3)。SIR は右から左への読みしか持たないので断る
+def test_flow_composition_left_to_right():
+    # 余った関数が続く流れは合成で、左の関数から実行する(V3、strict の Pipe)。strict の値と同じ
     import sign_sir as R, sign_interp as S
-    f, top = R.lower(S.parse_source("g : x ? x + 1\nsb : a b ? a - b\n(sb 10 (3 > 5)) (g __) 5\n"))
-    try: R.evaluate(f, top); assert False
-    except R.Unsup: pass
+    H = "g : x ? x + 1\nsb : a b ? a - b\n"
+    def ev(body):
+        f, top = R.lower(S.parse_source(H + body + "\n")); return R.evaluate(f, top)
+    assert ev("(sb 10 (3 > 5)) (g __) 5") == ("val", 6)
+    assert ev("(sb __ 3) (g __) 5 7") == ("flow", (-1, 7))
+    assert ev("1 (sb 10 (3 > 5)) (g __) 5 9") == ("flow", (1, 6, 9))
+    assert ev("(g __) (sb 10 (3 > 5)) 5") == ("val", 4)
 def test_fuzz_flows_defaults_more_seeds():
-    for a, seed in (("--flows", "3"), ("--defaults", "3")):
+    for a, seed in (("--flows", "3"), ("--flows", "7"), ("--defaults", "3")):
         r = subprocess.run([sys.executable, "fuzz_sir.py", "400", seed, a, "--asm"], capture_output=True, text=True, timeout=900)
         assert r.returncode == 0, a + r.stdout[-1200:]
 
