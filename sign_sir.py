@@ -5,6 +5,7 @@ SIR は、strict の読みを**木の形そのものに書き出した**中間�
   ("var", 名前)                                 仮引数(関数の本体の中)
   ("op", 記号, a, b)                            + - * / %。void の被演算子は単位で消える(`5 + _` は 5)。両方 void なら void。`/` `%` は割る数が 0 なら void(消えた void と同じ)
   ("fold", 記号, [項...])                      `[>] a b c` などの畳み: void は飛ばし、`<` `>` `<=` `>=` は残りを `(a op b) | b` で畳む(最小・最大)、`==` `=` は全部等しければその値、違えば void
+  ("abs", a)                                   絶対値 `|a|`(中が整数の 1 行)。void は void。値域が 0 を挟んで対称なので溢れない(integer_overflow.md)。リスト・並びの絶対値は断る
   ("neg", a)                                   符号反転。void は void のまま(`-_` は void。`0 - _` の 0 とは別)
   ("chain", [記号...], [項...])                  比べの連鎖: 3 項の範囲(`a < b < c` 等)は両方成り立てば真ん中の項、`=`・`==` だけの連鎖は全部等しければ最初の項。外れたら後ろの項は評価しない
   ("cmp", 記号, a, b)                           < > <= >= = == != !==。成り立てば a、外れ・どちらかが void なら void(R-rule、`a op b` は a か void)
@@ -18,13 +19,28 @@ I64_MAX, I64_MIN = 2**63 - 1, -(2**63 - 1)     # 範囲の下は -MAX(MIN に着
 class Unsup(Exception):
     pass
 
+class Funcs(dict):
+    """{関数名: (仮引数名の列, 本体の SIR)}。既定値のある関数だけ `defaults[名前]`(仮引数ごとの整数か None)を持つ(口は、既定値の無い口が先、既定値のある口が後)。"""
+    def __init__(self): super().__init__(); self.defaults = {}
+
+def int_default(d):
+    """既定値は整数の字面だけ(式の既定値は SIR の対象外)。"""
+    d = unblock(d)
+    if d[0] == "lit" and isinstance(d[1], int) and not isinstance(d[1], bool): return d[1]
+    if d[0] == "neg" and unblock(d[1])[0] == "lit" and isinstance(unblock(d[1])[1], int): return -unblock(d[1])[1]
+    raise Unsup("既定値が整数の字面でない")
+
 def lower(nodes):
-    """旧 AST の節の列 → ({関数名: (仮引数名の列, 本体の SIR)}, 最後の行の SIR か None)。下げられなければ Unsup"""
-    funcs, arity = {}, {}
+    """旧 AST の節の列 → (Funcs = {関数名: (仮引数名の列, 本体の SIR)}, 最後の行の SIR か None)。下げられなければ Unsup"""
+    funcs, arity = Funcs(), {}
     for n in nodes:
         if n[0] == "def":
             if isinstance(n[2], tuple) and n[2][0] == "lam":
-                if any(p[0] != "name" or p[2] is not None for p in n[2][1]): raise Unsup("括り・既定値の仮引数")
+                if any(p[0] != "name" for p in n[2][1]): raise Unsup("括りの仮引数")
+                ds = [None if p[2] is None else int_default(p[2]) for p in n[2][1]]
+                if any(d is not None for d in ds):
+                    if any(d is None for d in ds[ds.index(next(d for d in ds if d is not None)):]): raise Unsup("既定値のある口の後に、既定値の無い口")
+                    funcs.defaults[n[1]] = ds
                 arity[n[1]] = len(n[2][1])
             else: arity[n[1]] = 0                                                  # 値の定義は口の無い呼び
     body_top = None
@@ -84,6 +100,7 @@ def expr(n, params, arity):
             return ("idx", expr(n[2], params, arity), expr(n[3], params, arity))
         if op in ("==", "!==", "!="): return ("cmp", op, expr(n[2], params, arity), expr(n[3], params, arity))
         raise Unsup("演算子 " + op)
+    if k == "abs": return ("abs", expr(n[1], params, arity))
     if k == "norm": return ("len", expr(n[1], params, arity))
     if k == "cmp":
         xs = [expr(x, params, arity) for x in n[1]]
@@ -171,7 +188,7 @@ def evaluate(funcs, top, fuel=200000):
         if k == "list": return e[1]
         if k == "len":
             a = one(ev(e[1], env))
-            if a is None: return None
+            if a is None: return 0                                              # `||_||` は 0(value_spec 83 行、U〔答え〕2026-10-28 00:17)。以前は単位にしていて、strict と食い違った
             if not isinstance(a, tuple): raise Unsup("整数の長さ")
             return len(a)
         if k == "idx":
@@ -180,6 +197,10 @@ def evaluate(funcs, top, fuel=200000):
             if not isinstance(a, tuple) or isinstance(i, tuple): raise Unsup("添字の型")
             if i < 0: i += len(a)
             return a[i] if 0 <= i < len(a) else None
+        if k == "abs":
+            a = one(ev(e[1], env))
+            if isinstance(a, tuple): raise Unsup("リストの絶対値")
+            return None if a is None else abs(a)
         if k == "neg":
             a = one(ev(e[1], env))
             if isinstance(a, tuple): raise Unsup("リストの符号")
@@ -218,6 +239,14 @@ def evaluate(funcs, top, fuel=200000):
                 v = ev(x, env)
                 if isinstance(v, (PF, Flow)): raise Unsup("実引数が部分適用・並び")
                 args.append(v)
+            ds = getattr(funcs, "defaults", {}).get(e[1])
+            if ds is not None:                                                  # 既定値のある関数(R107): 足りない・単位の口は既定値で埋める。既定値の無い口が足りない・単位なら部分適用になるので断る
+                full = list(args) + [None] * (len(ds) - len(args))
+                for i, d in enumerate(ds):
+                    if full[i] is None:
+                        if d is None: raise Unsup("既定値のある関数の、既定値の無い口が足りない・単位")
+                        full[i] = d
+                return run_call(e[1], full)
             have = [v for v in args if v is not None]
             n = len(funcs[e[1]][0])
             if len(have) < n: return PF(e[1], have, n - len(have))                    # void の実引数が消えた・口が足りない: 後ろの値を待つ
@@ -253,7 +282,7 @@ def nonvoid(e):
     """e は void にならない(被演算子に置いても単位の読みが要らない)と静的に言える。"""
     k = e[0]
     if k in ("int", "var"): return True
-    if k == "neg": return nonvoid(e[1])
+    if k in ("neg", "abs"): return nonvoid(e[1])
     if k == "op":
         if not (nonvoid(e[2]) and nonvoid(e[3])): return False
         if e[1] in ("/", "%"): return e[3][0] == "int" and e[3][1] != 0
@@ -286,6 +315,10 @@ def raise_ast(funcs, top):
             e = inner
             for x in reversed(xs): e = ("bin", "&", x, e)
             return e
+        if k == "abs":                                                         # asm に絶対値の節は無い。`(x < 0 & 0 - x) | x`(void は void、0 は 0、負は符号反転)。x を 3 回評価するので呼びは戻さない
+            if has_call(e[1]): raise Unsup("絶対値の被演算子が呼びを含む")
+            x = blk(r(e[1], False))
+            return ("block", ("bin", "|", ("block", ("bin", "&", ("cmp", [x, ("lit", 0)], ["<"]), ("bin", "-", ("lit", 0), x))), x))
         if k == "neg": return ("neg", blk(r(e[1], False)))
         if k == "op": return ("bin", e[1], blk(r(e[2], False)), blk(r(e[3], False)))      # asm の算術は void を単位として扱い、0 割りは void(bin_tail)。包みは要らない
         if k in ("cmp", "chain"):
@@ -310,6 +343,8 @@ def raise_ast(funcs, top):
             return ("cases", [(None if c is None else blk(r(c, False)), blk(r(v, False))) for c, v in rows])
         if k == "call":
             if not e[2]: return ("id", e[1])
+            if e[1] in getattr(funcs, "defaults", {}) and not all(nonvoid(x) for x in e[2]):
+                raise Unsup("既定値のある関数の実引数が単位になりうる")           # 機械語は、単位の実引数を既定値で埋めず部分適用に読む(下の「既定値: 単位は既定値」の食い違い)。静的に単位でないと言えるときだけ戻す
             return ("seq", [("id", e[1])] + [blk(r(x, False)) for x in e[2]])          # void になりうる実引数は strict の部分適用。asm 側の strict_call_check が罠か断りにする
         if k == "list": return ("seq", [r(("int", v), False) for v in e[1]])
         if k == "idx": return ("bin", "'", blk(r(e[1], False)), blk(r(e[2], False)))
@@ -331,6 +366,8 @@ def raise_ast(funcs, top):
     out = []
     for name, (ps, body) in funcs.items():
         b = r(body, False)
-        out.append(("def", name, ("lam", [("name", p, None) for p in ps], b)) if ps else ("def", name, b))
+        ds = getattr(funcs, "defaults", {}).get(name, [None] * len(ps))
+        dd = lambda d: None if d is None else ("lit", d) if d >= 0 else ("neg", ("lit", -d))
+        out.append(("def", name, ("lam", [("name", p, dd(d)) for p, d in zip(ps, ds)], b)) if ps else ("def", name, b))
     out.append(r(top, False))
     return out

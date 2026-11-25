@@ -30,3 +30,6 @@ def test_via_sir_flag():
     assert rc == 0 and "旧経路で出します" in err and text
     rc, err, text2 = _compile("f : x y ?\n\tx > y : x / y\n\tx + 1\nf 3 4\n")     # 旗なしは今までどおり
     assert rc == 0 and "via-sir" not in err
+def test_fuzz_defaults():
+    r = subprocess.run([sys.executable, "fuzz_sir.py", "300", "23", "--defaults", "--asm"], capture_output=True, text=True, timeout=900)
+    assert r.returncode == 0, r.stdout[-1200:]

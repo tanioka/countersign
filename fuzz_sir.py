@@ -6,6 +6,7 @@ import sign_interp as S, sign_sir as R
 from fixblank import fix
 
 LIST_RATE = [0.0]
+DEF_RATE = [0.0]
 FLOW_RATE = [0.0]
 NOVOID = [False]
 def num(r):
@@ -21,7 +22,7 @@ def expr(r, ps, d):
     if c < .55: return f"({a} {r.choice('+-*/%')} {b})"
     if c < .75: return f"({a} {r.choice(['<','>','<=','>=','==','!=','='])} {b})"
     if c < .83: return f"({a} {r.choice('&|')} {b})"
-    if c < .88: return f"(0 - {a})"
+    if c < .88: return f"(0 - {a})" if r.random() < .6 else f"|{a}|"
     if c < .94:
         o = r.choice(["<", "<="]); return f"({a} {o} {b} {o} {expr(r, ps, d-1)})"
     if c < .97:
@@ -67,7 +68,19 @@ def list_program(r):
         defs += f"gf : xs i ? {body}\n"
         return defs + f"gf {r.choice(names)} {r.choice(['2', '1', '(1 < 0)', num(r)])}\n"
     return defs + lexpr(r, names, 3) + "\n"
+def defaults_program(r):
+    """既定値のある関数(整数の字面の既定値。既定値の無い口が先)と、その呼び。実引数は単位になりうる式も混ぜる。"""
+    nreq = r.randint(1, 2); nd = r.randint(1, 2)
+    req = ["x", "y"][:nreq]; dfl = [("p", r.choice([0, 1, -3, 7])), ("q", r.choice([2, 5, 100]))][:nd]
+    ps = req + [d[0] for d in dfl]
+    body = expr(r, ps, 2)
+    head = "gd :\n" + "".join(f"\t\t{n}\n" for n in req) + "".join(f"\t\t{n} : {v}\n" for n, v in dfl) + f"\t? {body}\n\n"
+    def arg(): return r.choice(["__", "(3 < 2)", num(r), "(" + expr(r, [], 1) + ")"]) if r.random() < .4 else num(r)
+    call = "gd " + " ".join(arg() for _ in range(r.randint(nreq, nreq + nd + (1 if r.random() < .2 else 0))))   # 口より 1 つ多い呼びは、余りが流れになる
+    if r.random() < .4: call = f"({call}) {r.choice('+-*')} {num(r)}"
+    return head + call + "\n"
 def program(r):
+    if DEF_RATE[0] and r.random() < DEF_RATE[0]: return defaults_program(r)
     if FLOW_RATE[0] and r.random() < FLOW_RATE[0]: return flow_program(r)
     if r.random() < LIST_RATE[0]: return list_program(r)
     out, fs = [], []
@@ -156,6 +169,7 @@ def main():
     FLOW_RATE[0] = 1.0 if '--flows' in sys.argv else 0.0
     NOVOID[0] = '--novoid' in sys.argv
     LIST_RATE[0] = 0.5 if '--lists' in sys.argv else 0.0
+    DEF_RATE[0] = 1.0 if '--defaults' in sys.argv else 0.0
     tally, bad = {}, []
     for _ in range(n):
         t = fix(program(r)); b = obs_sir(t)

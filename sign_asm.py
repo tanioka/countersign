@@ -5402,6 +5402,10 @@ class Program:
             y = tuple(x[:1]) + tuple(walk(z) for z in x[1:])
             if y[0] == "seq" and y[1] and y[1][0][0] == "id" and y[1][0][1] in dflt:
                 f = y[1][0][1]; k, ds = dflt[f]; args = y[1][1:]
+                if STRICT[0] and k < len(args) <= k + len(ds) and not all(_static_nonvoid(x) for x in args[k:]):
+                    # strict(coproduct_spec R107): 既定値のある口に来た単位の実引数は消えて、その口は既定値で埋まる(`gq 5 (3 < 2)` は 6)。ここは単位かどうかを実行時まで知らず、
+                    # 単位なら部分適用に読んで単位を返すので、答えが分かれる。静的に単位でないと言えるときだけ出す
+                    raise AsmError("%s: 既定値のある口に、単位になりうる実引数を書いた形は、--strict ではまだ出せません(単位は既定値で埋まる読みと、部分適用の読みで答えが分かれる)" % f)
                 if len(args) == k:
                     ps = self.fns[f]; m = {}
                     for p, a in zip(ps, args): m[p] = a
@@ -6505,6 +6509,14 @@ USAGE = """使い方: python3 sign.py --asm 〈プログラム.sn〉 [--target=b
 
 
 STRICT = [False]
+
+def _static_nonvoid(x):
+    """旧 AST の式 x が、実行時に単位にならないと静的に言える(整数の字面とその符号・括り・`+ - *`)。"""
+    if not isinstance(x, tuple) or not x: return False
+    if x[0] == "lit": return isinstance(x[1], int)
+    if x[0] in ("neg", "block"): return _static_nonvoid(x[1])
+    if x[0] == "bin" and x[1] in ("+", "-", "*"): return _static_nonvoid(x[2]) and _static_nonvoid(x[3])
+    return False
 VIA_SIR = [False]
 def _fold_minmax(n):
     """--strict --asm: 順序の比べの畳み `[>] a b …`(`[>=]` は max、`[<]`・`[<=]` は min。sign_interp.fold_cmp)を、

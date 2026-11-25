@@ -59,7 +59,27 @@ def obs_asm(t):
 i_ = src.index("MAX, MIN1 = "); j_ = src.index("\n]\n", src.index("CASES = [")) + 3
 exec(src[i_:j_], ns)
 via = collections.Counter(); front = collections.Counter(); back = collections.Counter(); unsup = collections.Counter(); bad = []
-for name, t in ns["CASES"]:
+# SIR だけが広げた形の見本(test_asm.py の CASES は旧経路の試験なので、そこには足さずここに置く)。strict が断る・SIR が断る形も、断りとして数える。
+EXTRA = [
+    ("絶対値: 負", "|-5|\n"), ("絶対値: 正", "|5|\n"), ("絶対値: 0", "|0|\n"), ("絶対値: 単位", "|__|\n"),
+    ("絶対値: 範囲の端", "|-9223372036854775807|\n"), ("絶対値: 式", "|3 - 8|\n"), ("絶対値: 外れた比べ", "|(3 < 2)|\n"),
+    ("絶対値: 仮引数", "f : x ? |x|\nf -7\n"), ("絶対値: 仮引数に単位", "f : x ? |x|\nf (3 < 2)\n"),
+    ("絶対値: 名前", "x : -4\n|x|\n"), ("絶対値: 溢れた式", "|9223372036854775807 + 1|\n"),
+    ("絶対値: 呼びを含む", "g : x ? x - 9\n|g 4|\n"), ("絶対値: 絶対値の中の絶対値", "|(|-3| - 8)|\n"),
+    ("絶対値: リスト", "l : 1 -2\n|l|\n"),
+    ("ノルム: 単位は 0", "||__||\n"), ("ノルム: 外れた比べは 0", "3 + ||(3 < 2)||\n"),
+    ("既定値: 省く", "gq :\n\t\tx\n\t\ty : 1\n\t? x + y\n\ngq 5\n"),
+    ("既定値: 与える", "gq :\n\t\tx\n\t\ty : 1\n\t? x + y\n\ngq 5 7\n"),
+    ("既定値: 単位は既定値", "gq :\n\t\tx\n\t\ty : 1\n\t? x + y\n\ngq 5 (3 < 2)\n"),
+    ("既定値: 必須が単位", "gq :\n\t\tx\n\t\ty : 1\n\t? x + y\n\ngq (3 < 2)\n"),
+    ("既定値: 被演算子", "gq :\n\t\tx\n\t\ty : 1\n\t? x + y\n\n(gq 5) + 1\n"),
+    ("既定値: 呼びの実引数", "gq :\n\t\tx\n\t\ty : 1\n\t? x + y\n\ngq (3 - 1) (gq 4)\n"),
+    ("既定値: 負の値", "gq :\n\t\tx\n\t\ty : 1\n\t? x + y\n\ngq 5 -4\n"),
+    ("既定値: 溢れ", "gq :\n\t\tx\n\t\ty : 1\n\t? x + y\n\ngq 9223372036854775807\n"),
+    ("既定値: 2 つ", "gz :\n\t\tx\n\t\ty : 2\n\t\tz : 3\n\t? x * y + z\n\ngz 4\n"),
+    ("既定値: 2 つと上書き", "gz :\n\t\tx\n\t\ty : 2\n\t\tz : 3\n\t? x * y + z\n\ngz 4 5\n"),
+]
+for name, t in ns["CASES"] + EXTRA:
     t2 = fix(t)
     a, b = obs_strict(t2), obs_sir(t2)
     if b[0] == "unsup": front["SIR 未対応"] += 1; unsup[b[1][:24]] += 1; continue
