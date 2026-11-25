@@ -433,6 +433,90 @@ def check_textual(funcs, top):
     for n, (ps, b) in funcs.items(): walk(b, n, tv(b, n))
     walk(top, None, tv(top, None))
 
+class _Need(Exception):
+    def __init__(self, e): self.e = e
+
+def plan_flow(funcs, items, cap=5):
+    """流れ(`("flow", [項...])`)のうち、実引数が単位になりうる呼び・口の足りない呼び(余った関数)を含む形を、
+    **単位かどうかで場合分けした木**(`(E & A) | B`)に書き換える。各葉は、余った関数も合成も解いた、普通の並び(値と口の埋まった呼びだけ)。
+    解き方は `evaluate` の `fold_flow`(strict の resolve_fold・Pipe)と同じ左からの畳みを、式の上で行う: 単位かどうかが決まらない式は場合分けの点(_Need)にする。
+    木の符号化は、葉がどれも単位でない(空でない)ときだけ正しい(`E & A` の A が単位だと `|` の B へ落ちるため)。空の葉・値 1 つの葉と並びの葉が混ざる(機械語は枝の種類を揃えられない)・場合分けが cap を超える・関数の答えが並びなら None(今の道に戻す)。"""
+    dfl = getattr(funcs, "defaults", {})
+    if any(x[0] == "call" and x[1] in dfl for x in items): return None
+    memo = {}
+    def body_nv(f, seen=()):
+        if f in memo: return memo[f]
+        if f in seen: return False
+        ps, b = funcs[f]
+        memo[f] = False if b[0] in ("flow", "rows", "list") else nv(b, seen + (f,))
+        return memo[f]
+    def nv(x, seen=()):
+        if x[0] == "call":
+            ps, b = funcs[x[1]]
+            return len(x[2]) == len(ps) and all(nv(a, seen) for a in x[2]) and body_nv(x[1], seen)
+        return nonvoid(x)
+    def interesting(x):
+        if x[0] != "call": return False
+        ps, b = funcs[x[1]]
+        return len(x[2]) < len(ps) or not all(nv(a) for a in x[2])
+    if not any(interesting(x) for x in items): return None
+    for x in items:
+        if x[0] == "call" and funcs[x[1]][1][0] == "flow": return None
+    def sim(dec):
+        def isnv(x):
+            if nv(x): return True
+            k = repr(x)
+            if k in dec: return dec[k]
+            raise _Need(x)
+        vs = []                                                                         # 評価した項: ("v", 式) か ("pf", 関数, 実引数の式, 残りの口)
+        for x in items:
+            if x[0] == "call":
+                have = [a for a in x[2] if isnv(a)]
+                n = len(funcs[x[1]][0])
+                if len(have) < n: vs.append(("pf", x[1], have, n - len(have))); continue
+                c = ("call", x[1], have)
+                if isnv(c): vs.append(("v", c))
+            elif isnv(x): vs.append(("v", x))
+        vals, pre, pipe = [], None, None
+        def feed(v):
+            while True:
+                if v is None: return None
+                f, args, need = pipe[0]
+                a2 = args + [v]
+                if need > 1: pipe[0] = (f, a2, need - 1); return None
+                c = ("call", f, a2)
+                rr = c if isnv(c) else None
+                pipe.pop(0)
+                if not pipe: return ("done", rr)
+                v = rr
+        for t in vs:
+            if pipe is not None:
+                if t[0] == "pf": pipe.append((t[1], list(t[2]), t[3]))
+                else:
+                    out = feed(t[1])
+                    if out is not None:
+                        vals = (pre if pre is not None else []) + ([] if out[1] is None else [out[1]]); pre = None; pipe = None
+            elif t[0] == "pf": pre = vals; vals = []; pipe = [(t[1], list(t[2]), t[3])]
+            else: vals.append(t[1])
+        if pipe is not None: vals = pre if pre is not None else []
+        return vals
+    def build(dec):
+        if len(dec) > cap: raise Unsup("場合分けが多すぎる")
+        try: leaf = sim(dec)
+        except _Need as n:
+            k = repr(n.e)
+            return ("node", n.e, build({**dec, k: True}), build({**dec, k: False}))
+        if not leaf: raise Unsup("空の葉")
+        return ("leaf", leaf)
+    try: tree = build({})
+    except Unsup: return None
+    def sizes(t): return {len(t[1]) > 1} if t[0] == "leaf" else sizes(t[2]) | sizes(t[3])
+    if len(sizes(tree)) > 1: return None                                          # 葉が値 1 つの枝と並びの枝が混ざる形は、機械語が枝の種類を揃えられない(Int と並び)
+    def enc(t):
+        if t[0] == "leaf": return t[1][0] if len(t[1]) == 1 else ("flow", list(t[1]), "leaf")
+        return ("tree", t[1], enc(t[2]), enc(t[3]))                                  # 葉がどれも単位でないので、`cases`(行)で出せる(`&` `|` の連鎖は並びの値を持てない)
+    return enc(tree)
+
 def raise_ast(funcs, top):
     """SIR を旧 AST の列にする。void の単位の読みが要る形(void になりうる被演算子・呼びの実引数)は Unsup。整数だけ。"""
     def blk(x): return ("block", x) if x[0] in ("bin", "cmp", "seq", "neg", "cases") else x
@@ -470,6 +554,8 @@ def raise_ast(funcs, top):
             return ("cmp", bs, ops)
         if k == "and": return ("bin", "&", blk(r(e[1], False)), blk(r(e[2], False)))
         if k == "or": return ("bin", "|", blk(r(e[1], False)), blk(r(e[2], False)))
+        if k == "tree":                                                            # plan_flow の場合分け: E が単位でなければ A、単位なら B。A も B も単位にならない
+            return ("block", ("cases", [(blk(r(e[1], False)), blk(r(e[2], False))), (None, blk(r(e[3], False)))]))
         if k == "rows":
             rows = e[1]
             if any(c is not None and not nonvoid(v) for c, v in rows[:-1]) or (rows[-1][0] is not None and not nonvoid(rows[-1][1]) and len(rows) > 1 and False):
@@ -503,6 +589,9 @@ def raise_ast(funcs, top):
             return acc
         if k == "flow":
             items = [x for x in e[1] if x[0] != "void"]                                # 字面の単位は並びで消える(`inc 2 zz` の余りの未定義の名前)
+            if len(items) == len(e[1]) and len(items) >= 2 and len(e) == 2:                   # 3 つ目の要素は「場合分けの葉」の印(もう解いた)
+                planned = plan_flow(funcs, items)                                       # 単位になりうる実引数・余った関数がある流れは、単位かどうかで場合分けした木にする(合成を機械語で正しく出す)
+                if planned is not None: return r(planned, in_flow)
             if not items: return ("id", "__")
             if len(items) < len(e[1]): return r(("flow", items), in_flow)
             if len(e[1]) == 1: return r(e[1][0], in_flow)
