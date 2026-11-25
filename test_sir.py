@@ -36,3 +36,6 @@ def test_fuzz_defaults():
 def test_fuzz_names():
     r = subprocess.run([sys.executable, "fuzz_sir.py", "500", "29", "--names", "--asm"], capture_output=True, text=True, timeout=900)
     assert r.returncode == 0, r.stdout[-1200:]
+def test_fuzz_partial_rows():
+    r = subprocess.run([sys.executable, "fuzz_sir.py", "400", "41", "--partial", "--asm"], capture_output=True, text=True, timeout=900)
+    assert r.returncode == 0, r.stdout[-1200:]

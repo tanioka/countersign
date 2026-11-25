@@ -234,7 +234,7 @@ def evaluate(funcs, top, fuel=200000):
             for c, v in e[1]:                                                  # 行は `c & v | 次の行`(value_spec V10)。v が void なら次の行へ落ちる
                 if c is None or one(ev(c, env)) is not None:
                     r = ev(v, env)
-                    if isinstance(r, PF): raise Unsup("行の値が部分適用")
+                    if isinstance(r, PF): r = None                                 # 行の値に裸の関数が残れば `!_`(coproduct_spec bare-function-return)。枝の値の `!_` は次の行へ進む(V8・V10)
                     if r is not None: return r
             return None
         if k == "call":
