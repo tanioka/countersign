@@ -171,6 +171,38 @@ def evaluate(funcs, top, fuel=200000):
         ps, body = funcs[name]
         v = ev(body, dict(zip(ps, args)))
         return None if isinstance(v, PF) else v                                 # 余った関数は関数の境界を越えない
+    def fold_flow(items):
+        """並び(値と余った関数)を左から畳む(strict の resolve_fold・Pipe と同じ。V3: 関数·値は口を 1 つ埋める、関数·関数は合成、値·関数は積む)。
+        合成した関数(段の並び)に値が来ると、最初の開いた段から順に埋め、埋まった段の答えは次の段の最初の口へ流れる。答えが単位なら次の段は何も受けず開いたまま。
+        段が全部埋まれば答えを並びに戻す。足りないまま並びが終われば、余った関数は消える(値の上に積まれた関数は警告つきで消え、下の値が残る)"""
+        vals, pre, pipe = [], None, None
+        def settle(out):
+            nonlocal vals, pre, pipe
+            vals = (pre if pre is not None else []) + ([] if out is None else [out]); pre = None; pipe = None
+        def feed(v):
+            while True:
+                st = pipe[0]
+                if v is None: return None                                      # 単位は口を埋めない。段は開いたまま
+                a2 = st.args + [v]
+                if len(a2) < st.need + len(st.args):                           # まだ口が残る
+                    pipe[0] = PF(st.f, a2, st.need - 1); return None
+                r = run_call(st.f, a2)
+                if isinstance(r, Flow): raise Unsup("合成した関数の段の答えが並び")
+                pipe.pop(0)
+                if not pipe: return ("done", r)
+                v = r
+        for x in items:
+            if pipe is not None:
+                if isinstance(x, PF): pipe.append(PF(x.f, list(x.args), x.need))
+                else:
+                    out = feed(x)
+                    if out is not None: settle(out[1])
+            elif isinstance(x, PF): pre = vals; vals = []; pipe = [PF(x.f, list(x.args), x.need)]
+            else: vals.append(x)
+        if pipe is not None:
+            if pre is not None: vals = pre                                    # 余った関数は消え、下の値が残る
+            else: vals = []
+        return None if not vals else vals[0] if len(vals) == 1 else Flow(vals)
     def ev(e, env):
         steps[0] += 1
         if steps[0] > fuel: raise Fuel()
@@ -309,16 +341,7 @@ def evaluate(funcs, top, fuel=200000):
                 if isinstance(v, tuple): raise Unsup("流れの中のリスト")
                 if textual(v): raise Unsup("文字列・文字を並びに置く")
                 items.extend(v) if isinstance(v, Flow) else items.append(v)
-            if any(isinstance(x, PF) and isinstance(y, PF) for x, y in zip(items, items[1:])): raise Unsup("余った関数(部分適用)が続く流れ(合成。V3: 次も関数なら合成して左の関数から実行する。SIR は右から左へ渡す読みしか持たない)")
-            out = []
-            for it in reversed(items):                                          # 右から左へ。部分適用は後ろの値を受け取る(足りなければ全部受けて消える)
-                if isinstance(it, PF):
-                    if len(out) >= it.need:
-                        v = run_call(it.f, it.args + out[:it.need]); rest = out[it.need:]
-                        out = (list(v) if isinstance(v, Flow) else [] if v is None else [v]) + rest
-                    else: out = []
-                else: out.insert(0, it)
-            return None if not out else out[0] if len(out) == 1 else Flow(out)
+            return fold_flow(items)
         raise Unsup("SIR " + k)
     try:
         v = ev(top, {})

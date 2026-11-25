@@ -34,7 +34,7 @@ def expr(r, ps, d):
         xs = [atom(r, ps) if r.random() < .7 else "(" + expr(r, ps, d-1) + ")" for _ in range(r.randint(1, 4))]
         return f"([{op}] {' '.join(xs)})"
     return f"({a} = {b} = {expr(r, ps, d-1)})"
-FLOW_G = "g : x ? x + 1\nk : x y ? x + y\nm : a b c ? a + b + c\np : x ? g (x > 5)\n"
+FLOW_G = "g : x ? x + 1\nk : x y ? x + y\nm : a b c ? a + b + c\np : x ? g (x > 5)\nsb : a b ? a - b\ndv : a b ? a / b\nh3 : a b c ? a * b - c\n"
 def vexp(r, ps):
     return r.choice(["__", "__", "(x > 5)", "(3 > 5)", "(7 > 5)"]) if ps else r.choice(["__", "(3 > 5)", "(7 > 5)", "4"])
 def fitem(r, ps):
@@ -43,7 +43,10 @@ def fitem(r, ps):
     if c < .55: return f"(g {vexp(r, ps)})"
     if c < .72: return f"(k {r.choice(['4', vexp(r, ps)])} {vexp(r, ps)})"
     if c < .85: return f"(m {vexp(r, ps)} {r.choice(['1', vexp(r, ps)])} {r.choice(['2', vexp(r, ps)])})"
-    if c < .92: return f"(m {vexp(r, ps)})"
+    if c < .88: return f"(m {vexp(r, ps)})"
+    if c < .91: return f"(sb {r.choice(['10', '3', vexp(r, ps)])} {vexp(r, ps)})"                # 順序で答えが変わる関数(合成の向きの確かめ)
+    if c < .94: return f"(dv {r.choice(['100', '7', vexp(r, ps)])} {r.choice(['0', '3', vexp(r, ps)])})"
+    if c < .96: return f"(h3 {r.choice(['4', vexp(r, ps)])} {vexp(r, ps)})"
     return f"(p {r.choice(ps) if ps else '3'})"
 def flow_program(r):
     n = r.randint(1, 6)
