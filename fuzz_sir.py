@@ -8,6 +8,7 @@ from fixblank import fix
 LIST_RATE = [0.0]
 DEF_RATE = [0.0]
 PARTIAL = [False]
+STRINGS = [False]                  # --strings: 文字列・文字の定数(S1。SIR_VALUES.md)
 NAMES = [False]                    # --names: 定義の無い名前 zz を式に混ぜる(R21 で `!_`)
 FLOW_RATE = [0.0]
 NOVOID = [False]
@@ -95,7 +96,24 @@ def partial_program(r):
     if r.random() < .3: call = f"({call}) {r.choice('+-*')} {num(r)}"
     if r.random() < .15: call += " " + num(r)
     return head + call + "\n"
+def strings_program(r):
+    """文字列・文字の名前と、長さ・文字の答え・断る形を混ぜる。使える形は `||s||`(長さ)・文字の名前・答え。ほかは SIR が断るか、断らずに strict と合う"""
+    al = "abcdefgh"
+    s1 = "".join(r.choice(al) for _ in range(r.randint(1, 6))); s2 = "".join(r.choice(al) for _ in range(r.randint(1, 4)))
+    c1 = r.choice(al); c2 = r.choice(al)
+    head = f"s : `{s1}`\nt : `{s2}`\nc : \\{c1}\nd : \\{c2}\n"
+    n = lambda: r.choice(["||s||", "||t||", "||c||", "||`" + s1 + "`||", num(r), "(||s|| - ||t||)", "(||s|| * 3)", "(||s|| / 2)"])
+    pick = r.random()
+    if pick < .25: body = f"{n()} {r.choice('+-*/%')} {n()}"
+    elif pick < .4: body = f"({n()} {r.choice(['<','>','=','!='])} {n()}) & {n()}"
+    elif pick < .5: body = r.choice(["c", "d", "(c | d)", "(5 & c)", "(__ | d)", "(c & d)", "(c = d)", "(c < d)", "(c + 1)"])
+    elif pick < .6: body = r.choice(["s", "t", "(s | t)", "(s ' 1)", "(s ' 9)", "(s = t)", "(s + 1)", "||s + 1||"])
+    elif pick < .8: return head + f"f : x ? x + {n()}\nf {num(r)}\n"
+    elif pick < .9: return head + f"f : x ?\n\t{n()} > x : {n()}\n\t{n()}\n\nf {r.choice(['1', '3', '9'])}\n"
+    else: return head + f"f : x ? ||x||\nf {r.choice(['s', 'c', '`ab`', '5'])}\n"
+    return head + body + "\n"
 def program(r):
+    if STRINGS[0]: return strings_program(r)
     if PARTIAL[0]: return partial_program(r)
     if DEF_RATE[0] and r.random() < DEF_RATE[0]: return defaults_program(r)
     if FLOW_RATE[0] and r.random() < FLOW_RATE[0]: return flow_program(r)
@@ -129,6 +147,8 @@ def obs_strict(t):
     if v.startswith("[") and v.endswith("]"):
         try: return ("flow", tuple(int(x) for x in v[1:-1].split(",")))
         except ValueError: pass
+    if len(v) >= 3 and v[0] == v[-1] == "`" and v[1:-1].isascii(): return ("str", v[1:-1])
+    if len(v) == 2 and v[0] == "\\" and v[1].isalnum() and v[1].isascii(): return ("chr", ord(v[1]))
     return ("void",) if v == "!_" else (("val", int(v)) if v.lstrip("-").isdigit() else ("other", v[:20]))
 def obs_sir(t):
     try:
@@ -189,6 +209,7 @@ def main():
     DEF_RATE[0] = 1.0 if '--defaults' in sys.argv else 0.0
     NAMES[0] = '--names' in sys.argv
     PARTIAL[0] = '--partial' in sys.argv
+    STRINGS[0] = '--strings' in sys.argv
     tally, bad = {}, []
     for _ in range(n):
         t = fix(program(r)); b = obs_sir(t)
@@ -201,10 +222,13 @@ def main():
         lx = FLOW_RATE[0] > 0 or b[0] == "flow" or PARTIAL[0]      # 余りの実引数がある呼びは、実行時に単位かどうかで値か流れかが変わる。非 linux の観測は流れを読めないので、linux で見る
         if "--asm" in sys.argv:
             c = obs_asm(t, lx)
+            if b[0] == "chr" and c == ("val", b[1]): c = b                         # 機械語の文字は整数と同じ字で出る
+            if b[0] == "str": tally["文字列の答えは機械語と比べない"] = tally.get("文字列の答えは機械語と比べない", 0) + 1; continue
             k = "後段 一致" if c == b else ("後段 断り" if c[0] == "refuse" else "後段 罠" if c[0] == "trap" else "後段 誤答")
             tally[k] = tally.get(k, 0) + 1
             if k == "後段 誤答": bad.append((t, "機械語 " + str(c), b))
             d = obs_asm_sir(t, lx)
+            if b[0] == "chr" and d == ("val", b[1]): d = b
             k2 = "SIR経由 戻せない" if d[0] == "unsup" else "SIR経由 一致" if d == b else ("SIR経由 断り" if d[0] == "refuse" else "SIR経由 罠" if d[0] == "trap" else "SIR経由 誤答")
             tally[k2] = tally.get(k2, 0) + 1
             if k2 == "SIR経由 誤答": bad.append((t, "SIR経由の機械語 " + str(d), b))

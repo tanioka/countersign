@@ -12,12 +12,23 @@ SIR は、strict の読みを**木の形そのものに書き出した**中間�
   ("and", a, b) / ("or", a, b)                  `&`: a が void でなければ b、void なら void。`|`: a が void でなければ a、void なら b
   ("rows", [(条件 か None, 値), ...])             行の列。各行は `c & v | 次の行`(V10): 条件が void でなく値も void でなければその値。値が void なら次の行へ落ちる。条件 None は既定の行。尽きれば void
   ("call", 名前, [実引数...])                     関数の呼び。口の数ちょうど。実引数が 1 つでも void なら呼びは成り立たず(部分適用)、SIR の評価は ("partial",) を返す
+  ("str", "abc") / ("chr", コード)              文字列・文字の定数(S1、SIR_VALUES.md)。ASCII だけ。使える所は `||s||`(長さ)・名前・答えだけで、算術・比べ・添字・実引数・並びに置く形は断る
   ("flow", [項...])                              並び(積)。void の項は消える。項が 1 つだけ残ればその項、0 ならvoid
 SIR に下げられない形は Unsup を投げ、理由を持つ(未対応の数え方が、そのまま次の段の仕事の一覧になる)。"""
 I64_MAX, I64_MIN = 2**63 - 1, -(2**63 - 1)     # 範囲の下は -MAX(MIN に着くのも `!_`、value_spec V5)
 
+from sign_interp import Char
+
 class Unsup(Exception):
     pass
+
+class Str(str): pass                                                           # 文字列の値(ASCII)
+class Chr:                                                                      # 文字の値。整数とは別の種類(strict が区別する)なので int の部分クラスにしない
+    __slots__ = ("c",)
+    def __init__(self, c): self.c = c
+    def __eq__(self, o): return isinstance(o, Chr) and o.c == self.c
+    def __hash__(self): return hash(("chr", self.c))
+def textual(v): return isinstance(v, (Str, Chr))
 
 class Funcs(dict):
     """{関数名: (仮引数名の列, 本体の SIR)}。既定値のある関数だけ `defaults[名前]`(仮引数ごとの整数か None)を持つ(口は、既定値の無い口が先、既定値のある口が後)。"""
@@ -76,6 +87,12 @@ def expr(n, params, arity):
     n = unblock(n)
     k = n[0]
     if k == "lit":
+        if isinstance(n[1], str):
+            if not n[1].isascii() or not n[1]: raise Unsup("ASCII でない・空の文字列と文字")
+            if isinstance(n[1], Char):
+                if len(n[1]) != 1: raise Unsup("文字の形")
+                return ("chr", ord(n[1]))
+            return ("str", str(n[1]))
         if not isinstance(n[1], int) or isinstance(n[1], bool): raise Unsup("整数でない字面")
         return ("int", n[1])
     if k == "neg":
@@ -160,10 +177,13 @@ def evaluate(funcs, top, fuel=200000):
         k = e[0]
         if k == "int": return e[1]
         if k == "void": return None
+        if k == "str": return Str(e[1])
+        if k == "chr": return Chr(e[1])
         if k == "var": return env[e[1]]
         if k == "op":
             a, b = one(ev(e[2], env)), one(ev(e[3], env))
             if isinstance(a, tuple) or isinstance(b, tuple): raise Unsup("リストの算術")
+            if textual(a) or textual(b): raise Unsup("文字列・文字の算術")
             if a is None or b is None: return b if a is None else a
             op = e[1]
             if op == "+": return clamp(a + b)
@@ -175,6 +195,7 @@ def evaluate(funcs, top, fuel=200000):
         if k == "cmp":
             a, b = one(ev(e[2], env)), one(ev(e[3], env))
             if isinstance(a, tuple) or isinstance(b, tuple): raise Unsup("リストの比べ")
+            if textual(a) or textual(b): raise Unsup("文字列・文字の比べ")
             if a is None or b is None: return None
             op = e[1]
             ok = {"<": a < b, ">": a > b, "<=": a <= b, ">=": a >= b, "=": a == b, "==": a == b, "!=": a != b, "!==": a != b}[op]
@@ -182,6 +203,7 @@ def evaluate(funcs, top, fuel=200000):
         if k == "fold":
             vs = [v for v in (one(ev(x, env)) for x in e[2]) if v is not None]
             if any(isinstance(v, tuple) for v in vs): raise Unsup("リストの畳み")
+            if any(textual(v) for v in vs): raise Unsup("文字列・文字の畳み")
             if not vs: return None
             op = e[1]
             if op in ("==", "="): return vs[0] if all(v == vs[0] for v in vs) else None
@@ -193,10 +215,13 @@ def evaluate(funcs, top, fuel=200000):
         if k == "len":
             a = one(ev(e[1], env))
             if a is None: return 0                                              # `||_||` は 0(value_spec 83 行、U〔答え〕2026-10-28 00:17)。以前は単位にしていて、strict と食い違った
+            if isinstance(a, Str): return len(a)                                 # strict: ||`abc`|| = 3
+            if isinstance(a, Chr): return 1                                      # ||\a|| = 1
             if not isinstance(a, tuple): raise Unsup("整数の長さ")
             return len(a)
         if k == "idx":
             a, i = one(ev(e[1], env)), one(ev(e[2], env))
+            if textual(a) or textual(i): raise Unsup("文字列・文字の添字(`'` は仕様 V12 のまだ。機械語も範囲外の答えが strict と違う)")
             if a is None or i is None: return None
             if not isinstance(a, tuple) or isinstance(i, tuple): raise Unsup("添字の型")
             if i < 0: i += len(a)
@@ -204,10 +229,12 @@ def evaluate(funcs, top, fuel=200000):
         if k == "abs":
             a = one(ev(e[1], env))
             if isinstance(a, tuple): raise Unsup("リストの絶対値")
+            if textual(a): raise Unsup("文字列・文字の絶対値")
             return None if a is None else abs(a)
         if k == "neg":
             a = one(ev(e[1], env))
             if isinstance(a, tuple): raise Unsup("リストの符号")
+            if textual(a): raise Unsup("文字列・文字の符号")
             return None if a is None else clamp(-a)
         if k == "chain":
             ts, ops = e[2], e[1]
@@ -215,6 +242,7 @@ def evaluate(funcs, top, fuel=200000):
             for i, t in enumerate(ts):
                 v = one(ev(t, env))
                 if isinstance(v, tuple): raise Unsup("リストの比べ")
+                if textual(v): raise Unsup("文字列・文字の比べ")
                 if v is None: return None
                 vals.append(v)
                 if i:
@@ -225,14 +253,18 @@ def evaluate(funcs, top, fuel=200000):
         if k == "and":
             a = ev(e[1], env)
             if isinstance(a, (PF, Flow)): raise Unsup("部分適用・並びを & の左に置く")
+            if textual(a): raise Unsup("文字列・文字を & の左に置く")
             return None if a is None else ev(e[2], env)
         if k == "or":
             a = ev(e[1], env)
             if isinstance(a, (PF, Flow)): raise Unsup("部分適用・並びを | の左に置く")
+            if textual(a): raise Unsup("文字列・文字を | の左に置く")
             return a if a is not None else ev(e[2], env)
         if k == "rows":
             for c, v in e[1]:                                                  # 行は `c & v | 次の行`(value_spec V10)。v が void なら次の行へ落ちる
-                if c is None or one(ev(c, env)) is not None:
+                cv = None if c is None else one(ev(c, env))
+                if textual(cv): raise Unsup("文字列・文字を行の条件に置く")
+                if c is None or cv is not None:
                     r = ev(v, env)
                     if isinstance(r, PF): r = None                                 # 行の値に裸の関数が残れば `!_`(coproduct_spec bare-function-return)。枝の値の `!_` は次の行へ進む(V8・V10)
                     if r is not None: return r
@@ -242,6 +274,7 @@ def evaluate(funcs, top, fuel=200000):
             for x in e[2]:
                 v = ev(x, env)
                 if isinstance(v, (PF, Flow)): raise Unsup("実引数が部分適用・並び")
+                if textual(v): raise Unsup("文字列・文字を関数へ渡す(S2)")
                 args.append(v)
             ds = getattr(funcs, "defaults", {}).get(e[1])
             if ds is not None:                                                  # 既定値のある関数(R107): 足りない・単位の口は既定値で埋める。既定値の無い口が足りない・単位なら部分適用になるので断る
@@ -261,6 +294,7 @@ def evaluate(funcs, top, fuel=200000):
                 v = ev(x, env)
                 if v is None: continue
                 if isinstance(v, tuple): raise Unsup("流れの中のリスト")
+                if textual(v): raise Unsup("文字列・文字を並びに置く")
                 items.extend(v) if isinstance(v, Flow) else items.append(v)
             out = []
             for it in reversed(items):                                          # 右から左へ。部分適用は後ろの値を受け取る(足りなければ全部受けて消える)
@@ -278,6 +312,8 @@ def evaluate(funcs, top, fuel=200000):
     except RecursionError: return ("fuel",)
     if isinstance(v, PF): v = None                                              # 余った関数は消える
     if isinstance(v, Flow): return ("flow", tuple(v))
+    if isinstance(v, Str): return ("str", str(v))
+    if isinstance(v, Chr): return ("chr", v.c)
     if isinstance(v, tuple): return ("flow", v)                                 # 整数の並び(リスト)は流れと同じ字で出る
     return ("void",) if v is None else ("val", v)
 
@@ -301,11 +337,37 @@ def has_call(e):
         if isinstance(x, list) and any(has_call(y) for y in x if isinstance(y, tuple)): return True
     return False
 
+def check_textual(funcs, top):
+    """文字列・文字は、機械語へ戻せる所だけ戻す(S1): `||…||` の直下、口の無い定義の本体そのもの、いちばん上の答え。それ以外(算術・比べ・&|・行・実引数・並びの中)は断る。
+    口の無い定義が文字列・文字なら、その名前の呼びも同じ扱い。機械語の文字列・文字は整数と同じ字で出る(答えの種類は SIR 側の観測が持つ)"""
+    sc = {n for n, (ps, b) in funcs.items() if not ps and b[0] in ("str", "chr")}
+    def walk(e, ok):
+        if not isinstance(e, tuple): return
+        k = e[0]
+        if k in ("str", "chr") and not ok: raise Unsup("文字列・文字を機械語に戻せない位置に置く")
+        if k == "call" and e[1] in sc and not ok: raise Unsup("文字列・文字の名前を機械語に戻せない位置に置く")
+        for x in e[1:]:
+            if isinstance(x, tuple) and x and isinstance(x[0], str): walk(x, k == "len")
+            elif isinstance(x, (list, tuple)):
+                for y in x:
+                    if isinstance(y, tuple) and y and isinstance(y[0], str): walk(y, False)
+                    elif isinstance(y, tuple):
+                        for z in y: walk(z, False)
+    for n, (ps, b) in funcs.items():
+        if not ps and b[0] in ("str", "chr"): continue
+        walk(b, False)
+    if top[0] == "str" or (top[0] == "call" and top[1] in sc and funcs[top[1]][1][0] == "str"):
+        raise Unsup("文字列を答えにする(機械語は答えの文字列を見せない。文字は整数と同じ字で出る)")
+    walk(top, True) if top[0] in ("str", "chr", "call") else walk(top, False)
+
 def raise_ast(funcs, top):
     """SIR を旧 AST の列にする。void の単位の読みが要る形(void になりうる被演算子・呼びの実引数)は Unsup。整数だけ。"""
     def blk(x): return ("block", x) if x[0] in ("bin", "cmp", "seq", "neg", "cases") else x
+    check_textual(funcs, top)
     def r(e, in_flow):
         k = e[0]
+        if k == "str": return ("lit", e[1])
+        if k == "chr": return ("lit", Char(chr(e[1])))
         if k == "int": return ("lit", e[1]) if e[1] >= 0 else ("neg", ("lit", -e[1]))
         if k == "void": return ("id", "__")
         if k == "var": return ("id", e[1])
