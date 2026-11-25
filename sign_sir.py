@@ -248,7 +248,17 @@ def evaluate(funcs, top, fuel=200000):
         if k == "var": return env[e[1]]
         if k == "op":
             a, b = one(ev(e[2], env)), one(ev(e[3], env))
-            if isinstance(a, tuple) or isinstance(b, tuple): raise Unsup("リストの算術")
+            if isinstance(a, tuple) or isinstance(b, tuple):                      # 器の算術(type_system.md 910–914): `List * n` は n 回コピー、`List + - %` は型エラーで `!_`。左が数・`!_`・Float の `n * List` も `!_`。`/`・`^`(入れ子の器)・n ≤ 0・器どうしは断る
+                o = e[1]
+                if isinstance(a, (Rec, Chr, Str)) or isinstance(b, (Rec, Chr, Str)): raise Unsup("リストと文字列・文字・欄ブロックの算術")
+                if o in ("/", "^"): raise Unsup("リストの `/`・`^`(入れ子の器になる)")
+                if isinstance(a, tuple) and isinstance(b, tuple): raise Unsup("リストどうしの算術")
+                if o != "*": return None
+                if isinstance(a, tuple) and isinstance(b, int):
+                    if b <= 0: raise Unsup("リストの `* n` の n が 0 以下(仕様の根拠が薄い)")
+                    if len(a) * b > 100000: raise Unsup("リストの繰り返しが大きい")
+                    return a * b
+                return None
             if isinstance(a, Rec) or isinstance(b, Rec): raise Unsup("欄ブロックの算術")
             if isinstance(a, Chr) or isinstance(b, Chr):                         # 文字の域の射(type_system.md 1543–1590)。左辺が規則を選ぶ。域は U+0001〜U+007F(ascii)。`!_` は両側で吸収
                 o = e[1]

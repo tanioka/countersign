@@ -76,6 +76,10 @@ def list_program(r):
         body = r.choice([f"(xs ' {k}) + ||xs||", f"xs ' {k}", f"||xs|| * (xs ' {k})", f"(xs ' {k}) | (xs ' 0)", f"((xs ' {k}) < 100) + 1"])
         defs += f"gf : xs i ? {body}\n"
         return defs + f"gf {r.choice(names)} {r.choice(['2', '1', '(1 < 0)', num(r)])}\n"
+    if r.random() < .35:                                                   # 器の算術(`List * n` は n 回コピー、`+ - %` は `!_`)
+        n0 = r.choice(names); k = r.choice(["2", "3", "1", "0", "-1", "__", "(1 < 0)", "1.5", "la", "(la ' 0)"])
+        body = r.choice([f"{n0} * {k}", f"{n0} {r.choice('+-%/')} {k}", f"{k} * {n0}", f"||{n0} * {k}||", f"({n0} * {k}) ' {r.choice(['0', '3', '-1', '9'])}", f"({n0} * 2) * 2", f"5 + ({n0} + 1)", f"({n0} + 1) | 7", f"{n0} * 2 + 1"])
+        return defs + body + "\n"
     return defs + lexpr(r, names, 3) + "\n"
 def defaults_program(r):
     """既定値のある関数(整数の字面の既定値。既定値の無い口が先)と、その呼び。実引数は単位になりうる式も混ぜる。"""

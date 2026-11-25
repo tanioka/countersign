@@ -128,6 +128,16 @@ def test_floats_promote_and_refuse_undecided():
 def test_fuzz_floats():
     r = subprocess.run([sys.executable, "fuzz_sir.py", "800", "81", "--floats", "--asm"], capture_output=True, text=True, timeout=900)
     assert r.returncode == 0, r.stdout[-1200:]
+def test_list_arithmetic():
+    # 器の算術(type_system.md 910–914): `List * n` は n 回コピー、`List + - %`・`n * List` は `!_`。`/`・`^`・n ≤ 0・器どうしは断る
+    import sign_sir as R, sign_interp as S
+    def ev(src):
+        f, top = R.lower(S.parse_source(src + "\n")); return R.evaluate(f, top)
+    assert ev("[1 2] * 2") == ("flow", (1, 2, 1, 2)) and ev("||[1 2] * 3||") == ("val", 6) and ev("([1 2] * 2) ' 3") == ("val", 2)
+    assert ev("[1 2] + 1") == ("void",) and ev("2 * [1 2]") == ("void",) and ev("[1 2] % 2") == ("void",) and ev("5 + ([1 2] + 1)") == ("val", 5)
+    for bad in ("[1 2] / 2", "[1 2] * -1", "[1 2] * [3 4]", "[1 2] ^ 2"):
+        try: ev(bad); assert False, bad
+        except R.Unsup: pass
 def test_flow_composition_left_to_right():
     # 余った関数が続く流れは合成で、左の関数から実行する(V3、strict の Pipe)。strict の値と同じ
     import sign_sir as R, sign_interp as S
