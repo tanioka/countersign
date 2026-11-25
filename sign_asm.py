@@ -6486,7 +6486,7 @@ def add_realdev(text):
     return text.rstrip("\n") + "\n" + "\n".join(ro + bss) + "\n"
 
 
-USAGE = """使い方: python3 sign.py --asm 〈プログラム.sn〉 [--target=bare|linux] [--charset=ascii|utf32] [--strict [--via-sir]] [--no-opt] [--no-peephole] [--no-lint] [--no-fuse] [--no-share] [--no-hoist] [--no-scalar] [--no-neon] [--real-dev] [--display=幅x高さ] [-o 出力.s] [--elf=出力ファイル]
+USAGE = """使い方: python3 sign.py --asm 〈プログラム.sn〉 [--target=bare|linux] [--charset=ascii|utf32] [--strict [--no-sir]] [--no-opt] [--no-peephole] [--no-lint] [--no-fuse] [--no-share] [--no-hoist] [--no-scalar] [--no-neon] [--real-dev] [--display=幅x高さ] [-o 出力.s] [--elf=出力ファイル]
 
   実行せずに、AArch64 のアセンブリ(GNU as の綴り)を標準出力(か -o の先)へ書く。
   --target=bare   既定。`_.main` までを出す(設計者のターゲット aarch64_rpi など向け。起動部は別)
@@ -6504,7 +6504,8 @@ USAGE = """使い方: python3 sign.py --asm 〈プログラム.sn〉 [--target=b
   --real-dev      (linux 用)装置の番地への # と @ を、実機の Linux の装置(/dev/i2c-N・/dev/gpiochip0・時計・標準入出力)の操作に置き換える。実機では未実行
   --real-db       (--real-dev に足す)SQLite 装置(0x9A00000)も libsqlite3 で動かす。--pi-bundle=DIR で prog.s・sign_db.c・build.sh を作る(Pi で gcc が要る)。--elf とは併せられない
   --fps=N         (--real-dev で tick を持つファイル)1 秒に N こま(既定 60)。tick・init・on_timer をゲーム機と同じ周期で回す
-  --via-sir       --strict と一緒に: 整数・整数リスト・部分適用の流れは、strict の正規化中間表現(sign_sir.py)から木を作って出す(旧補正 strict_rewrite を通さない)。下げられない形(文字列・器など)は旧経路。stderr に使った道を出す
+  --no-sir        --strict の道を旧経路(strict_rewrite)だけにする。既定は SIR 経由で、下げられない形・機械語が断った形は旧経路へ戻る
+  --via-sir       (既定。付けると、どちらの道で出したかを stderr に出す) --strict と一緒に: 整数・整数リスト・部分適用の流れは、strict の正規化中間表現(sign_sir.py)から木を作って出す(旧補正 strict_rewrite を通さない)。下げられない形(文字列・器など)は旧経路。stderr に使った道を出す
   --strict        別の道: --strict(仕様の読み)と同じ答えになるコードを出す(構文木を書き換えてから出す。既定の道は変えない)。直す形は4つ: `x ' 名前`(`__`)・逆適用 `c f`(`c`)・最後でない行の値が `!_` なら次の行へ・本体の `y : 2` は条件の行。書き換えられない形は断る。累積に `__` を足す形などは、既定と同じく出せない
   --no-estimate   上界を見積もりで通さない(既定は仕様どおり、証明できない上界も見積もり+実行時の確認で通し、information に名指しする)
   --elf=FILE      linux の足場つきで組んでリンクし、AArch64 の静的な ELF を FILE に書く(clang と ld.lld が要る。実行は Raspberry Pi など AArch64 の Linux で)
@@ -6520,7 +6521,8 @@ def _static_nonvoid(x):
     if x[0] in ("neg", "block"): return _static_nonvoid(x[1])
     if x[0] == "bin" and x[1] in ("+", "-", "*"): return _static_nonvoid(x[2]) and _static_nonvoid(x[3])
     return False
-VIA_SIR = [False]
+VIA_SIR = [True]                                          # --strict の道は既定で SIR 経由(2026-11-25 の検討: STAGE2_STRICT_IR.md)。SIR に下げられない形・機械語が断った形は旧経路。`--no-sir` で旧経路だけにする
+VIA_SIR_EXPLICIT = [False]                                # `--via-sir` を自分で付けたときだけ、どちらの道かを stderr に出す(既定では黙って旧経路へ戻る)
 def _fold_minmax(n):
     """--strict --asm: 順序の比べの畳み `[>] a b …`(`[>=]` は max、`[<]`・`[<=]` は min。sign_interp.fold_cmp)を、
     `((a op b) | b) op c) | c …` に書き直す(`a op b` は成り立てば a、外れれば `!_`。`|` は `!_` なら右)。
@@ -6804,7 +6806,8 @@ def main(argv):
                 if not (1 <= w_ <= 4096 and 1 <= h_ <= 4096 and w_ * h_ <= 2073600): print("エラー: --display の大きさは 1x1〜4096x4096 で、画素は 2073600 以下です(%s)" % tail, file=sys.stderr); return 1
                 display = (w_, h_)
         elif a == "--strict": STRICT[0] = True
-        elif a == "--via-sir": VIA_SIR[0] = True               # --strict の道を、strict の正規化中間表現(sign_sir)から出す。下げられない形は旧経路(strict_rewrite)
+        elif a == "--no-sir": VIA_SIR[0] = False
+        elif a == "--via-sir": VIA_SIR[0] = True; VIA_SIR_EXPLICIT[0] = True               # --strict の道を、strict の正規化中間表現(sign_sir)から出す。下げられない形は旧経路(strict_rewrite)
         elif a == "--no-peephole": PEEP[0] = False
         elif a == "--no-lint": LINT[0] = False
         elif a == "--no-fuse": FUSE[0] = False
@@ -6847,15 +6850,26 @@ def main(argv):
             import sign_sir
             try:
                 _f0, _top0 = sign_sir.lower(_tree)
-                if _top0 is not None: _tree = sign_sir.raise_ast(_f0, _top0); _sir_done = True; print("%s: --via-sir: SIR 経由で出します" % path, file=sys.stderr)
-                else: print("%s: --via-sir: 式が無いので旧経路で出します" % path, file=sys.stderr)
-            except sign_sir.Unsup as _e: print("%s: --via-sir: SIR に下げられないので旧経路で出します(%s)" % (path, _e), file=sys.stderr)
+                if _top0 is not None:
+                    _tree = sign_sir.raise_ast(_f0, _top0); _sir_done = True
+                    if VIA_SIR_EXPLICIT[0]: print("%s: --via-sir: SIR 経由で出します" % path, file=sys.stderr)
+                elif VIA_SIR_EXPLICIT[0]: print("%s: --via-sir: 式が無いので旧経路で出します" % path, file=sys.stderr)
+            except sign_sir.Unsup as _e:
+                if VIA_SIR_EXPLICIT[0]: print("%s: --via-sir: SIR に下げられないので旧経路で出します(%s)" % (path, _e), file=sys.stderr)
         _f = []
         if STRICT[0] and not _sir_done:
             _tree, _f = strict_rewrite(_tree)                  # 別の道: strict の読みと同じ答えになる木へ書き換える
             if _f:
                 raise AsmError("--strict の読みにできない形があります(書き換えられない形。コンパイラは既定の読みで解きます):\n" + "\n".join("  [%d] %s\n      %s" % f for f in _f[:12]) + ("\n  ほか %d 件" % (len(_f) - 12) if len(_f) > 12 else ""))
-        text = generate(_tree, target, os.path.basename(path), charset, real_dev, fps, real_db, display, par if (par or not par_spec) else 4, par_spec)
+        try:
+            text = generate(_tree, target, os.path.basename(path), charset, real_dev, fps, real_db, display, par if (par or not par_spec) else 4, par_spec)
+        except AsmError as _e0:
+            if not _sir_done: raise
+            if VIA_SIR_EXPLICIT[0]: print("%s: --via-sir: SIR の木を機械語が断ったので旧経路でやり直します(%s)" % (path, _e0), file=sys.stderr)
+            _tree, _f = strict_rewrite(sign_interp.parse_source(src))          # SIR 経由で断られた形は、旧経路で出せることがある(`||s ' __||`)。旧経路も断るなら、その断りを出す
+            if _f:
+                raise AsmError("--strict の読みにできない形があります(書き換えられない形。コンパイラは既定の読みで解きます):\n" + "\n".join("  [%d] %s\n      %s" % f for f in _f))
+            text = generate(_tree, target, os.path.basename(path), charset, real_dev, fps, real_db, display, par if (par or not par_spec) else 4, par_spec)
         for fn, ln, rule, msg in LAST_LINT[:10]:      # 置き場の寿命の検査(sign_lint.py)。警告だけで、生成は止めない
             print("%s: 警告(lint %s): %s の %d 行目: %s" % (path, rule, fn, ln, msg), file=sys.stderr)
         if len(LAST_LINT) > 10: print("  ほか %d 件" % (len(LAST_LINT) - 10), file=sys.stderr)

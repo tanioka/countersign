@@ -3886,3 +3886,8 @@ A1・A4・A6 は仕様に答えがあり実装も一致(問いを閉じてよい
 ### S3・S5 欄ブロックと S4 の保留(2026-11-25)
 - SIR に struct/field を追加(評価のみ。機械語へは戻さない)。旧経路は項目 8 で欄ブロックを断る(鍵の名前を `__` に書き換えて誤答になるため)。fuzz `--structs`。詳細は SIR_VALUES.md 4.8。
 - S4 Float は仕様が NaN と `!_` の繋ぎ・niche を未決としているため実装せず、SIR_VALUES.md 4.9 に理由を記録。
+
+### `--asm --strict` の既定を SIR 経由にした(2026-11-25)
+- `sign_asm.py`: `VIA_SIR` の既定を True に。SIR に下げられない形(`Unsup`)と、SIR の木を `generate` が断った形(`AsmError`)は、黙って旧経路(`strict_rewrite`)でやり直す。`--no-sir` で旧経路だけ。`--via-sir` を明示したときだけ道を stderr に出す。
+- 根拠は STAGE2_STRICT_IR.md の検討(9 生成器 × 1500 本で誤答 0、得約 1150 本・失 2 本。失の 2 本は機械語が断ったときの旧経路への戻りで解消)。既存の asm テストは全部通る。`test_via_sir_flag` を新しい既定に直した。
+- 旧経路(`strict_rewrite`)はまだ消さない: 欄ブロック・Float・器の入れ子など、SIR が戻せない形の逃げ先。
