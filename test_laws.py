@@ -1073,7 +1073,12 @@ c = law("V9", "value_spec V9: ファイルのいちばん外の値の定義は�
 val(c, "y : x + 1\nx : 5\ny", "6", only="strict", prelude=False)
 val(c, "x : 5\ny : x * 2\ny", "10", only="strict", prelude=False)
 val(c, "x : _\nx : 5\nx", "5", only="strict", prelude=False)
-val(c, "x : 5\nx : 6\nx", "5", only="strict", prelude=False); warns(c, "x : 5\nx : 6\nx", "name-duplicate", only="strict", prelude=False)      # documents(compiler_pipeline §4): 同じ枚の同名は先が勝ち、2つ目は使わず information
+val(c, "x : 5\nx : 6\nx", "!_", only="strict", prelude=False); warns(c, "x : 5\nx : 6\nx", "name-duplicate", only="strict", prelude=False)      # 設計者の答え 2026-11-25(Sign#302 の 2 (c)): 同じ枚の同名は知らせて `!_`(以前は先勝ち)
+val(c, "f : x ? 1\nf : x ? 2\nf 0", "0", only="strict", prelude=False)
+c = law("B1", "設計者の答え 2026-11-25(Sign#302 の 3): 欄の右辺の、`?` の下にない自分の名前は 1 つ外を指す(コンストラクタ `x : x`)。欄どうしの値の輪は知らせて `!_`")
+val(c, "Point : x y ? [\n\tx : x\n\ty : y\n]\n(Point 1 2) ' y", "2", only="strict", prelude=False)
+val(c, "Point : x y ? [\n\tx : x + 1\n\ty : y\n]\n(Point 3 2) ' x", "4", only="strict", prelude=False)
+val(c, "p :\n\ta : b\n\tb : a\np", "[a: !_, b: !_]", only="strict", prelude=False); warns(c, "p :\n\ta : b\n\tb : a\np", "name-cycle", only="strict", prelude=False)
 c = law("V10/V11", "value_spec V10: 入れ子の深さが上限に届けば _ と information resource-depth。V11: 0 で割る・負の指数の冪は information")
 if not os.environ.get("SIGN_OPT"): warns(c, "deep : n ?\n\tn = 0 : 0\n\t1 + (deep (n - 1))\ndeep 100000", "resource-depth", only="strict", prelude=False)      # --opt は定数の呼び出しを静的に畳むので深さの上限に当たらない
 val(c, "deep : n ?\n\tn = 0 : 0\n\t1 + (deep (n - 1))\ndeep 100", "100", only="strict", prelude=False)
