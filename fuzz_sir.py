@@ -9,6 +9,7 @@ LIST_RATE = [0.0]
 DEF_RATE = [0.0]
 PARTIAL = [False]
 STRINGS = [False]                  # --strings: 文字列・文字の定数(S1。SIR_VALUES.md)
+STRUCTS = [False]                  # --structs: 欄ブロック・欄引き・コンストラクタ(S3・S5)
 NAMES = [False]                    # --names: 定義の無い名前 zz を式に混ぜる(R21 で `!_`)
 FLOW_RATE = [0.0]
 NOVOID = [False]
@@ -125,7 +126,30 @@ def strings_program(r):
         call = f"f {arg()}" if not pre else r.choice([f"f (g {arg()})", f"||g {arg()}||", f"g {arg()}"])
         return head + pre + f"f : x ? {body}\n{call}\n"
     return head + body + "\n"
+def structs_program(r):
+    """S3・S5: 欄ブロック・欄引き `'`・コンストラクタ・入れ子・欄の長さ・関数へ渡す。欄の名前・位置・文字列の鍵・範囲外・単位の欄・値の名前の鍵を混ぜる"""
+    v = lambda: r.choice(["1", "2", "7", "-3", "(3 < 2)", "(4 + 5)", "a", "b", "`xy`", "\\\\q", "__"])
+    nf = r.randint(1, 4); names = r.sample(["a", "b", "c", "d"], nf)
+    lines = []
+    for i, nm in enumerate(names):
+        vv = r.choice([x for x in ["1", "2", "7", "-3", "(3 < 2)", "(4 + 5)", "`xy`", "\\\\q"] + [m for m in names[:i]] + [m + " + 1" for m in names[:i]]])
+        lines.append(f"\t{nm} : {vv}")
+    head = "p :\n" + "\n".join(lines) + "\nk : 2\nq : 1\n"
+    if r.random() < .25: head += "w :\n\tz : 5\n\tp : " + r.choice(["1", "`s`"]) + "\n"; names2 = names
+    key = r.choice(names + ["e", "0", "1", "2", "3", "-1", "-4", "9", "k", "__", "`a`", "`e`", "(1 + 1)", "(2 - 5)", "(3 < 2)"])
+    pick = r.random()
+    if pick < .2: body = "p"
+    elif pick < .55: body = f"p ' {key}"
+    elif pick < .65: body = f"||p||"
+    elif pick < .72: body = f"(p ' {key}) + 1"
+    elif pick < .8: body = f"p + 1"
+    elif pick < .86: return head + f"f : s ? s ' {r.choice(names + ['e'])}\nf p\n"
+    elif pick < .9: return head + f"f : s x ? (s ' {r.choice(names)}) + x\nf p {r.choice(['1', '(3 < 2)'])}\n"
+    elif pick < .95: return "Pt : x y ? [\n\tl : x\n\tm : y\n\tn : x + y\n]\n(Pt " + f"{r.choice(['1','2'])} {r.choice(['3','(3 < 2)'])}) ' {r.choice(['l','m','n','o','0','-1'])}\n"
+    else: body = r.choice(["w ' z", "(w ' p)", "||w||", "w"])
+    return head + body + "\n"
 def program(r):
+    if STRUCTS[0]: return structs_program(r)
     if STRINGS[0]: return strings_program(r)
     if PARTIAL[0]: return partial_program(r)
     if DEF_RATE[0] and r.random() < DEF_RATE[0]: return defaults_program(r)
@@ -157,6 +181,7 @@ def obs_strict(t):
         v = S.show(r[-1]) if r else "!_"
     except BaseException as e: return ("refuse", type(e).__name__)
     finally: S.STRICT_GATES = False
+    if v.startswith("[") and v.endswith("]") and ": " in v: return ("rec", v)
     if v.startswith("[") and v.endswith("]"):
         try: return ("flow", tuple(int(x) for x in v[1:-1].split(",")))
         except ValueError: pass
@@ -225,6 +250,7 @@ def main():
     NAMES[0] = '--names' in sys.argv
     PARTIAL[0] = '--partial' in sys.argv
     STRINGS[0] = '--strings' in sys.argv
+    STRUCTS[0] = '--structs' in sys.argv
     tally, bad = {}, []
     for _ in range(n):
         t = fix(program(r)); b = obs_sir(t)

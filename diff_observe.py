@@ -27,6 +27,7 @@ def obs_strict(t):
     if v == "!_": return ("void",)
     if v.lstrip("-").isdigit(): return ("val", int(v))
     if len(v) >= 3 and v[0] == v[-1] == "`" and v[1:-1].isascii(): return ("str", v[1:-1])           # 文字列は `abc`
+    if v.startswith("[") and v.endswith("]") and ": " in v: return ("rec", v)                         # 欄ブロックは [a: 1, b: 2]
     if len(v) == 2 and v[0] == "\\" and v[1].isalnum() and v[1].isascii(): return ("chr", ord(v[1]))   # 文字は \a(英数字だけ見る)
     return ("unsup", "値 " + v[:20])
 

@@ -13,6 +13,7 @@ SIR は、strict の読みを**木の形そのものに書き出した**中間�
   ("rows", [(条件 か None, 値), ...])             行の列。各行は `c & v | 次の行`(V10): 条件が void でなく値も void でなければその値。値が void なら次の行へ落ちる。条件 None は既定の行。尽きれば void
   ("call", 名前, [実引数...])                     関数の呼び。口の数ちょうど。実引数が 1 つでも void なら呼びは成り立たず(部分適用)、SIR の評価は ("partial",) を返す
   ("str", "abc") / ("chr", コード)              文字列・文字の定数(S1、SIR_VALUES.md)。ASCII だけ。使える所は `||s||`(長さ)・名前・答えだけで、算術・比べ・添字・実引数・並びに置く形は断る
+  ("struct", [(名前, 式)...]) / ("field", 式, 名前)    欄ブロック(構造体)と、名前の鍵の欄引き `p ' a`(S3・S5、SIR_VALUES.md)。欄の式は前の欄の名前を見られる。欄引きの底が欄ブロックでなければ `!_`(R64)
   ("flow", [項...])                              並び(積)。void の項は消える。項が 1 つだけ残ればその項、0 ならvoid
 SIR に下げられない形は Unsup を投げ、理由を持つ(未対応の数え方が、そのまま次の段の仕事の一覧になる)。"""
 I64_MAX, I64_MIN = 2**63 - 1, -(2**63 - 1)     # 範囲の下は -MAX(MIN に着くのも `!_`、value_spec V5)
@@ -28,7 +29,16 @@ class Chr:                                                                      
     def __init__(self, c): self.c = c
     def __eq__(self, o): return isinstance(o, Chr) and o.c == self.c
     def __hash__(self): return hash(("chr", self.c))
-def textual(v): return isinstance(v, (Str, Chr))
+class Rec:                                                                      # 欄ブロック(構造体)の値: (欄の名前, 値) の並び。値は単位(None)でもよい(`b : (3 < 2)` の欄は `!_` で残る)
+    __slots__ = ("items",)
+    def __init__(self, items): self.items = items
+def show_rec(v):
+    if v is None: return "!_"
+    if isinstance(v, Rec): return "[" + ", ".join("%s: %s" % (n, show_rec(x)) for n, x in v.items) + "]"
+    if isinstance(v, Str): return "`" + str(v) + "`"
+    if isinstance(v, Chr): return "\\" + chr(v.c)
+    return str(v)
+def textual(v): return isinstance(v, (Str, Chr, Rec))
 
 class Funcs(dict):
     """{関数名: (仮引数名の列, 本体の SIR)}。既定値のある関数だけ `defaults[名前]`(仮引数ごとの整数か None)を持つ(口は、既定値の無い口が先、既定値のある口が後)。"""
@@ -95,6 +105,13 @@ def expr(n, params, arity):
             return ("str", str(n[1]))
         if not isinstance(n[1], int) or isinstance(n[1], bool): raise Unsup("整数でない字面")
         return ("int", n[1])
+    if k == "struct":
+        names = [f[0] for f in n[1]]
+        if len(set(names)) != len(names): raise Unsup("欄の名前が同じ括りで 2 回(P2。strict が断る)")
+        out, seen = [], set(params)
+        for name, fe in n[1]:
+            out.append((name, expr(fe, seen, arity))); seen = seen | {name}
+        return ("struct", out)
     if k == "neg":
         x = expr(n[1], params, arity)
         return ("neg", x)
@@ -114,8 +131,8 @@ def expr(n, params, arity):
         if op == "'":
             key = unblock(n[3])
             if key[0] == "post" and key[1] == "~": key = unblock(key[2])
-            if key[0] == "id" and key[1] != "__":                                  # R64: 鍵の名前は欄の名前。値の名前でも `!_`
-                return ("idx", expr(n[2], params, arity), ("void",))
+            if key[0] == "id" and key[1] != "__":                                  # R64: 鍵の名前は欄の名前(値の名前でも)。欄ブロックなら欄、ほかは `!_`
+                return ("field", expr(n[2], params, arity), key[1])
             return ("idx", expr(n[2], params, arity), expr(n[3], params, arity))
         if op in ("==", "!==", "!="): return ("cmp", op, expr(n[2], params, arity), expr(n[3], params, arity))
         raise Unsup("演算子 " + op)
@@ -210,11 +227,25 @@ def evaluate(funcs, top, fuel=200000):
         if k == "int": return e[1]
         if k == "void": return None
         if k == "str": return Str(e[1])
+        if k == "struct":
+            env2, items = dict(env), []
+            for name, fe in e[1]:
+                v = ev(fe, env2)
+                if isinstance(v, (PF, Flow, tuple)): raise Unsup("欄の値が余った関数・並び")
+                env2[name] = v; items.append((name, v))
+            return Rec(items)
+        if k == "field":
+            a = one(ev(e[1], env))
+            if isinstance(a, Rec):
+                for n_, v_ in a.items:
+                    if n_ == e[2]: return v_
+            return None
         if k == "chr": return Chr(e[1])
         if k == "var": return env[e[1]]
         if k == "op":
             a, b = one(ev(e[2], env)), one(ev(e[3], env))
             if isinstance(a, tuple) or isinstance(b, tuple): raise Unsup("リストの算術")
+            if isinstance(a, Rec) or isinstance(b, Rec): raise Unsup("欄ブロックの算術")
             if isinstance(a, Chr) or isinstance(b, Chr): raise Unsup("文字の算術(`\\a + 1` は文字。仕様の答えを SIR は持たない)")
             if isinstance(a, Str) or isinstance(b, Str):
                 if e[1] == "*": raise Unsup("文字列の `*`(繰り返し。S1 の外)")
@@ -253,12 +284,22 @@ def evaluate(funcs, top, fuel=200000):
             if isinstance(a, PF): return None                                   # `||f||`(f が余った関数)は囲みごと `!_`(仕様 R27)。`||_||` の 0 とは別
             a = one(a)
             if a is None: return 0                                              # `||_||` は 0(value_spec 83 行、U〔答え〕2026-10-28 00:17)。以前は単位にしていて、strict と食い違った
+            if isinstance(a, Rec): return len(a.items)                           # 欄の数(単位の欄も数える)
             if isinstance(a, Str): return len(a)                                 # strict: ||`abc`|| = 3
             if isinstance(a, Chr): return 1                                      # ||\a|| = 1
             if not isinstance(a, tuple): raise Unsup("整数の長さ")
             return len(a)
         if k == "idx":
             a, i = one(ev(e[1], env)), one(ev(e[2], env))
+            if isinstance(a, Rec):                                                 # 欄ブロックの添字: 整数は位置(負は後ろから)、文字列は欄の名前。範囲外・単位・名前なしは `!_`
+                if i is None: return None
+                if isinstance(i, Str):
+                    for n_, v_ in a.items:
+                        if n_ == str(i): return v_
+                    return None
+                if isinstance(i, (Chr, Rec, tuple)): raise Unsup("欄ブロックの鍵が文字・欄ブロック・リスト")
+                if i < 0: i += len(a.items)
+                return a.items[i][1] if 0 <= i < len(a.items) else None
             if isinstance(a, Chr) or textual(i): raise Unsup("文字・文字を添字にする形(文字の添字、文字列・文字の鍵)")
             if isinstance(a, Str):                                                 # String は List(Char) と同型(type_system.md 110 行)。範囲外は `!_`(idiom_to_instructions.md 767 行)、負は後ろから(type_system.md 423 行)
                 if i is None: return None
@@ -349,6 +390,7 @@ def evaluate(funcs, top, fuel=200000):
     except RecursionError: return ("fuel",)
     if isinstance(v, PF): v = None                                              # 余った関数は消える
     if isinstance(v, Flow): return ("flow", tuple(v))
+    if isinstance(v, Rec): return ("rec", show_rec(v))
     if isinstance(v, Str): return ("str", str(v))
     if isinstance(v, Chr): return ("chr", v.c)
     if isinstance(v, tuple): return ("flow", v)                                 # 整数の並び(リスト)は流れと同じ字で出る
@@ -523,6 +565,7 @@ def raise_ast(funcs, top):
     check_textual(funcs, top)
     def r(e, in_flow):
         k = e[0]
+        if k in ("struct", "field"): raise Unsup("欄ブロック・欄引きは機械語へ戻せない(機械語に欄の表がない)")
         if k == "str": return ("lit", e[1])
         if k == "chr": return ("lit", Char(chr(e[1])))
         if k == "int": return ("lit", e[1]) if e[1] >= 0 else ("neg", ("lit", -e[1]))

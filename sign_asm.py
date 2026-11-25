@@ -6732,6 +6732,8 @@ def strict_rewrite(tree):
             if not (isinstance(l_, tuple) and l_[0] == "lit" and isinstance(r_, tuple) and r_[0] == "lit"):
                 return ("bin", "&", ("bin", "==", l_, l_), ("bin", "&", ("bin", "==", r_, r_), ("cmp", [l_, r_], ["!="])))
             return ("cmp", [l_, r_], ["!="])
+        if k == "struct" and "8" not in off:                     # 8. 欄ブロック(`k : v` の並びの括り)。strict は欄の名前で引く(`p ' a`)。機械語に欄の表が無く、鍵が名前だと 1 で `__` に書き換わって答えが `!_` になるので断る(SIR_VALUES.md S3)
+            rest.append((8, "欄ブロック(構造体)。strict は欄の名前で引く。機械語は欄の表を持たない", src(n)))
         if k == "norm" and "7" not in off:                       # 7. `||g 実引数||` の実引数が `!_` になりうる: g は余った関数(部分適用)になり、`||関数||` は囲みごと `!_`(仕様 R27)。機械語は 0 を返すので断る
             inner = unwrap(n[1])
             if isinstance(inner, tuple) and inner and inner[0] == "seq" and len(inner[1]) >= 2 and isinstance(inner[1][0], tuple) and inner[1][0][0] == "id" \
