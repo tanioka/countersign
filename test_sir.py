@@ -24,12 +24,18 @@ def _compile(src, *flags):
         r = subprocess.run([sys.executable, "sign.py", "--asm", "--strict", *flags, p, "-o", os.path.join(d, "a.s")], capture_output=True, text=True, timeout=300)
         return r.returncode, r.stderr, open(os.path.join(d, "a.s")).read() if os.path.exists(os.path.join(d, "a.s")) else ""
 def test_via_sir_flag():
-    rc, err, text = _compile("f : x y ?\n\tx > y : x / y\n\tx + 1\nf 3 4\n", "--via-sir")
-    assert rc == 0 and "SIR 経由で出します" in err and text
+    rc, err, t1 = _compile("f : x y ?\n\tx > y : x / y\n\tx + 1\nf 3 4\n", "--via-sir")
+    assert rc == 0 and "SIR 経由で出します" in err and t1
     rc, err, text = _compile("c : \\a\n(c + 1)\n", "--via-sir")               # 文字の足し算は SIR の外: 旧経路で出る
     assert rc == 0 and "旧経路で出します" in err and text
-    rc, err, text2 = _compile("f : x y ?\n\tx > y : x / y\n\tx + 1\nf 3 4\n")     # 旗なしは今までどおり
-    assert rc == 0 and "via-sir" not in err
+    rc, err, text2 = _compile("f : x y ?\n\tx > y : x / y\n\tx + 1\nf 3 4\n")     # 旗なしも SIR 経由(既定。2026-11-25)。黙って出す
+    assert rc == 0 and "via-sir" not in err and text2 == t1
+    rc, err, text3 = _compile("f : x y ?\n\tx > y : x / y\n\tx + 1\nf 3 4\n", "--no-sir")   # 旧経路だけ
+    assert rc == 0 and "via-sir" not in err and text3
+    # 機械語が SIR の木を断る形は旧経路でやり直す(`||s ' __||` は strict で 0)。旧経路だけでも、既定でも同じ出力
+    P = "s : `ce`\nk : 1\n||s ' __||\n"
+    rc, err, t_def = _compile(P); rc2, err2, t_old = _compile(P, "--no-sir"); rc3, err3, _ = _compile(P, "--via-sir")
+    assert rc == 0 and rc2 == 0 and rc3 == 0 and t_def == t_old and "やり直します" in err3
 def test_fuzz_defaults():
     r = subprocess.run([sys.executable, "fuzz_sir.py", "300", "23", "--defaults", "--asm"], capture_output=True, text=True, timeout=900)
     assert r.returncode == 0, r.stdout[-1200:]
