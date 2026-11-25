@@ -231,6 +231,16 @@ for src_, why in ((FIB + "g :\n\t\tn\n\t\ta : fib n\n\t? a\ng (fib 5)\n", "既�
     except sign_asm.AsmError as e: r = "断った"
     check("%s は断る(黙って違う答えにしない)" % why, r, "断った")
 
+# 溢れで __ になった実引数(設計者の答え 2026-11-25): 並列の包みが見て答えは __。処理系は --check-int と比べる
+def interp_ci(src):
+    d = tempfile.mkdtemp(); p = os.path.join(d, "x.sn"); open(p, "w").write(src)
+    return subprocess.run([sys.executable, os.path.join(HERE, "sign.py"), "--check-int", p], capture_output=True, text=True).stdout
+for nm, s_ in (("足す 2 本", LPS + "w : n d ? (lp n 0) + d\nm : x ? x * 4611686018427387904\n(w 600 (m 3)) + (w 400 (m 1))\n"),
+               ("片方だけ溢れる", LPS + "w : n d ? (lp n 0) + d\nm : x ? x * 4611686018427387904\n(w 600 (m 3)) + (w 400 5)\n")):
+    want = interp_ci(s_).strip()
+    c0, k0, t0 = run(s_); cpu, k, text = run(s_, 4, 1, 17)
+    check("溢れの実引数(%s): 処理系(--check-int)・直列・並列の答えが同じ(%s)" % (nm, want.replace("\n", " ")), cpu.out.decode().strip() == want and c0.out.decode().strip() == want, True)
+
 # 第106段の形を、命令の途中の強制切り替え(12 通り)でも
 bad = 0
 for nm, s_ in (("リストの仮引数", SM + "xs : 1 2 3 4 5\nys : 10 20\n(sm xs 0) + (sm ys 0) + (sm xs 3)\n"),
