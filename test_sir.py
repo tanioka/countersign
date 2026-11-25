@@ -26,7 +26,7 @@ def _compile(src, *flags):
 def test_via_sir_flag():
     rc, err, text = _compile("f : x y ?\n\tx > y : x / y\n\tx + 1\nf 3 4\n", "--via-sir")
     assert rc == 0 and "SIR 経由で出します" in err and text
-    rc, err, text = _compile("s : `hi`\ns\n", "--via-sir")                  # 文字列は SIR の外: 旧経路で出る
+    rc, err, text = _compile("c : \\a\n(c + 1)\n", "--via-sir")               # 文字の足し算は SIR の外: 旧経路で出る
     assert rc == 0 and "旧経路で出します" in err and text
     rc, err, text2 = _compile("f : x y ?\n\tx > y : x / y\n\tx + 1\nf 3 4\n")     # 旗なしは今までどおり
     assert rc == 0 and "via-sir" not in err
@@ -83,3 +83,23 @@ def test_strings_through_functions():
 def test_fuzz_strings_functions():
     r = subprocess.run([sys.executable, "fuzz_sir.py", "600", "61", "--strings", "--asm"], capture_output=True, text=True, timeout=900)
     assert r.returncode == 0, r.stdout[-1200:]
+def test_flow_of_consecutive_partials_refused():
+    # 余った関数が続く流れは合成(左の関数から実行。V3)。SIR は右から左への読みしか持たないので断る
+    import sign_sir as R, sign_interp as S
+    f, top = R.lower(S.parse_source("g : x ? x + 1\nsb : a b ? a - b\n(sb 10 (3 > 5)) (g __) 5\n"))
+    try: R.evaluate(f, top); assert False
+    except R.Unsup: pass
+def test_fuzz_flows_defaults_more_seeds():
+    for a, seed in (("--flows", "3"), ("--defaults", "3")):
+        r = subprocess.run([sys.executable, "fuzz_sir.py", "400", seed, a, "--asm"], capture_output=True, text=True, timeout=900)
+        assert r.returncode == 0, a + r.stdout[-1200:]
+
+if __name__ == "__main__":                      # CI は `python3 test_*.py` で走らせる(pytest ではない)。ここが無いと何も走らず成功になる
+    import traceback
+    ng = 0
+    for name, fn in sorted(globals().items()):
+        if name.startswith("test_") and callable(fn):
+            try: fn(); print("ok ", name)
+            except BaseException: ng += 1; print("NG ", name); traceback.print_exc()
+    print("全部 ok" if not ng else "%d 件 NG" % ng)
+    sys.exit(1 if ng else 0)
