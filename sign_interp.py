@@ -3834,7 +3834,7 @@ class Parser:
                 try: return ("addr", self.parse_expr(230))
                 finally: self.addr_depth -= 1
             if g == "@": return ("input", self.parse_expr(230))
-            if g == "~": return ("lift", self.parse_expr(230 if STRICT_GATES else SP))      # R79: 前置の印は単一の対象に係る(`~1 2 3` は `(~1) 2 3`)
+            if g == "~": return ("lift", self.parse_expr(SP))      # R79: 前置の印は単一の対象に係る(`~1 2 3` は `(~1) 2 3`)
             if g in ("|", "||"):
                 inner = self.parse_expr(0)
                 if not (g == "||" and inner == ("not", ("hole",))): no_hole(inner)   # ||!_|| はノルムの口の穴(R27)
@@ -4903,8 +4903,7 @@ def _ev(n, env):
             return compose(v, native_fixed(count, 1))   # 既定のモード: ||f|| は f の後にノルムを当てる合成
         return count(v)
     if k == "lift":
-        if n[1][0] == "seq" and len(n[1][1]) >= 2:                       # G4: 前置 ~ の項が2項以上の並び
-            strict_gate("G4: 前置 ~ の項が2項以上の並びです(`~1 2 3`)。括るか、1項にします")
+        # 前置 ~ は余積(空白)を掴む(設計者の答え 2026-11-25、Sign#302 の 7。段 10。以前は直後の 1 項だけで、`~1 2 3` は門 G4 で断っていた)。`~1 + 2 , 0` は `(~(1 + 2)) , 0`
         v = ev(n[1], env)
         if STRICT_GATES: return v                                         # R79: `~x` は書いた `[x]` と同じ項([x] ≅ x)
         return v if isinstance(v, list) else [v]
