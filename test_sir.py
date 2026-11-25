@@ -48,9 +48,19 @@ def test_strings_lower_and_refuse():
         f, top = R.lower(S.parse_source(src)); return R.evaluate(f, top)
     assert ev("s : `abc`\n||s||\n") == ("val", 3)
     assert ev("\\a\n") == ("chr", 97)
-    for bad in ["s : `abc`\ns + 1\n", "s : `abc`\ns ' 1\n", "f : x ? ||x||\nf `ab`\n", "\\a < \\b\n", "s : `h\u00e9`\n||s||\n"]:
+    assert ev("s : `abc`\ns ' 1\n") == ("chr", 98) and ev("s : `abc`\ns ' -1\n") == ("chr", 99)
+    assert ev("s : `abc`\ns ' 5\n") == ("void",) and ev("s : `abc`\ns + 1\n") == ("void",) and ev("s : `abc`\n5 + (s + 1)\n") == ("val", 5)
+    for bad in ["s : `abc`\ns * 2\n", "s : `abc`\n(s ' 1) + 1\n", "f : x ? ||x||\nf `ab`\n", "\\a < \\b\n", "s : `h\u00e9`\n||s||\n"]:
         try: ev(bad); assert False, bad
         except R.Unsup: pass
     f, top = R.lower(S.parse_source("5 & \\a\n"))
     try: R.raise_ast(f, top); assert False
     except R.Unsup: pass
+def test_old_route_char_unit_plus_int_traps():
+    # (s ' 9) + 1 は strict・既定とも 1(Char の `__` は演算の口で消える)。旧経路の機械語は `__` を返していたので、罠にした
+    import sign_interp as S, sign_asm
+    sign_asm.STRICT[0] = True
+    try:
+        tree, rest = sign_asm.strict_rewrite(S.parse_source("s : `abc`\n(s ' 9) + 1\n"))
+        assert not rest and ".Ltrap" in sign_asm.generate(tree, "linux")
+    finally: sign_asm.STRICT[0] = False
