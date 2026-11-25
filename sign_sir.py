@@ -309,6 +309,7 @@ def evaluate(funcs, top, fuel=200000):
                 if isinstance(v, tuple): raise Unsup("流れの中のリスト")
                 if textual(v): raise Unsup("文字列・文字を並びに置く")
                 items.extend(v) if isinstance(v, Flow) else items.append(v)
+            if any(isinstance(x, PF) and isinstance(y, PF) for x, y in zip(items, items[1:])): raise Unsup("余った関数(部分適用)が続く流れ(合成。V3: 次も関数なら合成して左の関数から実行する。SIR は右から左へ渡す読みしか持たない)")
             out = []
             for it in reversed(items):                                          # 右から左へ。部分適用は後ろの値を受け取る(足りなければ全部受けて消える)
                 if isinstance(it, PF):
@@ -482,6 +483,8 @@ def raise_ast(funcs, top):
             if not items: return ("id", "__")
             if len(items) < len(e[1]): return r(("flow", items), in_flow)
             if len(e[1]) == 1: return r(e[1][0], in_flow)
+            dfl = getattr(funcs, "defaults", {})
+            if any(x[0] == "call" and x[1] in dfl for x in e[1]): raise Unsup("既定値のある関数の呼びが並びの中にある(余りの実引数が付く形。機械語が答えを誤る)")
             return ("seq", [blk(r(x, True)) for x in e[1]])                          # 流れ: 部分適用は asm の strict_call_check が枝を分けるか罠にする
         raise Unsup("旧 AST に戻せない形 " + k)
     out = []
