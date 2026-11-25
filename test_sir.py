@@ -176,6 +176,15 @@ def test_fuzz_flows_defaults_more_seeds():
         r = subprocess.run([sys.executable, "fuzz_sir.py", "400", seed, a, "--asm"], capture_output=True, text=True, timeout=900)
         assert r.returncode == 0, a + r.stdout[-1200:]
 
+def test_default_mode_duplicate_names():
+    """設計者の答え 2026-11-25(Sign#302 の 2 (c)): 既定のモードも、同じ枚の同名はどちらも使わず `!_`。"""
+    import os, tempfile
+    d = tempfile.mkdtemp()
+    for src, want in (("f : 1\nf : 2\nf\n", "__"), ("f : 1\nf : 2\nf : 3\nf + 5\n", "5"), ("f : 1\ng : 2\nf + g\n", "3")):
+        p = os.path.join(d, "x.sn"); open(p, "w").write(src)
+        r = subprocess.run([sys.executable, "sign.py", p], capture_output=True, text=True, timeout=60)
+        assert r.stdout.strip() == want, (src, r.stdout, r.stderr)
+
 if __name__ == "__main__":                      # CI は `python3 test_*.py` で走らせる(pytest ではない)。ここが無いと何も走らず成功になる
     import traceback
     ng = 0
