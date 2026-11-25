@@ -24,7 +24,11 @@ def obs_strict(t):
         v = S.show(r[-1]) if r else "!_"
     except BaseException as e: return ("refuse", type(e).__name__)
     finally: S.STRICT_GATES = False
-    return ("void",) if v == "!_" else (("val", int(v)) if v.lstrip("-").isdigit() else ("unsup", "値 " + v[:20]))
+    if v == "!_": return ("void",)
+    if v.lstrip("-").isdigit(): return ("val", int(v))
+    if len(v) >= 3 and v[0] == v[-1] == "`" and v[1:-1].isascii(): return ("str", v[1:-1])           # 文字列は `abc`
+    if len(v) == 2 and v[0] == "\\" and v[1].isalnum() and v[1].isascii(): return ("chr", ord(v[1]))   # 文字は \a(英数字だけ見る)
+    return ("unsup", "値 " + v[:20])
 
 def obs_sir(t):
     try:
@@ -75,6 +79,12 @@ EXTRA = [
     ("行の値が部分適用: 途中の枝は次へ", "add : a b ? a + b\nf : x ?\n\tx > 0 : add (3 < 2)\n\tx\n\nf 5\n"),
     ("行の値が部分適用: 口が足りない枝", "add : a b ? a + b\nf : x ?\n\tx > 0 : add 1\n\t100\n\nf 5\n"),
     ("行の値が部分適用: 最後の枝だけ", "add : a b ? a + b\nf : x ?\n\tx > 0 : add (3 < 2)\n\nf 5\n"),
+    ("文字列: 長さ", "s : `abc`\n||s||\n"), ("文字列: 字面の長さ", "||`abcd`||\n"), ("文字列: 長さに足す", "||`abc`|| + 2\n"), ("文字列: 1文字", "||`a`||\n"),
+    ("文字列: 長さの計算", "s : `hello`\n||s|| * 2 - 1\n"), ("文字列: 長さを関数へ", "f : n ? n + 1\nf ||`abc`||\n"), ("文字列: 長さを行の条件", "s : `abc`\nf : x ?\n\t||s|| > x : 1\n\t0\n\nf 2\n"),
+    ("文字列: 答えにする", "s : `abc`\ns\n"), ("文字列: 添字", "s : `abc`\ns ' 1\n"), ("文字列: 範囲外の添字", "s : `abc`\ns ' 5\n"), ("文字列: 足す", "s : `abc`\ns + 1\n"),
+    ("文字列: 関数へ渡す", "f : x ? ||x||\nf `ab`\n"), ("文字列: 比べ", "`a` = `a`\n"), ("文字列: 非 ASCII", "s : `héllo`\n||s||\n"),
+    ("文字: 答え", "\\a\n"), ("文字: 名前", "c : \\a\nc\n"), ("文字: 長さ", "||\\a||\n"), ("文字: 足す", "\\a + 1\n"), ("文字: 比べ", "\\a < \\b\n"),
+    ("文字: & の右", "5 & \\a\n"), ("文字: | の右", "zz | \\a\n"), ("文字: & の左", "\\a & 5\n"), ("文字: 関数の本体", "f : x ? \\a\nf 1\n"), ("文字: 行の値", "f : x ?\n\tx > 0 : \\a\n\t\\b\n\nf 1\n"),
     ("ノルム: 単位は 0", "||__||\n"), ("ノルム: 外れた比べは 0", "3 + ||(3 < 2)||\n"),
     ("既定値: 省く", "gq :\n\t\tx\n\t\ty : 1\n\t? x + y\n\ngq 5\n"),
     ("既定値: 与える", "gq :\n\t\tx\n\t\ty : 1\n\t? x + y\n\ngq 5 7\n"),
@@ -96,9 +106,12 @@ for name, t in ns["CASES"] + EXTRA:
     elif a[0] == "refuse": front["評価器が断る"] += 1
     elif b == ("partial",): front["SIR: 部分適用(実引数が void)"] += 1
     else: front["食い違い"] += 1; bad.append(("前段", name, a, b))
+    if b[0] == "str": back["文字列の答えは機械語が見せない(比べない)"] += 1; continue     # 旧経路は文字列の答えに番地を返す(strict の `abc` と別。SIR 経由は断る)
     c = obs_asm(t2)
+    if b[0] == "chr" and c == ("val", b[1]): c = b                       # 機械語の文字は整数と同じ字で出る。SIR が文字と言う答えだけ読み替える
     if b not in (("partial",),):
         d = obs_asm_sir(t2)
+        if b[0] == "chr" and d == ("val", b[1]): d = b
         k2 = "戻せない" if d[0] == "unsup" else "一致" if d == b else "断り" if d[0] == "refuse" else "罠" if d[0] == "trap" else "誤答"
         via[k2] += 1
         if k2 == "誤答": bad.append(("SIR経由", name, b, d))

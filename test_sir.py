@@ -39,3 +39,18 @@ def test_fuzz_names():
 def test_fuzz_partial_rows():
     r = subprocess.run([sys.executable, "fuzz_sir.py", "400", "41", "--partial", "--asm"], capture_output=True, text=True, timeout=900)
     assert r.returncode == 0, r.stdout[-1200:]
+def test_fuzz_strings():
+    r = subprocess.run([sys.executable, "fuzz_sir.py", "500", "53", "--strings", "--asm"], capture_output=True, text=True, timeout=900)
+    assert r.returncode == 0, r.stdout[-1200:]
+def test_strings_lower_and_refuse():
+    import sign_sir as R, sign_interp as S
+    def ev(src):
+        f, top = R.lower(S.parse_source(src)); return R.evaluate(f, top)
+    assert ev("s : `abc`\n||s||\n") == ("val", 3)
+    assert ev("\\a\n") == ("chr", 97)
+    for bad in ["s : `abc`\ns + 1\n", "s : `abc`\ns ' 1\n", "f : x ? ||x||\nf `ab`\n", "\\a < \\b\n", "s : `h\u00e9`\n||s||\n"]:
+        try: ev(bad); assert False, bad
+        except R.Unsup: pass
+    f, top = R.lower(S.parse_source("5 & \\a\n"))
+    try: R.raise_ast(f, top); assert False
+    except R.Unsup: pass
