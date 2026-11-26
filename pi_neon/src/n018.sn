@@ -1,0 +1,3 @@
+`Float を Int で割る(Float だけ)
+f : a n ? a / n
+f 1.0 4

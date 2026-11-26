@@ -3946,3 +3946,11 @@ A1・A4・A6 は仕様に答えがあり実装も一致(問いを閉じてよい
 - 機械語版 `led_gpio.sn`(`--real-dev`。ゲーム機の駆動部のアラームで反転)。
 - インタープリタ版 `python3 sign_console.py led_gpio.sn --display=null --gpio`(gpiozero か RPi.GPIO 経由)。
 機械語版とインタープリタ版の GPIO の経路は別(`/dev/gpiochip0` の GPIO v2 直接と、Python のライブラリ)だが、見た目は同じだった。
+
+## 実機(Raspberry Pi 4 Model B)での NEON と --par の照合(2026-11-26)
+
+`pi_neon/`(新規): `make.py` が test_neon.py の `same_linux` の事例(83 本。Float / Vector の演算・`__` の持ち回り・`[op] (map $g xs)` の融合)と pi_check/src_par の 7 プログラム(直列 `_s`・`--par=2/3/4`)を `--target=linux` の静的 ELF にして `expected.json`(処理系の `--check-f32` の出力。par は直列の答え)を書く。`run_on_pi.py` が走らせて `report.txt` を作る。
+**結果: 111 本とも一致(食い違い 0 件)**。
+- **NEON は初めて実機で動いた**(それまでは test_neon.py の自前エミュレータだけ)。Vector の 32 ビットのレーン(`.4s`)・Float(`.2d`)・`__` の旗・融合の端数まで、処理系と同じ答え。
+- **--par**: 答えは全部直列と同じ(A3 の溢れ検査 = par ラッパーの niche 検査を入れたあとの確認)。直列に対する速さ(1 回の測定。ぶれる): p4 は t_par_loop ×3.30、list ×2.81、local ×2.54、fib1 ×2.46、fib4 ×2.39、args ×2.29、fib ×2.10。p2 は ×1.30〜1.77、p3 は ×1.76〜2.31。4 コアで理想の 4 倍には届かない(重い関数の兄弟呼びが 2 本だけの形がある。この見立ては測っていない)。
+- 同じ日の他の実機結果: 末尾呼びの飛び(兄弟呼び)と SIGSEGV の受け皿(深い再帰で rc=1 と知らせ)は PR #41・#44。

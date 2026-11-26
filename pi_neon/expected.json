@@ -1,0 +1,585 @@
+{
+ "n000": {
+  "name": "掛けて足す",
+  "stdout": "[1.5 2.5 12.0 36.0]\n",
+  "exit": 0
+ },
+ "n001": {
+  "name": "1/3 の丸め(最短の桁)",
+  "stdout": "[0.33333334 0.6666667 1.0 1.3333334]\n",
+  "exit": 0
+ },
+ "n002": {
+  "name": "負の字面",
+  "stdout": "[-0.5 -2.5 6.0 -36.0]\n",
+  "exit": 0
+ },
+ "n003": {
+  "name": "レーン(Float は 64 ビットの最短)",
+  "stdout": "0.6666666865348816\n",
+  "exit": 0
+ },
+ "n004": {
+  "name": "Float だけ(0.1 * 3.0)",
+  "stdout": "0.30000000000000004\n",
+  "exit": 0
+ },
+ "n005": {
+  "name": "Float だけ(整数値は .0)",
+  "stdout": "8.0\n",
+  "exit": 0
+ },
+ "n006": {
+  "name": "大きな Float(1e+16 以上は指数表記)",
+  "stdout": "1e+17\n",
+  "exit": 0
+ },
+ "n007": {
+  "name": "小さな Float(1e-05)",
+  "stdout": "1e-05\n",
+  "exit": 0
+ },
+ "n008": {
+  "name": "Float の inf",
+  "stdout": "inf\n",
+  "exit": 0
+ },
+ "n009": {
+  "name": "Float の nan",
+  "stdout": "nan\n",
+  "exit": 0
+ },
+ "n010": {
+  "name": "Vector の大きな値(1e+20 の指数表記)",
+  "stdout": "[1e+20 2e+20 3e+20 4e+20]\n",
+  "exit": 0
+ },
+ "n011": {
+  "name": "Vector の小さな値",
+  "stdout": "[1e-05 2e-05 3e-05 4e-05]\n",
+  "exit": 0
+ },
+ "n012": {
+  "name": "Int の関数の値を Vector に掛ける",
+  "stdout": "[6.0 12.0 18.0 24.0]\n",
+  "exit": 0
+ },
+ "n013": {
+  "name": "Int の関数が別の Int の関数を呼ぶ",
+  "stdout": "[0.0 6.0 12.0 18.0]\n",
+  "exit": 0
+ },
+ "n014": {
+  "name": "Int の実引数が 2 つ(字面と式)",
+  "stdout": "[11.0 17.0 23.0 29.0]\n",
+  "exit": 0
+ },
+ "n015": {
+  "name": "Int の字面を Float に",
+  "stdout": "0.7000000000000001\n",
+  "exit": 0
+ },
+ "n016": {
+  "name": "Int を左に置く(引き算の順)",
+  "stdout": "[9.0 8.0 7.0 6.0]\n",
+  "exit": 0
+ },
+ "n017": {
+  "name": "Int の字面が本体に",
+  "stdout": "[2.5 1.75 10.0 25.0]\n",
+  "exit": 0
+ },
+ "n018": {
+  "name": "Float を Int で割る(Float だけ)",
+  "stdout": "0.25\n",
+  "exit": 0
+ },
+ "n019": {
+  "name": "Vector を Int の字面で割る",
+  "stdout": "[0.25 0.5 0.75 1.0]\n",
+  "exit": 0
+ },
+ "n020": {
+  "name": "2^24+1 は binary32 に丸まる(Int → Float → binary32)",
+  "stdout": "[16777216.0 16777216.0 16777216.0 16777216.0]\n",
+  "exit": 0
+ },
+ "n021": {
+  "name": "Int の引数の後ろに Vector(レジスタは x と v で別に数える)",
+  "stdout": "[4.0 8.0 12.0 16.0]\n",
+  "exit": 0
+ },
+ "n022": {
+  "name": "Int と Float と Vector の混在(順序)",
+  "stdout": "[2.5 3.0 3.5 4.0]\n",
+  "exit": 0
+ },
+ "n023": {
+  "name": "割る数が Vector で 0 のレーンなし",
+  "stdout": "[2.0 8.0 1.0 0.5]\n",
+  "exit": 0
+ },
+ "n024": {
+  "name": "割る数が Vector で 0 のレーンあり → __",
+  "stdout": "__\n",
+  "exit": 0
+ },
+ "n025": {
+  "name": "0 でない Vector で割る(分子に 0 のレーン)",
+  "stdout": "[0.0 0.5 0.6666667 0.75]\n",
+  "exit": 0
+ },
+ "n026": {
+  "name": "0.0 で割る → __",
+  "stdout": "__\n",
+  "exit": 0
+ },
+ "n027": {
+  "name": "Float の変数 0.0 で割る → __",
+  "stdout": "__\n",
+  "exit": 0
+ },
+ "n028": {
+  "name": "Int の 0 で割る → __",
+  "stdout": "__\n",
+  "exit": 0
+ },
+ "n029": {
+  "name": "Int の 2 で割る",
+  "stdout": "[0.5 1.0 1.5 2.0]\n",
+  "exit": 0
+ },
+ "n030": {
+  "name": "Float を Vector で割る(0 のレーンあり → __)",
+  "stdout": "__\n",
+  "exit": 0
+ },
+ "n031": {
+  "name": "Float を Float の 0.0 で割る(IEEE の inf、__ ではない)",
+  "stdout": "inf\n",
+  "exit": 0
+ },
+ "n032": {
+  "name": "Float を Int の 0 で割る(inf)",
+  "stdout": "inf\n",
+  "exit": 0
+ },
+ "n033": {
+  "name": "32 ビットで 0 に丸まる Float で割る → __",
+  "stdout": "__\n",
+  "exit": 0
+ },
+ "n034": {
+  "name": "__ + c は c",
+  "stdout": "[0.5 0.25 3.0 8.0]\n",
+  "exit": 0
+ },
+ "n035": {
+  "name": "c - __ は c",
+  "stdout": "[0.5 0.25 3.0 8.0]\n",
+  "exit": 0
+ },
+ "n036": {
+  "name": "__ - c は c(符号を変えない)",
+  "stdout": "[0.5 0.25 3.0 8.0]\n",
+  "exit": 0
+ },
+ "n037": {
+  "name": "__ * c は c",
+  "stdout": "[0.5 0.25 3.0 8.0]\n",
+  "exit": 0
+ },
+ "n038": {
+  "name": "__ / c は c",
+  "stdout": "[0.5 0.25 3.0 8.0]\n",
+  "exit": 0
+ },
+ "n039": {
+  "name": "c / __ は c",
+  "stdout": "[0.5 0.25 3.0 8.0]\n",
+  "exit": 0
+ },
+ "n040": {
+  "name": "__ + __ は __",
+  "stdout": "__\n",
+  "exit": 0
+ },
+ "n041": {
+  "name": "__ のレーンは __",
+  "stdout": "__\n",
+  "exit": 0
+ },
+ "n042": {
+  "name": "__ のレーン + Float は Float",
+  "stdout": "1.5\n",
+  "exit": 0
+ },
+ "n043": {
+  "name": "__ でない Vector のレーン + Float",
+  "stdout": "9.5\n",
+  "exit": 0
+ },
+ "n044": {
+  "name": "__ になりうる式の続き(旗が続く)",
+  "stdout": "[1.5 2.25 6.0 12.0]\n",
+  "exit": 0
+ },
+ "n045": {
+  "name": "__ の後ろの割り算がもう一度 __",
+  "stdout": "__\n",
+  "exit": 0
+ },
+ "n046": {
+  "name": "融合 [+] n=2",
+  "stdout": "36.3\n",
+  "exit": 0
+ },
+ "n047": {
+  "name": "融合 [-] n=2",
+  "stdout": "0.14000000000000057\n",
+  "exit": 0
+ },
+ "n048": {
+  "name": "融合 [*] n=2",
+  "stdout": "329.41759999999994\n",
+  "exit": 0
+ },
+ "n049": {
+  "name": "融合 [/] n=2",
+  "stdout": "1.0077433628318584\n",
+  "exit": 0
+ },
+ "n050": {
+  "name": "融合 [+] n=3",
+  "stdout": "24.1\n",
+  "exit": 0
+ },
+ "n051": {
+  "name": "融合 [-] n=3",
+  "stdout": "-13.22\n",
+  "exit": 0
+ },
+ "n052": {
+  "name": "融合 [*] n=3",
+  "stdout": "460.4764160000001\n",
+  "exit": 0
+ },
+ "n053": {
+  "name": "融合 [/] n=3",
+  "stdout": "0.06426735218508997\n",
+  "exit": 0
+ },
+ "n054": {
+  "name": "融合 [+] n=5",
+  "stdout": "74.39999999999999\n",
+  "exit": 0
+ },
+ "n055": {
+  "name": "融合 [-] n=5",
+  "stdout": "-49.84\n",
+  "exit": 0
+ },
+ "n056": {
+  "name": "融合 [*] n=5",
+  "stdout": "702264.3916308479\n",
+  "exit": 0
+ },
+ "n057": {
+  "name": "融合 [/] n=5",
+  "stdout": "0.00021473166203088455\n",
+  "exit": 0
+ },
+ "n058": {
+  "name": "融合 [+] n=6",
+  "stdout": "61.06\n",
+  "exit": 0
+ },
+ "n059": {
+  "name": "融合 [-] n=6",
+  "stdout": "-30.419999999999998\n",
+  "exit": 0
+ },
+ "n060": {
+  "name": "融合 [*] n=6",
+  "stdout": "218288.70044467197\n",
+  "exit": 0
+ },
+ "n061": {
+  "name": "融合 [/] n=6",
+  "stdout": "0.0010751926211567157\n",
+  "exit": 0
+ },
+ "n062": {
+  "name": "融合 [+] n=7",
+  "stdout": "46.78\n",
+  "exit": 0
+ },
+ "n063": {
+  "name": "融合 [-] n=7",
+  "stdout": "-32.86\n",
+  "exit": 0
+ },
+ "n064": {
+  "name": "融合 [*] n=7",
+  "stdout": "158550.1016224334\n",
+  "exit": 0
+ },
+ "n065": {
+  "name": "融合 [/] n=7",
+  "stdout": "0.0003055286594224797\n",
+  "exit": 0
+ },
+ "n066": {
+  "name": "融合 [+] n=8",
+  "stdout": "72.96000000000001\n",
+  "exit": 0
+ },
+ "n067": {
+  "name": "融合 [-] n=8",
+  "stdout": "-62.480000000000004\n",
+  "exit": 0
+ },
+ "n068": {
+  "name": "融合 [*] n=8",
+  "stdout": "6453869.41043597\n",
+  "exit": 0
+ },
+ "n069": {
+  "name": "融合 [/] n=8",
+  "stdout": "4.254439972956501e-06\n",
+  "exit": 0
+ },
+ "n070": {
+  "name": "融合 [+] n=9",
+  "stdout": "79.9\n",
+  "exit": 0
+ },
+ "n071": {
+  "name": "融合 [-] n=9",
+  "stdout": "-61.02\n",
+  "exit": 0
+ },
+ "n072": {
+  "name": "融合 [*] n=9",
+  "stdout": "30226945.38788331\n",
+  "exit": 0
+ },
+ "n073": {
+  "name": "融合 [/] n=9",
+  "stdout": "2.948151024076744e-06\n",
+  "exit": 0
+ },
+ "n074": {
+  "name": "融合 [+] n=16",
+  "stdout": "148.31999999999996\n",
+  "exit": 0
+ },
+ "n075": {
+  "name": "融合 [-] n=16",
+  "stdout": "-133.04\n",
+  "exit": 0
+ },
+ "n076": {
+  "name": "融合 [+] n=33",
+  "stdout": "372.69999999999993\n",
+  "exit": 0
+ },
+ "n077": {
+  "name": "融合 [-] n=33",
+  "stdout": "-349.9799999999999\n",
+  "exit": 0
+ },
+ "n078": {
+  "name": "融合: 名前付き関数 g",
+  "stdout": "7.406666666666666\n",
+  "exit": 0
+ },
+ "n079": {
+  "name": "融合: 切り出し $[* 2.0]",
+  "stdout": "-48.44\n",
+  "exit": 0
+ },
+ "n080": {
+  "name": "融合: 恒等(map なし)",
+  "stdout": "3003.271164036\n",
+  "exit": 0
+ },
+ "n081": {
+  "name": "融合: 負の字面を含む g",
+  "stdout": "-35.08\n",
+  "exit": 0
+ },
+ "n082": {
+  "name": "融合: 二重丸め(0.1 の和)",
+  "stdout": "2.8\n",
+  "exit": 0
+ },
+ "t_par_args_s": {
+  "name": "par t_par_args_s",
+  "stdout": "14930352\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_args_p2": {
+  "name": "par t_par_args_p2",
+  "stdout": "14930352\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_args_p3": {
+  "name": "par t_par_args_p3",
+  "stdout": "14930352\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_args_p4": {
+  "name": "par t_par_args_p4",
+  "stdout": "14930352\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib_s": {
+  "name": "par t_par_fib_s",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib_p2": {
+  "name": "par t_par_fib_p2",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib_p3": {
+  "name": "par t_par_fib_p3",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib_p4": {
+  "name": "par t_par_fib_p4",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib1_s": {
+  "name": "par t_par_fib1_s",
+  "stdout": "63245986\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib1_p2": {
+  "name": "par t_par_fib1_p2",
+  "stdout": "63245986\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib1_p3": {
+  "name": "par t_par_fib1_p3",
+  "stdout": "63245986\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib1_p4": {
+  "name": "par t_par_fib1_p4",
+  "stdout": "63245986\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib4_s": {
+  "name": "par t_par_fib4_s",
+  "stdout": "96631268\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib4_p2": {
+  "name": "par t_par_fib4_p2",
+  "stdout": "96631268\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib4_p3": {
+  "name": "par t_par_fib4_p3",
+  "stdout": "96631268\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib4_p4": {
+  "name": "par t_par_fib4_p4",
+  "stdout": "96631268\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_list_s": {
+  "name": "par t_par_list_s",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_list_p2": {
+  "name": "par t_par_list_p2",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_list_p3": {
+  "name": "par t_par_list_p3",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_list_p4": {
+  "name": "par t_par_list_p4",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_local_s": {
+  "name": "par t_par_local_s",
+  "stdout": "44791056\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_local_p2": {
+  "name": "par t_par_local_p2",
+  "stdout": "44791056\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_local_p3": {
+  "name": "par t_par_local_p3",
+  "stdout": "44791056\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_local_p4": {
+  "name": "par t_par_local_p4",
+  "stdout": "44791056\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_loop_s": {
+  "name": "par t_par_loop_s",
+  "stdout": "80000000400000000\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_loop_p2": {
+  "name": "par t_par_loop_p2",
+  "stdout": "80000000400000000\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_loop_p3": {
+  "name": "par t_par_loop_p3",
+  "stdout": "80000000400000000\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_loop_p4": {
+  "name": "par t_par_loop_p4",
+  "stdout": "80000000400000000\n",
+  "exit": 0,
+  "par": true
+ }
+}

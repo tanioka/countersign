@@ -1,0 +1,3 @@
+`Int の字面を Float に
+f : a n ? a * n
+f 0.1 7
