@@ -3003,7 +3003,7 @@ def _arith_core(op, a, b):
             if k == 0: return a                                # 丈が 0 なら空の群は消え、元の器が残る
             return [a[i * k:(i + 1) * k] for i in range(b - 1)] + [a[(b - 1) * k:]]
     if isinstance(a, Char) or isinstance(b, Char):             # 文字の域(type_system.md §3.6): 量ではなく位置
-        def in_domain(r): return Char(chr(r)) if (0 <= r <= 127 if CHARSET[0] == "ascii" else (0 <= r <= 0x10FFFF and not 0xD800 <= r <= 0xDFFF)) else UNIT    # U+0000〜charset の上限(ascii は U+007F、utf32 は U+10FFFF でサロゲートを除く。alpha1: U+0000 はただの文字)
+        def in_domain(r): return Char(chr(r)) if (1 <= r <= 127 if CHARSET[0] == "ascii" else (1 <= r <= 0x10FFFF and not 0xD800 <= r <= 0xDFFF)) else UNIT    # U+0001〜charset の上限(ascii は U+007F、utf32 は U+10FFFF でサロゲートを除く。documents type_system.md: U+0000 は `!_` の綴りなので、ずらした先が U+0000 でも `!_`)
         if isinstance(a, Char) and isinstance(b, Char):
             if op == "-": return ord(a) - ord(b)               # 隔たり(Int。負でよい)
             if op == "+": return in_domain(ord(a) + ord(b))    # 符号位置の和
