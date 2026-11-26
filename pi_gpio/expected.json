@@ -1,0 +1,18 @@
+{
+ "g_17to27": {
+  "stdout": "1010\n",
+  "exit": 0
+ },
+ "g_27to17": {
+  "stdout": "1010\n",
+  "exit": 0
+ },
+ "g_count": {
+  "stdout": "200\n",
+  "exit": 0
+ },
+ "g_pull": {
+  "stdout": "10\n",
+  "exit": 0
+ }
+}
