@@ -1,4 +1,4 @@
-"""枚を跨ぐ同じ名前(compiler_pipeline.md §4・coproduct_spec P2): --strict は name-duplicate で断る。公開(`#`)でない名前は引く側に入らないので、ぶつからない。"""
+"""枚を跨ぐ同じ名前(compiler_pipeline.md §4・coproduct_spec P2): 設計者の答え 2026-11-25(Sign#302 の 2 (c))で、断りでなく、知らせて `!_`(どちらも使わない)。公開(`#`)でない名前は引く側に入らないので、ぶつからない。"""
 import os, subprocess, sys, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 FILES = {"lib.sn": "#k : x ? w x\nw : x ? x + 1\n", "pub.sn": "#w : x ? x + 1\n", "pub2.sn": "#w : x ? x + 100\n"}
@@ -19,4 +19,9 @@ for name, body, refuse in CASES:
     r = subprocess.run([sys.executable, os.path.join(HERE, "sign.py"), "--strict", f], capture_output=True, text=True, cwd=d)
     got = "name-duplicate" in r.stderr + r.stdout
     if got != refuse: bad += 1; print("NG", name, "断りが出た" if got else "断りが出ない", "のはず:", "断る" if refuse else "通る", r.stderr[:120])
+for name, body, want in (("自分の w と公開の w は、どちらも使われず `!_`", "`pub.sn`@~\nw : x ? x * 10\nv : 7\n(w 5) + v\n", "12"), ("公開の w が 2 枚も同じ", "`pub.sn`@~\n`pub2.sn`@~\nv : 7\n(w 1) + v\n", "8")):
+    f = os.path.join(d, "m.sn"); open(f, "w", encoding="utf-8").write(body)
+    for flag in ([], ["--strict"]):      # --strict は `!_` との算術が `!_`(答えは出ない)、既定は `!_` の項が消える
+        r = subprocess.run([sys.executable, os.path.join(HERE, "sign.py")] + flag + [f], capture_output=True, text=True, cwd=d)
+        if r.stdout.strip() != ("" if flag else want): bad += 1; print("NG", name, flag, "答え", repr(r.stdout), "のはず", want, r.stderr[:120])
 print("全部 ok" if not bad else "NG %d 件" % bad); sys.exit(1 if bad else 0)
