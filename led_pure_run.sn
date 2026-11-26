@@ -1,0 +1,17 @@
+`led_pure_run.sn — led_pure.sn(時刻の純粋な関数)を、通常のインタープリタ(sign.py / sign_interp.py)で動かす。sign_console.py は要らない。
+`  動かし方: python3 sign.py led_pure_run.sn --gpio          (実機の GPIO17。止めるのは Ctrl+C)    /  python3 sign.py led_pure_run.sn --gpio=fake(ピンの変化が標準エラーに出る)
+`  装置を 1 つでも付けると、タイマー(0x9200000)が付く。まど(描画)が無いので、こまの駆動(tick)は無い。代わりに、末尾の再帰が「50 ミリ秒待つ → 今の時刻の状態をピンへ」を繰り返す(末尾呼びなので、積み上がらない)
+
+`led_pure.sn`@~
+
+`1 周: 50 ミリ秒待つ(タイマー装置の SLEEP)。待ったあとで、時刻の状態をピンへ書く`
+step : z ? seq2 ((T + 4) # 50) (tick 0)
+
+`同じ周を繰り返す(行の条件に副作用を置き、成り立たないので次の行へ。最後の行が末尾呼び)`
+loop : n ?
+	(step 0) = 99 : 0
+	loop (n + 1)
+
+seq2 : a b ? b
+init 0
+loop 0
