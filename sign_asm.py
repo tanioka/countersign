@@ -1527,7 +1527,7 @@ class FnGen:
             if unit_l:
                 self.lines.append("%s:" % unit_l); self.call_unit(rk, args, gws)
             return
-        sib = (tail and f != self.name and self.entry and not gws and not unit_l and not fl_relay and not fl_mask and not ringcall
+        sib = (tail and f != self.name and self.entry and not gws and not fl_relay and not fl_mask and not ringcall
                and not self.sret and not self.alloca and not self.pre_alloca and self.name not in self.prog.maskfns
                and rk == "I" and all(kd == "I" and len(ts) == 1 for ts, kd in tmps) and len(tmps) <= len(ARG_REGS)
                and not self.prog.bound.get(f) and not (f == self.name and self.prog.grow.get(f)) and not self.prog.grow.get(f)
@@ -1541,6 +1541,8 @@ class FnGen:
             for _ in range(nslots): self.free()
             self.emit("@@EPILOGUE", "フレームを戻す")
             self.emit("b %s" % symbol_of(f), "兄弟への末尾呼び出し")
+            if unit_l:
+                self.lines.append("%s:" % unit_l); self.call_unit(rk, args, gws)
             return
         for gw in gws: self.commit_grow(gw)
         r = 0; extra = []
