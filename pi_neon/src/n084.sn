@@ -1,0 +1,5 @@
+`map List n=3
+m : f [h ~t] ? (@f h) (m f t)~
+g : x ? x * 2.0 + 1.0
+f : xs ? m $g xs
+f (5.19 3.92 5.25)
