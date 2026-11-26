@@ -6548,7 +6548,8 @@ USAGE = """使い方: python3 sign.py --asm 〈プログラム.sn〉 [--target=b
   --strict        別の道: --strict(仕様の読み)と同じ答えになるコードを出す(構文木を書き換えてから出す。既定の道は変えない)。直す形は4つ: `x ' 名前`(`__`)・逆適用 `c f`(`c`)・最後でない行の値が `!_` なら次の行へ・本体の `y : 2` は条件の行。書き換えられない形は断る。累積に `__` を足す形などは、既定と同じく出せない
   --no-estimate   上界を見積もりで通さない(既定は仕様どおり、証明できない上界も見積もり+実行時の確認で通し、information に名指しする)
   --elf=FILE      linux の足場つきで組んでリンクし、AArch64 の静的な ELF を FILE に書く(clang と ld.lld が要る。実行は Raspberry Pi など AArch64 の Linux で)
-出せる範囲は整数・比較・分岐・関数(再帰を含む)と、Int のリスト・ASCII の文字列・文字(取り出し・長さ・比較・関数へ渡す・関数から返す・最後の式として印字)だけ。範囲(端が定数なら .rodata のリスト、実行時の値なら規則 {start, step, end} の値渡し)・スライス(端が非負の定数)・連結(`xs~ ys~`)・入れ子のリスト(`(1 2) (3 4 5)`、`xs ys`。arena)・文字列の連結(`a b`)も出せる。返す器の大きさは、上界 konst + Σ coef×||器|| を呼ぶ側が実行時に計算して置き場を取る。書き込み `a # v`(Int の番地と値。64 ビット、答えは番地)、9 個以上の引数(9 語目からスタック渡し)も出せる。出せない形は、理由を言って終わる(終了コード 1)。"""
+出せる範囲は整数・比較・分岐・関数(再帰を含む)と、Int のリスト・ASCII の文字列・文字(取り出し・長さ・比較・関数へ渡す・関数から返す・最後の式として印字)だけ。範囲(端が定数なら .rodata のリスト、実行時の値なら規則 {start, step, end} の値渡し)・スライス(端が非負の定数)・連結(`xs~ ys~`)・入れ子のリスト(`(1 2) (3 4 5)`、`xs ys`。arena)・文字列の連結(`a b`)も出せる。返す器の大きさは、上界 konst + Σ coef×||器|| を呼ぶ側が実行時に計算して置き場を取る。書き込み `a # v`(Int の番地と値。64 ビット、答えは番地)、9 個以上の引数(9 語目からスタック渡し)も出せる。出せない形は、理由を言って終わる(終了コード 1)。
+--asm は処理系の --check-int(Int の検査)と --check-f32(Vector のレーンを 32 ビットに)を自動で入れます(コンパイル時の評価を機械語と同じ精度にするため)。"""
 
 
 STRICT = [False]
@@ -6805,6 +6806,8 @@ def strict_rewrite(tree):
 
 def main(argv):
     import os, subprocess, sys, tempfile
+    import sign_interp as _SI                             # --asm では、コンパイル時に処理系で評価する所(定数の畳み込み・部分計算)も機械語と同じ精度で: Int の検査(--check-int)と Vector のレーンの 32 ビット(--check-f32)を自動で入れる
+    _SI.INTCHK[0] = True; _SI.F32[0] = True
     path = out = elf = None
     target = "bare"; charset = None; real_dev = False; fps = 60; real_db = False; bundle = None; display = (64, 32); par = None; par_spec = False
     for a in argv:

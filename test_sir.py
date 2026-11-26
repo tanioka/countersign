@@ -185,6 +185,15 @@ def test_default_mode_duplicate_names():
         r = subprocess.run([sys.executable, "sign.py", p], capture_output=True, text=True, timeout=60)
         assert r.stdout.strip() == want, (src, r.stdout, r.stderr)
 
+def test_asm_turns_on_checks():
+    """--asm は --check-int と --check-f32 を自動で入れる(コンパイル時の評価を機械語と同じ精度にする)。"""
+    code = ("import sys, sign_asm, sign_interp, os, tempfile\n"
+            "d = tempfile.mkdtemp(); p = os.path.join(d, 'x.sn'); open(p, 'w').write('3 + 4\\n')\n"
+            "sign_asm.main([p, '-o', os.path.join(d, 'x.s')])\n"
+            "print(sign_interp.INTCHK[0], sign_interp.F32[0])\n")
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120)
+    assert r.stdout.strip().endswith("True True"), (r.stdout, r.stderr)
+
 if __name__ == "__main__":                      # CI は `python3 test_*.py` で走らせる(pytest ではない)。ここが無いと何も走らず成功になる
     import traceback
     ng = 0

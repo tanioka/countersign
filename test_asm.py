@@ -585,6 +585,8 @@ for name, src, key in REFUSE:
         asm_of(src); got = "出てしまった"
     except sign_asm.AsmError as e:
         got = "断り" if key is None or key in str(e) else "断り(理由が違う): %s" % e
+    except sign_interp.SignError as e:        # 値域の外の字面は、読む段でコンパイルエラー(integer_overflow.md §1.1 末。全モード)
+        got = "断り" if key is None or key in str(e) else "断り(理由が違う): %s" % e
     except Exception as e:
         got = "例外 %s: %s" % (type(e).__name__, e)
     check("断る: " + name, got, "断り")
