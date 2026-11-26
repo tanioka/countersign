@@ -3084,8 +3084,23 @@ class OpenRange:                               # stack_abi §1.3: 開端レン�
         o, s = self.op, self.step
         return x + s if o == "~+" else x - s if o == "~-" else x * s if o == "~*" else x // s if o == "~/" and isinstance(x, int) and isinstance(s, int) else x / s if o == "~/" else x ** s
     def at(self, k):
-        x = self.start
-        for _ in range(k): x = self.next(x)
+        x, s, o = self.start, self.step, self.op
+        isint = lambda v: isinstance(v, int) and not isinstance(v, bool)
+        if isint(x) and isint(s) and o == "~+": x = x + k * s            # 閉じた式(k 回の足し込みを待たない)
+        elif isint(x) and isint(s) and o == "~*":                       # 等比: 溢れたら以後も溢れるので、|s| >= 2 は高々 64 回で決まる
+            if x == 0 or k == 0: pass
+            elif s == 0: x = 0
+            elif s == 1: pass
+            elif s == -1: x = -x if k % 2 else x
+            else:
+                for _ in range(k):
+                    x = x * s
+                    if abs(x) > INT_MAX: break
+        else:
+            for _ in range(k): x = self.next(x)
+        if isint(x) and abs(x) > INT_MAX:                               # 設計者の答え 2026-11-25: Int の溢れは `!_`
+            info("int-overflow", f"Int(64 bit)の溢れなので _ です: 規則 {self!r} の {k} 番目は -{INT_MAX} 〜 {INT_MAX} の外です")
+            return UNIT
         return x
     def __repr__(self): return f"[{show(self.start)} {self.op} {show(self.step)}]"
 def iterate_loop(it, fnref):

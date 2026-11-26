@@ -35,6 +35,7 @@ from sign_interp import Char, WInt      # 文字(`\\a`)は str の部分クラ�
 INT_MAX = (1 << 63) - 1
 ARG_REGS = ["x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7"]
 FRAME_MARK = "@@FRAME@@"
+OPEN_USED = [False]       # 終端の無い規則を使うプログラム(表示の補助が罠の検査を持つ)
 NICHE_BITS = 0x8000000000000000       # Int の `__`(target_info.js の UNIT_NICHE_ASM。INT64_MIN は Int の値でない)
 
 
@@ -1788,6 +1789,9 @@ class FnGen:
         """要素数 = (end - start) / step + 1(向きが逆なら 0)を dst へ。x13 を壊す。溢れは罠(Int の算術)。"""
         self.prog.trap_used = True
         zero, one, done = self.prog.label(), self.prog.label(), self.prog.label()
+        if self.prog.open_used:
+            self.niche(); self.emit("cmp %s, x13" % re_); self.emit("b.eq .Ltrap", "終端の無い規則は数えられない(実装の選択: 罠)")
+            self.emit("cbz %s, .Ltrap" % rst, "等比の規則も数えられない")
         self.emit("subs %s, %s, %s" % (dst, re_, rs), "end - start")
         self.emit("ccmp xzr, %s, #1, vc" % dst); self.emit("b.vs .Ltrap")
         self.emit("cbz %s, %s" % (dst, one), "始まりと終わりが同じなら 1 個")
@@ -1826,9 +1830,33 @@ class FnGen:
         self.emit("mov x0, x9"); self.emit("mov x1, x10"); self.emit("mov x2, x12")
         for _ in cells: self.free()
 
+    def gen_open_rule(self, n, r0, r1, r2):
+        """終端の無い規則 `[a ~+ s]` `[a ~* k]`(実装の選択。仕様は運び方を決めていない)。3 本のレジスタ {start, step, end} のまま運ぶ:
+        等差 = {a, s, INT64_MIN}(end が `__` の印 = 終わりが無い)、等比 = {a, 0, k}(有限の規則の step は 0 にならない = 0 は進まない罠。
+        end に k を入れて step 0 を目印にする。k は Int で INT64_MIN にならない)。取り出し(`' i`)だけが読める。個数・並べ出しは罠。"""
+        for x in (n[2], n[3]):
+            if self.prog.kind(x, self.kinds) != "I": raise AsmError("規則の端点・歩幅は Int だけです")
+            if self.mu_hard(x): raise AsmError("端点・歩幅が `__` になりうる規則はまだ出せません(`__` の規則は起点を niche にして運ぶ)")
+        cells = []
+        for x in (n[2], n[3]):
+            self.gen(x); self.ovf_guard(x); t = self.tmp(); cells.append(t)
+            self.emit("str x0, [x29, #%d]" % self.off(t))
+        self.emit("ldr x9, [x29, #%d]" % self.off(cells[0]), "start")
+        self.emit("ldr x10, [x29, #%d]" % self.off(cells[1]), "歩幅(等比なら比)")
+        if n[1] == "~+":
+            self.niche("x12"); self.emit("mov x14, x10")
+        else:
+            self.emit("mov x12, x10"); self.emit("mov x14, #0", "step 0 = 等比の印")
+        for _ in cells: self.free()
+        for r, src in ((r0, "x9"), (r1, "x14"), (r2, "x12")):
+            if r != src: self.emit("mov %s, %s" % (r, src))
+        self.prog.open_used = True
+
     def load_rule(self, n, r0, r1, r2):
         """規則を表す項 n の start, step, end を r0, r1, r2 へ。"""
         n = self.strip(n)
+        if n[0] == "id" and n[1] in self.prog.orules and n[1] not in self.slot: n = self.prog.orules[n[1]]
+        if n[0] == "bin" and n[1] in ("~+", "~*"): return self.gen_open_rule(n, r0, r1, r2)
         if n[0] == "id" and n[1] in self.slot and self.kinds[n[1]] == "R":
             c = self.slot[n[1]]
             for j, (r, nm) in enumerate(zip((r0, r1, r2), ("start", "step", "end"))):
@@ -1863,6 +1891,17 @@ class FnGen:
             self.emit("ldr x11, [x29, #%d]" % self.off(t)); self.free()
         else:
             self.load_rule(l, "x9", "x10", "x12")
+        lo_ = self.strip(l)
+        if lo_[0] == "id" and lo_[1] in self.prog.orules and lo_[1] not in self.slot: lo_ = self.prog.orules[lo_[1]]
+        if lo_[0] == "bin" and lo_[1] in ("~+", "~*"):             # 字面で終端の無い規則: 開いた取り出しだけ
+            self.open_index(unit, done); self.lines.append("%s:" % unit); self.niche("x0"); self.lines.append("%s:" % done); return
+        if self.prog.open_used and not (lo_[0] == "bin" and lo_[1] == "~"):          # 名前・仮引数・呼びの結果: 実行時に終端の有無を見る
+            fin = self.prog.label()
+            self.niche(); self.emit("cmp x12, x13"); self.emit("b.eq %s" % (fin + "o"), "end が __ の印 = 等差で終わりが無い")
+            self.emit("cbnz x10, %s" % fin, "step が 0 = 等比(有限の規則の step は 0 にならない)")
+            self.lines.append("%so:" % fin)
+            self.open_index(unit, done)
+            self.lines.append("%s:" % fin)
         self.emit_rule_count("x9", "x10", "x12", "x14")
         self.emit("cmp x11, #0"); self.emit("b.ge %s" % pos)
         self.emit("add x11, x11, x14", "負の添字は後ろから")
@@ -1872,6 +1911,29 @@ class FnGen:
         self.emit("b %s" % done)
         self.lines.append("%s:" % unit); self.niche("x0")
         self.lines.append("%s:" % done)
+
+    def open_index(self, unit, done):
+        """終端の無い規則の `' i`(x9 = start, x10 = step か 0, x12 = end か k, x11 = i)を x0 へ。負の i は `__`。
+        等差(end が INT64_MIN): start + i × step。等比(step が 0): start × k^i を前の値に k を掛けて求める
+        (|k| >= 2 は溢れたら以後も溢れるので高々 64 回。0, ±1 は閉じた式。start 0 は 0)。溢れは `!_`(= `__` の印)。"""
+        ovf, lp, geo, zero, st, neg1 = (self.prog.label() for _ in range(6))
+        self.emit("cmp x11, #0"); self.emit("b.lt %s" % unit, "負の添字は __(開いた規則には後ろが無い)")
+        self.niche(); self.emit("cmp x12, x13"); self.emit("b.ne %s" % geo)
+        self.emit("mul x13, x11, x10"); self.emit("smulh x14, x11, x10", "i × step の上の語")
+        self.emit("cmp x14, x13, asr #63"); self.emit("b.ne %s" % ovf)
+        self.emit("adds x0, x9, x13"); self.emit("b.vs %s" % ovf, "溢れたら __(INT64_MIN に着いたらそのまま印)")
+        self.emit("b %s" % done)
+        self.lines.append("%s:" % geo)
+        self.emit("mov x0, x9"); self.emit("cbz x9, %s" % done, "start 0 は 0"); self.emit("cbz x11, %s" % done, "0 番目は start")
+        self.emit("cbz x12, %s" % zero); self.emit("cmp x12, #1"); self.emit("b.eq %s" % done)
+        self.emit("movn x13, #0", "−1"); self.emit("cmp x12, x13"); self.emit("b.ne %s" % lp)
+        self.emit("tbz x11, #0, %s" % done, "比 -1: 偶数番目は start"); self.emit("neg x0, x9"); self.emit("b %s" % done)
+        self.lines.append("%s:" % zero); self.emit("mov x0, #0"); self.emit("b %s" % done)
+        self.lines.append("%s:" % lp)
+        self.emit("mul x13, x0, x12"); self.emit("smulh x14, x0, x12"); self.emit("cmp x14, x13, asr #63"); self.emit("b.ne %s" % ovf)
+        self.emit("mov x0, x13"); self.emit("subs x11, x11, #1"); self.emit("b.ne %s" % lp)
+        self.niche(); self.emit("cmp x0, x13"); self.emit("b.ne %s" % done, "INT64_MIN に着いた積は __ の印そのもの"); self.emit("b %s" % ovf)
+        self.lines.append("%s:" % ovf); self.niche("x0"); self.emit("b %s" % done)
 
     def spread_total(self, x):
         """展開 `x~` の要素の総数を x12 へ(x11, x13, x14 を壊す)。入れ子は内側の長さの総和。"""
@@ -2759,6 +2821,8 @@ class Program:
         self.consts = {}       # 名前 → 整数(字面だけの定義)
         self.maybe_ids = set() # 先に評価した葉の名前のうち、答えが `__` になりうる物
         self.defaults = {}     # 名前 → (既定値の無い仮引数の数, [(仮引数の名前, 既定値の式)]) 既定値のある関数。呼び出しの側で、足りない実引数を既定値の式で埋める(expand_defaults)
+        self.orules = {}       # 名前 → 右辺(終端の無い規則 `[a ~+ s]` `[a ~* k]` の定義。端点・歩幅が定数 Int のものだけ。使う所で式を置き直す)
+        self.open_used = False # 終端の無い規則を作る式がある(実装の選択。運び方は gen_open_rule の注)
         self.dyn = {}          # 名前 → 右辺(値が計算で決まる Int の定義。起動で一度だけ評価して .bss のセル _sign_dyn_名前 に置く)
         self.trap_used = False
         self.cwidth = {}          # 名前 → 幅つきの番地の幅(byte)
@@ -4949,6 +5013,7 @@ class Program:
         if k == "dyn": return self.kind(n[2], env)
         if k == "id":
             if n[1] in env: return env[n[1]]            # "?" = まだ分からない仮引数
+            if n[1] in self.orules and n[1] not in self.lists: return "R"
             return "L" if n[1] in self.lists else "S" if n[1] in self.strs else "N" if n[1] in self.nests else "C" if n[1] in self.chars else "I"
         if k == "lit":
             if isinstance(n[1], Char) and len(n) == 2: return "C"
@@ -4988,8 +5053,11 @@ class Program:
         if k == "bin" and n[1] == "*" and self.kind(n[2], env) == "C": raise AsmError("`Char * Int` は回数が定数のときだけ出せます(長さが実行時に決まる文字列は、確保する領域がまだ無い)")
         if k == "bin" and n[1] == "+" and self.kind(n[2], env) == "C" and self.kind(n[3], env) == "C": return "C"      # Char + Char は文字コードの和(範囲の外は __)
         if k == "bin" and n[1] in ("+", "-") and self.kind(n[2], env) == "C" and self.kind(n[3], env) in ("I", "?"): return "C"      # Char ± Int は Char(`0u30 + n`。範囲の外は __)
-        if k == "bin" and n[1] == "~+":
-            raise AsmError("終端の無い規則(`[a ~+ s]`)はまだ出せません(数えられず、引くだけ。設計者の 2 本渡し)")
+        if k == "bin" and n[1] in ("~+", "~*"):                       # 終端の無い規則(実装の選択。gen_open_rule)
+            for x in (n[2], n[3]):
+                if self.kind(x, env) not in ("I", "?"): raise AsmError("規則の端点・歩幅は Int だけです")
+            self.open_used = True
+            return "R"
         if k == "cmp" or (k == "bin" and n[1] in ("==", "!==")):
             first = n[1][0] if k == "cmp" else n[2]
             return "C" if self.kind(first, env) == "C" else "I"
@@ -5291,7 +5359,7 @@ class Program:
                 dynn.append(n); continue
             if n[0] != "def": continue
             name, rhs = n[1], n[2]
-            if name in self.fns or name in self.consts or name in self.lists or name in self.strs or name in self.nests or name in self.dyn: continue          # 先に書いた方が勝つ(compiler_pipeline.md §4)
+            if name in self.fns or name in self.consts or name in self.lists or name in self.strs or name in self.nests or name in self.dyn or name in self.orules: continue          # 先に書いた方が勝つ(compiler_pipeline.md §4)
             if rhs[0] == "lam":
                 ps = []; dfl = []
                 for p in rhs[1]:
@@ -5330,6 +5398,8 @@ class Program:
                 elif r[0] == "neg" and r[1][0] == "lit": self.consts[name] = -int_literal(r[1])
                 elif self.const_val(r) is not self.NOF: self.consts[name] = self.const_val(r)          # 定数どうしの比べ(`ok : 3 < 5`、真なら左辺・偽なら `__`)と、`__` を含む算術(`c + 1`)を畳む
                 elif self.const_int(r) is not None: self.consts[name] = self.const_int(r)          # 定数名どうしの + - *(`color : gfx + 0x08`)は、その場で畳む
+                elif r[0] == "bin" and r[1] in ("~+", "~*") and self.const_int(r[2]) is not None and self.const_int(r[3]) is not None:
+                    self.orules[name] = r; self.open_used = True          # 終端の無い規則の名前(実装の選択): 使う所で式を置き直す
                 elif self.dyn_shape(r):
                     self.dyn[name] = r; dynn.append(("dyn", name, r))          # 値が計算で決まる定義(`a : fib 30`): 起動のとき一度だけ評価してセルに置く(generate が確かめる)
                 else:
@@ -6005,6 +6075,8 @@ class Program:
             self.note_estimate(self.addr_cells[a][0], "幅より近い定数の番地が %d 組あります(例: 0x%x と 0x%x。幅 %d byte)。仕様(value_representation.md §5.4)では `0x…` の幅は target の語幅(aarch64 は 8 バイト)なので重なります。4 バイトの変数・レジスタには幅を書く `4x…` を使います。番地ごとに別のセルとして扱う処理系の古い読みとは答えが変わります" % (len(close), a, b, self.addr_cells[a][1]))
         if STRICT[0] and any(i not in self.part_seen and (o is None or o in self.live) for i, (_n, _t, o) in self.part_trap.items()):             # 罠を出せなかった呼びが残るなら、strict の読みにできない(`!_` の実引数で答えが変わるのを黙って通さない)
             raise StrictRefusal("--strict の読みにできない形があります(コンパイラは既定の読みで解きます):\n  [6] 実引数が `!_` になりうる呼びの後ろに値が続くか、`~` が付く形で、実行時の罠を出せません(asm に関数値は無い)\n      %s" % "; ".join(sorted({t for i, (_n, t, o) in self.part_trap.items() if i not in self.part_seen and (o is None or o in self.live)})[:1]))
+        OPEN_USED[0] = self.open_used
+        if self.open_used: self.trap_used = True          # 終端の無い規則を数える・並べると罠(実装の選択)
         if self.trap_used:
             if self.work_trap: out += [".Ltrap_work:", "\tmov x16, #2  // 作業領域に入らない伸び(原因の印)", "\tb .Ltrap_halt", ""]
             if self.part_used: out += [".Ltrap_part:", "\tmov x16, #3  // --strict: 余った関数が値として残る・後ろの値を受け取る形(asm に関数値は無い。原因の印)", "\tb .Ltrap_halt", ""]
@@ -6299,6 +6371,7 @@ def linux_start(prints, maybe_unit=False, top="I", flag=False, overflow=False, f
             "_sign_print_rule:",
             "\tmov x22, x30",
             "\tmov x19, x0", "\tmov x20, x1", "\tmov x21, x2",
+        ] + (["\tmovz x13, #0x8000, lsl #48", "\tcmp x21, x13", "\tb.eq .Ltrap", "\tcbz x20, .Ltrap"] if OPEN_USED[0] else []) + [
             "\tsub x23, x21, x19", "\tmov x24, #1", "\tcbz x23, 6f",
             "\teor x13, x23, x20", "\tmov x24, #0", "\ttbnz x13, #63, 6f",
             "\tsdiv x24, x23, x20", "\tadd x24, x24, #1",

@@ -1,0 +1,22 @@
+`backoff.sn — 指数バックオフ(再試行の待ち時間を倍々にする)を、開端の規則 [100 ~* 2] の n 番目で書く。待ち時間の表は状態の変数が要らず、n を渡すだけ。
+`  Int の溢れは !_ なので、倍々で表せなくなる所が「自然な打ち切り」になる(上限の検査を別に書かなくてよい)。
+`  開端の規則の機械語の運び方は実装の選択(IMPLEMENTATION_NOTES.md「終端の無い規則」)。取り出し 規則 ' n だけ読める(個数・並べ出しは罠)。
+`  確かめ方: python3 sign.py backoff.sn と、python3 sign.py backoff.sn --asm で同じ答え
+
+BASE : 100
+CAP : 60000
+
+delay : [BASE ~* 2]
+
+`1. n 回目(0 から)の待ち時間(ミリ秒)。上限 CAP で頭打ち。倍々が Int を超えたら delay ' n は __ で、その行は次の行(CAP)へ落ちる`
+wait_ms : n ?
+	((delay ' n) = (delay ' n)) & ((delay ' n) < CAP) : delay ' n
+	CAP
+
+`2. n 回の再試行で待つ合計(ミリ秒)。末尾再帰`
+waited : n acc ?
+	n = 0 : acc
+	waited (n - 1) (acc + (wait_ms (n - 1)))
+
+`3. 表: 0 〜 9 回目の待ち、10 回までの合計、30 回までの合計(頭打ちの効果)、60 回目(溢れたあと)の待ち`
+[(wait_ms 0) (wait_ms 1) (wait_ms 2) (wait_ms 5) (wait_ms 9) (waited 10 0) (waited 30 0) (wait_ms 60)]
