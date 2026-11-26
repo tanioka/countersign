@@ -271,7 +271,6 @@ def evaluate(funcs, top, fuel=200000):
                 if isinstance(a, (float, Rec)) or isinstance(b, (float, Rec)): raise Unsup("文字と Float・欄ブロックの算術")
                 if isinstance(a, Str) or isinstance(b, Str): return None                  # 文字列は算術を飲まない(`s * \a` は回数が文字で射なし)
                 def dom(r):
-                    if r == 0: raise Unsup("ずらした先が U+0000(仕様は `!_`。strict は文字 U+0000 を返す。M1)")
                     return Chr(r) if 1 <= r <= 127 else None
                 if isinstance(a, Chr) and isinstance(b, Chr):
                     if o == "+": return dom(a.c + b.c)

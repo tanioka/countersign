@@ -6409,7 +6409,7 @@ def drop_duplicate_defs(nodes):
     if not any(c > 1 for c in cnt.values()): return nodes
     return [n for n in nodes if not ((n[1] if n[0] == "export" else n)[0] == "def" and cnt.get((n[1] if n[0] == "export" else n)[1], 0) > 1 and (n[1] if n[0] == "export" else n)[2] != ("hole",))]
 
-def generate(nodes, target="bare", source=None, charset="ascii", real_dev=False, fps=60, real_db=False, display=(64, 32), par=None, par_spec=False):
+def _generate_core(nodes, target="bare", source=None, charset="ascii", real_dev=False, fps=60, real_db=False, display=(64, 32), par=None, par_spec=False):
     global LAST_INFOS, CW
     nodes = drop_duplicate_defs(nodes)
     PAR[0] = par if (par and par > 1) else None
@@ -6520,11 +6520,35 @@ def add_realdev(text):
     putc = list(_UTF8_PUTC if CW == 4 else _LINUX_PUT_HELPERS[:next(i for i, l in enumerate(_LINUX_PUT_HELPERS) if l.startswith("// x0 を 10 進"))])
     putc = [l.replace("_sign_putc", "_sign_dev_putc") for l in putc if not l.startswith("//")]
     ro, bss = sign_realdev.data_lines(REALDB[0], GFXSZ[0])
-    body = "\n".join(sign_realdev.shim(putc, CW, REALDB[0], GFXSZ[0])) + "\n"
+    body = "\t.text\n" + "\n".join(sign_realdev.shim(putc, CW, REALDB[0], GFXSZ[0])) + "\n"          # 直前が .bss(起動で評価した定義のセル)でも、中継ルーチンは .text に置く
     i = text.find("\t.section .rodata")
     text = text[:i] + body + text[i:] if i >= 0 else text + body
     text = text.replace("_start:\n\tbl _.main", "_start:\n\tbl _sign_dev_map\n\tbl _.main", 1)          # 作業メモリを確保してから始める
     return text.rstrip("\n") + "\n" + "\n".join(ro + bss) + "\n"
+
+
+_SEGV_MSG = b"sign: stopped by a memory fault (deep recursion used up the stack, or a bad address)\n"
+
+
+def generate(nodes, target="bare", *a, **k):
+    """_generate_core の出力に、linux 用の SIGSEGV の受け皿を足す(Linux の標準の入口 `_start` の直後で sigaltstack + rt_sigaction)。
+    深い再帰でスタックが尽きたとき、黙って SIGSEGV で落ちずに、1 行の知らせを標準エラーに出して終了コード 1 で終わる(処理系は落ちない、の方針。設計者の答え待ち: 質問書 14)。"""
+    text = _generate_core(nodes, target, *a, **k)
+    if target != "linux" or "\n_start:\n" not in text: return text
+    n = len(_SEGV_MSG)
+    code = ["", "\t.text", "// SIGSEGV の受け皿(代替スタック 16 KiB)", "_sign_segv_init:",
+            "\tadrp x9, _sign_altstk", "\tadd x9, x9, :lo12:_sign_altstk", "\tadrp x10, _sign_ss", "\tadd x10, x10, :lo12:_sign_ss",
+            "\tstr x9, [x10]", "\tstr xzr, [x10, #8]", "\tmov x11, #16384", "\tstr x11, [x10, #16]",
+            "\tmov x0, x10", "\tmov x1, #0", "\tmov x8, #132  // sigaltstack", "\tsvc #0",
+            "\tadrp x10, _sign_sa", "\tadd x10, x10, :lo12:_sign_sa", "\tadr x9, _sign_segv",
+            "\tstr x9, [x10]", "\tmovz x11, #0x0800, lsl #16  // SA_ONSTACK", "\tstr x11, [x10, #8]", "\tstr xzr, [x10, #16]",
+            "\tmov x0, #11", "\tmov x1, x10", "\tmov x2, #0", "\tmov x3, #8", "\tmov x8, #134  // rt_sigaction", "\tsvc #0", "\tret",
+            "_sign_segv:", "\tmov x0, #2", "\tadrp x1, _sign_segv_msg", "\tadd x1, x1, :lo12:_sign_segv_msg", "\tmov x2, #%d" % n, "\tmov x8, #64  // write", "\tsvc #0",
+            "\tmov x0, #1", "\tmov x8, #94  // exit_group", "\tsvc #0", "",
+            "\t.section .rodata", "_sign_segv_msg:", "\t.byte " + ", ".join(str(b) for b in _SEGV_MSG), "\t.text", "",
+            "\t.section .bss", "\t.balign 16", "_sign_altstk:", "\t.skip 16384", "_sign_ss:", "\t.skip 24", "_sign_sa:", "\t.skip 32", ""]
+    text = text.replace("\n_start:\n", "\n_start:\n\tbl _sign_segv_init\n", 1)
+    return text.rstrip("\n") + "\n" + "\n".join(code) + "\n"
 
 
 USAGE = """使い方: python3 sign.py --asm 〈プログラム.sn〉 [--target=bare|linux] [--charset=ascii|utf32] [--strict [--no-sir]] [--no-opt] [--no-peephole] [--no-lint] [--no-fuse] [--no-share] [--no-hoist] [--no-scalar] [--no-neon] [--real-dev] [--display=幅x高さ] [-o 出力.s] [--elf=出力ファイル]

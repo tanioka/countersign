@@ -120,6 +120,10 @@ class NeonCpu(Cpu):
         if op == "ldp" and first[0] == "q" and first[1:].isdigit():
             addr = self.memaddr(a[2]); r1, r2 = int(first[1:]), int(a[1][1:])
             self.v[r1][:] = bytes((self.load(addr, 16) >> (8 * i)) & 0xFF for i in range(16)); self.v[r2][:] = bytes((self.load(addr + 16, 16) >> (8 * i)) & 0xFF for i in range(16)); return True
+        if op == "stp" and first[0] == "q" and first[1:].isdigit():
+            addr = self.memaddr(a[2]); r1, r2 = int(first[1:]), int(a[1][1:])
+            for i in range(16): self.mem[addr + i] = self.v[r1][i]; self.mem[addr + 16 + i] = self.v[r2][i]
+            return True
         m2 = re.fullmatch(r"v(\d+)\.2d", first)
         if op in ("fadd", "fsub", "fmul", "fdiv") and m2:
             d = int(m2.group(1)); x = struct.unpack("<2d", bytes(self.v[int(a[1][1:].split(".")[0])])); y = struct.unpack("<2d", bytes(self.v[int(a[2][1:].split(".")[0])]))
@@ -373,6 +377,23 @@ for i in range(40):
     want = interp(src) + "\n"
     if got != "断り" and got != want: bad_f += 1; print("  不一致", gb, op, n, got, want)
 check("融合: 乱数 40 本が処理系と一致", bad_f, 0)
+
+# ---- map が List(Float) を返す形: 4 要素ずつ(2 本 × 2 レーン)並べて書く ----
+for n in (2, 3, 5, 6, 7, 8, 9, 16, 33):
+    same_linux("map List n=%d" % n, MM + "g : x ? x * 2.0 + 1.0\nf : xs ? m $g xs\nf %s\n" % flist(n, n + 7))
+same_linux("map List: 名前付き g(割り算・引き算)", MM + "g : x ? x / 3.0 - 0.5\nf : xs ? m $g xs\nf %s\n" % flist(7))
+same_linux("map List: 切り出し $[* 2.0]", MM + "f : xs ? m $[* 2.0] xs\nf %s\n" % flist(6))
+same_linux("map List: 負の字面を含む g", MM + "g : x ? x * -1.5 + 2.0\nf : xs ? m $g xs\nf %s\n" % flist(7))
+same_linux("map List: 恒等", MM + "g : x ? x\nf : xs ? m $g xs\nf %s\n" % flist(5))
+rg = random.Random(5); bad_m = 0
+for i in range(40):
+    n = rg.choice([2, 3, 5, 6, 7, 9, 10, 13, 17, 31]); gb = rg.choice(["x * 2.0 + 1.0", "x / 3.0", "x - 0.5", "(x + 1.0) * (x - 1.0)", "x * x", "x / 0.1"])
+    src = MM + "g : x ? %s\nf : xs ? m $g xs\nf %s\n" % (gb, flist(n, i + 300))
+    try: got = run_linux(src)[0]
+    except (sign_neon.NeonError, sign_asm.AsmError): got = "断り"
+    if got != interp(src) + "\n": bad_m += 1; print("  不一致", gb, n, got[:60])
+check("map List: 乱数 40 本が処理系と一致", bad_m, 0)
+check("map List: bare は断る(結果の置き場の約束が無い)", gen(MM + "g : x ? x * 2.0\nf : xs ? m $g xs\nf %s\n" % flist(5), target="bare").startswith("断り: NEON:"), True)
 # 命令数: 融合 vs 1 要素ずつ(scalar=True)
 def steps(src, scalar):
     nodes = sign_interp.parse_source(src)

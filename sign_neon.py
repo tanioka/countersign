@@ -186,7 +186,8 @@ class Gen:
         env = {}; self.tenv = {p[1]: t for p, t in zip(params, sig)}; self.lines.append("%s:" % mangled)
         ni = nf = 0
         if sig == ["L"] and params[0][0] == "name":
-            res = self.fold_kernel(name, params[0][1], body)
+            if self.map_shape(body, params[0][1]) is not None: self.map_kernel(name, params[0][1], body); self.mapfn = mangled
+            else: self.fold_kernel(name, params[0][1], body)
             self.may_void = False; return mangled
         for p, t in zip(params, sig):
             if p[0] != "name": raise NeonError("仮引数の形が出せません")
@@ -245,6 +246,58 @@ class Gen:
             self.emit("%s v%d.2d, %s.2d, %s.2d" % (OPS[n[1]], r, a, b)); return "v%d" % r
         raise NeonError("g の本体は仮引数・字面・+ - * / だけです")
 
+    def preload_lits(self, gb):
+        """g の字面は、輪に入る前に v24〜v31 へ 2 本ずつ置く(輪の中で読み直さない)。"""
+        lits = []
+        def walk(n):
+            if isinstance(n, tuple):
+                if n[0] == "lit" and isinstance(n[1], (int, float)) and not isinstance(n[1], bool): lits.append(float(n[1]))
+                elif n[0] == "neg" and len(n) == 2 and n[1][0] == "lit" and isinstance(n[1][1], (int, float)): lits.append(-float(n[1][1]))
+                else:
+                    for x in n: walk(x)
+            elif isinstance(n, list):
+                for x in n: walk(x)
+        walk(gb); uniq = []
+        for v in lits:
+            if v not in uniq: uniq.append(v)
+        if len(uniq) > 8: raise NeonError("g の字面が 8 種類を超えます")
+        for i, v in enumerate(uniq):
+            lab = self.lit_label("double", [v, v]); self.emit("adrp x9, %s" % lab); self.emit("add x9, x9, :lo12:%s" % lab); self.emit("ldr q%d, [x9]" % (24 + i), "字面 %r を 2 本に" % v)
+            self.consts[v] = 24 + i
+
+    def map_shape(self, body, xs):
+        """本体が `m $g xs`(m は map の形の定義)なら g を返す(`fold_shape` の g と同じ形: (仮引数名, 本体))。そうでなければ None。"""
+        b = _strip(body)
+        if b[0] != "seq" or len(b[1]) != 3 or b[1][0][0] != "id" or b[1][1][0] != "addr" or _strip(b[1][2]) != ("id", xs): return None
+        import sign_fuse
+        m = self.defnodes.get(b[1][0][1])
+        if m is None or not sign_fuse.map_like(m): return None
+        fake = ("seq", [("sec", "fold", "+", None, False), b])            # g の取り出しは fold_shape に任せる(畳みの演算は使わない)
+        return self.fold_shape(fake, xs)[1]
+
+    def map_kernel(self, name, xs, body):
+        """`m $g xs`(結果は Float の List): x0 = 先頭の番地、x1 = 長さ(2 以上)、x2 = 書く先の番地(長さ分の double)。g だけを 4 つずつ(2 本 × 2 レーン)並べて計算して書く。
+        1 要素ずつの端数は、スカラーで同じ式。x0 = `__` の旗(なし)。"""
+        g = self.map_shape(body, xs)
+        if g is None: raise NeonError("List(Float) の関数の本体は `[op] (map $g xs)`・`[op] xs`・`map $g xs` だけです")
+        gp, gb = g
+        if self.ty(gb, {gp: "F"}) != "F": raise NeonError("g の結果は Float だけです")
+        env1 = {gp: ("F", "d1")}
+        self.preload_lits(gb)
+        L1, L2, L3 = self.klabel(), self.klabel(), self.klabel()
+        self.emit("mov x3, #0", "次の番号")
+        if not self.scalar:
+            self.lines.append(L1 + ":"); self.emit("add x4, x3, #4"); self.emit("cmp x4, x1"); self.emit("b.hi %s" % L2)
+            self.emit("add x5, x0, x3, lsl #3"); self.emit("ldp q1, q2, [x5]", "4 つ(2 本 × 2 レーン)")
+            self.nreg = 0
+            a = self.expr2(gb, {gp: "v1"}); b = self.expr2(gb, {gp: "v2"})
+            self.emit("add x6, x2, x3, lsl #3"); self.emit("stp q%s, q%s, [x6]" % (a[1:], b[1:]), "4 つ書く")
+            self.emit("mov x3, x4"); self.emit("b %s" % L1)
+        self.lines.append(L2 + ":"); self.emit("cmp x3, x1"); self.emit("b.hs %s" % L3)
+        self.emit("ldr d1, [x0, x3, lsl #3]"); self.nreg = 0; self.emit("fmov d4, %s" % self.expr(gb, env1)[1]); self.emit("str d4, [x2, x3, lsl #3]")
+        self.emit("add x3, x3, #1"); self.emit("b %s" % L2)
+        self.lines.append(L3 + ":"); self.emit("mov x0, #0", "x0 = `__` の旗(なし)"); self.emit("ret"); self.consts = {}
+
     def fold_kernel(self, name, xs, body):
         """x0 = 先頭の番地、x1 = 長さ(1 以上)。d0 = 答え(Float)。先頭の 1 つを 1 つずつ、あとを 4 つずつ(2 本 × 2 レーン)、残りを 1 つずつ。
         畳みは左から 1 つずつ(足し算の順は変えない: 処理系と同じ丸めになる)。map の部分(g)だけを並べて計算する。"""
@@ -253,23 +306,7 @@ class Gen:
             gp, gb = g
             if self.ty(gb, {gp: "F"}) != "F": raise NeonError("g の結果は Float だけです")
             env1 = {gp: ("F", "d1")}
-        if g is not None:                                       # g の字面は、輪に入る前に v24〜v31 へ 2 本ずつ置く(輪の中で読み直さない。1 つ目のレーンは Float としても読める)
-            lits = []
-            def walk(n):
-                if isinstance(n, tuple):
-                    if n[0] == "lit" and isinstance(n[1], (int, float)) and not isinstance(n[1], bool): lits.append(float(n[1]))
-                    elif n[0] == "neg" and len(n) == 2 and n[1][0] == "lit" and isinstance(n[1][1], (int, float)): lits.append(-float(n[1][1]))
-                    else:
-                        for x in n: walk(x)
-                elif isinstance(n, list):
-                    for x in n: walk(x)
-            walk(gb); uniq = []
-            for v in lits:
-                if v not in uniq: uniq.append(v)
-            if len(uniq) > 8: raise NeonError("g の字面が 8 種類を超えます")
-            for i, v in enumerate(uniq):
-                lab = self.lit_label("double", [v, v]); self.emit("adrp x9, %s" % lab); self.emit("add x9, x9, :lo12:%s" % lab); self.emit("ldr q%d, [x9]" % (24 + i), "字面 %r を 2 本に" % v)
-                self.consts[v] = 24 + i
+        if g is not None: self.preload_lits(gb)
         def scalar_g():
             self.nreg = 0
             if g is None: return "d1"
@@ -355,6 +392,8 @@ class Gen:
             else:
                 lab = self.lit_label("double", [_fv(a)])
                 self.emit("adrp x9, %s" % lab); self.emit("add x9, x9, :lo12:%s" % lab); self.emit("ldr d%d, [x9]" % nf); nf += 1
+        if sig == ["L"] and lane is None and sig_result(self, name, sig) == "M":
+            self.mlen = len(_list_lit(args[0])); self.emit("adrp x2, _neon_out"); self.emit("add x2, x2, :lo12:_neon_out", "書く先(Float の List の結果)")
         self.emit("bl %s" % fn)
         if lane is not None:
             if sig_result(self, name, sig) != "V": raise NeonError("`' k` は Vector にだけ付けられます")
@@ -362,6 +401,9 @@ class Gen:
         if int_args: self.emit("mov sp, x29", "置き場を捨てる")
         self.emit("ldp x29, x30, [sp], #16"); self.emit("ret")
         kind = "F" if lane is not None else sig_result(self, name, sig)
+        if kind == "M" and self.target != "linux": raise NeonError("Float の List を返す関数は --target=linux だけで出せます(bare では結果の置き場の約束がありません)")
+        rkind = kind
+        if kind == "M" and self.mlen > 64: raise NeonError("Float の List の結果は 64 要素までです")
         if kind == "I": raise NeonError("結果が Int の関数です(NEON の道は Float / Vector を返す関数だけ。Int の関数は Int の道で)")
         out = ["\t.text"] + self.lines
         if self.target == "linux": out += self.start(kind).splitlines()
@@ -370,6 +412,7 @@ class Gen:
             out.append("%s:" % lab)
             if kind == "float": out.append("\t.float " + ", ".join(repr(v) if v == v and abs(v) != float("inf") else "0" for v in vals))
             else: out.append("\t.double " + ", ".join(repr(v) for v in vals))
+        if rkind == "M": out += ["\t.section .bss", "\t.balign 16", "_neon_out:", "\t.skip %d" % (8 * self.mlen), "\t.text"]
         text = "\n".join(out) + "\n"
         if int_text: text = int_text + "\n" + text
         if self.target == "linux":
@@ -383,10 +426,16 @@ class Gen:
         if getattr(self, "may_void", False):                                   # x0 = 1 なら結果は `__`
             L += ["\tcbz x0, .LKv", "\tsub sp, sp, #16", "\tmov w3, #95", "\tstrb w3, [sp]", "\tstrb w3, [sp, #1]", "\tmov w3, #10", "\tstrb w3, [sp, #2]",
                   "\tmov x0, #1", "\tmov x1, sp", "\tmov x2, #3", "\tmov x8, #64", "\tsvc #0", "\tmov x0, #0", "\tmov x8, #93", "\tsvc #0", ".LKv:"]
-        L += ["\tsub sp, sp, #256", "\tmov x21, sp"]
+        L += ["\tsub sp, sp, #%d" % (16 * ((26 * getattr(self, "mlen", 0) + 270) // 16)) if kind == "M" else "\tsub sp, sp, #256", "\tmov x21, sp"]
         def ch(c): L.extend(["\tmov w3, #%d" % ord(c), "\tstrb w3, [x21]", "\tadd x21, x21, #1"])
         def num(mode): L.extend(["\tmov x1, #%d" % mode, "\tmov x2, x21", "\tbl _sign_fmt_float", "\tadd x21, x21, x0"])
-        if kind == "V":
+        if kind == "M":
+            L += ["\tadrp x22, _neon_out", "\tadd x22, x22, :lo12:_neon_out"]; ch("[")
+            for k in range(self.mlen):
+                L.append("\tldr x0, [x22, #%d]" % (8 * k)); num(0)
+                if k < self.mlen - 1: ch(","); ch(" ")
+            ch("]")
+        elif kind == "V":
             L.append("\tstr q0, [sp, #192]"); ch("[")
             for k in range(4):
                 L.append("\tldr w0, [sp, #%d]" % (192 + 4 * k)); num(1)
@@ -399,7 +448,7 @@ class Gen:
         return "\n".join(L) + "\n"
 
 def sig_result(g, name, sig):
-    if sig == ["L"]: return "F"                  # `[op] (map $g xs)` の答えは Float
+    if sig == ["L"]: return "M" if g.map_shape(g.defs[name][2], g.defs[name][1][0][1]) is not None else "F"      # `[op] (map $g xs)` の答えは Float、`map $g xs` は Float の List
     env = {p[1]: t for p, t in zip(g.defs[name][1], sig)}
     return g.ty(g.defs[name][2], env)
 

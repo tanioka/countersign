@@ -1,0 +1,3 @@
+`Int と Float と Vector の混在(順序)
+f : n x a ? a * x + n
+f 2 0.5 [1.0 2.0 3.0 4.0]
