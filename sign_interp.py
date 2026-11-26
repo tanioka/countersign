@@ -3038,6 +3038,7 @@ def _arith_core(op, a, b):
             return r if a >= 0 else -r
         return a % b
     if op == "^":
+        if isinstance(a, int) and isinstance(b, int) and b > 0 and abs(a) > 1 and b * (a.bit_length() - 1) > 63: return UNIT         # Int の値域の外は `!_`(設計者の答え 2026-11-25)。巨大な冪は計算せずに決める
         if isinstance(a, int) and isinstance(b, int) and b > 0 and abs(a) > 1 and b * a.bit_length() > BIT_LIMIT: raise SignError(f"結果が大きすぎます(実装の上限は {BIT_LIMIT:,} ビット)")
         if isinstance(a, float) or isinstance(b, float): return f_pow(float(a), float(b))      # Float は IEEE 754: 桁あふれ ±∞・0.0 の負の冪 +∞・負の数の小数冪 NaN
         if STRICT_GATES and isinstance(a, int) and isinstance(b, int) and b < 0:      # V5・V11: 負の指数の冪は当たる演算が無く _
@@ -3052,6 +3053,8 @@ def _arith_core(op, a, b):
         if op == ";;": return a ^ b
         if op == "<<" or op == ">>":
             if b < 0: return UNIT                      # 負のシフト量: 仕様は未決(type_system.md「k が負の形は未決」)。Python の ValueError で落とさず、決まらない値 __ にする(判断。仕様で決まれば合わせる)
+            if op == "<<" and a != 0 and b > 64: return UNIT         # Int の値域の外は `!_`(巨大なシフトは計算せずに決める)
+            if op == "<<" and a == 0: return 0
             if op == "<<" and b > BIT_LIMIT: raise SignError(f"結果が大きすぎます(実装の上限は {BIT_LIMIT:,} ビット)")
             return a << b if op == "<<" else a >> b
         raise KeyError(op)
@@ -3352,7 +3355,8 @@ def product(vals):                             # 直積: Unit は落ち、後置
 def logical_not(v): return ID if is_unit(v) else UNIT
 FACT_LIMIT = 100_000                           # 実装の守り: 階乗の引数の上限(超えると結果が大きすぎて計算を終えられない)
 def factorial(v):
-    if isinstance(v, int) and not is_unit(v) and v > FACT_LIMIT: raise SignError(f"結果が大きすぎます(実装の上限は {FACT_LIMIT:,} の階乗まで)")
+    if isinstance(v, int) and not is_unit(v) and v > 20:         # 21! は Int の値域の外(設計者の答え 2026-11-25: 溢れは `!_`。大きな階乗は計算せずに決める)
+        info("int-overflow", f"Int(64 bit)の溢れなので _ です: {v}! の答えは -{INT_MAX} 〜 {INT_MAX} の外です"); return UNIT
     return math.factorial(v) if isinstance(v, int) and v >= 0 and not is_unit(v) else UNIT
 _NOFN = frozenset([Closure])                  # 型の集合どうしの isdisjoint は C で回る(要素ごとの isinstance の生成式より桁違いに速い)
 _NOFN2 = frozenset([Closure, Stream])
