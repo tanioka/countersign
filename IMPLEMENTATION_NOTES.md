@@ -3938,3 +3938,11 @@ A1・A4・A6 は仕様に答えがあり実装も一致(問いを閉じてよい
 - 前の実機検証(第 80 段)は何もつながない状態の読み戻しとプルまでだった。今回で、ピンの外へ出た値が別のピンに届くところまで実機で確かめられた。LED の点滅(`led_gpio.sn`)は未確認。
 
 **見つかった実装の不具合(未修正)**: 引数なしの定義に副作用の式(`pu : seq3 …`)を書くと、`--real-dev` のアセンブルが「SHT_NOBITS section '.bss' cannot have instructions」で失敗する。引数つきの関数にすれば出る(`pi_gpio/src/g_pull.sn` はそうした)。
+
+### LED(GPIO17 ── 330Ω ── LED ── GND)の実機確認(2026-11-26、Pi 4)
+
+`pi_led/`(新規)。3 つとも期待どおりの 1 秒周期(500 ms 点灯・500 ms 消灯)の点滅だった(ユーザーの目視。周期の実測はしていない)。
+- 機械語版 `led_blink5`(書いたあとに 500 ms 待つ方式。5 回で終わり、終了時は消灯)。
+- 機械語版 `led_gpio.sn`(`--real-dev`。ゲーム機の駆動部のアラームで反転)。
+- インタープリタ版 `python3 sign_console.py led_gpio.sn --display=null --gpio`(gpiozero か RPi.GPIO 経由)。
+機械語版とインタープリタ版の GPIO の経路は別(`/dev/gpiochip0` の GPIO v2 直接と、Python のライブラリ)だが、見た目は同じだった。
