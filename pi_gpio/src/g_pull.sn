@@ -1,0 +1,12 @@
+`std.sn`@~
+G : 0x9500000
+T : 0x9200000
+w : ms ? (T + 4) # ms
+dir : n d ? (G + 0x100 + (4 * n)) # d
+put : n v ? seq2 ((G + (4 * n)) # v) (w 5)
+get : n ? @(G + (4 * n))
+r : a b ? a * 10 + b
+`17 と 27 をジャンパでつないだまま、両方入力にして 27 のプル。上げて 1、下げて 0。期待 10
+pu : z ? seq3 (dir 17 0) (dir 27 2) (seq2 (w 20) (get 27))
+pd : z ? seq2 (dir 27 3) (seq2 (w 20) (get 27))
+r (pu 0) (pd 0)
