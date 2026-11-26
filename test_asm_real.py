@@ -62,6 +62,12 @@ if shutil.which("clang"):
         check("clang で組み立てられる(1 + 2)", (r.returncode, r.stderr.strip()), (0, ""))
         r = subprocess.run(["ld.lld", "-static", "-e", "_start", os.path.join(d, "a.o"), "-o", os.path.join(d, "a.out")], capture_output=True, text=True)
         check("ld.lld でリンクできる", r.returncode, 0)
+    # 起動で評価する定義(引数なしで値が計算で決まる)があっても、中継ルーチンは .text に置かれて組み立てられる(.bss に命令が入る不具合の回帰)
+    asm = compile_real("G : 0x9500000\nT : 0x9200000\nw : ms ? (T + 4) # ms\ndir : n d ? (G + 0x100 + (4 * n)) # d\nget : n ? @(G + (4 * n))\nr : a b ? a * 10 + b\npu : seq3 (dir 17 0) (dir 27 2) (seq2 (w 20) (get 27))\npd : seq2 (dir 27 3) (seq2 (w 20) (get 27))\nr pu pd\n")
+    with tempfile.TemporaryDirectory() as d:
+        s = os.path.join(d, "a.s"); open(s, "w").write(asm)
+        r = subprocess.run(["clang", "--target=aarch64-linux-gnu", "-c", s, "-o", os.path.join(d, "a.o")], capture_output=True, text=True)
+        check("clang で組み立てられる(起動で評価する定義 + --real-dev)", (r.returncode, r.stderr.strip()), (0, ""))
 
 I2C = "I2C : 4x09600000\nBUF : 4x007C0000\n"
 GO = "go : a cmd n rn ? seq6 ((I2C + 0) # a) ((I2C + 4) # BUF) ((I2C + 8) # n) ((I2C + 12) # rn) ((I2C + 0x14) # cmd) (@(I2C + 0x18))\n"

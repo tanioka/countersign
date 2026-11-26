@@ -6520,7 +6520,7 @@ def add_realdev(text):
     putc = list(_UTF8_PUTC if CW == 4 else _LINUX_PUT_HELPERS[:next(i for i, l in enumerate(_LINUX_PUT_HELPERS) if l.startswith("// x0 を 10 進"))])
     putc = [l.replace("_sign_putc", "_sign_dev_putc") for l in putc if not l.startswith("//")]
     ro, bss = sign_realdev.data_lines(REALDB[0], GFXSZ[0])
-    body = "\n".join(sign_realdev.shim(putc, CW, REALDB[0], GFXSZ[0])) + "\n"
+    body = "\t.text\n" + "\n".join(sign_realdev.shim(putc, CW, REALDB[0], GFXSZ[0])) + "\n"          # 直前が .bss(起動で評価した定義のセル)でも、中継ルーチンは .text に置く
     i = text.find("\t.section .rodata")
     text = text[:i] + body + text[i:] if i >= 0 else text + body
     text = text.replace("_start:\n\tbl _.main", "_start:\n\tbl _sign_dev_map\n\tbl _.main", 1)          # 作業メモリを確保してから始める
