@@ -3612,14 +3612,14 @@ PREFIX_START = {"!", "-", "!!", "$", "@", "~", "|", "||"}
 SECTION_OPS = set(INFIX) | CMPCHAIN
 
 def uint_lit(v, s):
-    if v > UMASK and INTCHK[0]: raise SignError(f"字面 {s} は UInt の値域(0 〜 2^64 − 1)の外です(コンパイルエラー。integer_overflow.md §1.1 末)")
+    if v > UMASK: raise SignError(f"字面 {s} は UInt の値域(0 〜 2^64 − 1)の外です(コンパイルエラー。integer_overflow.md §1.1 末)")
     return v & UMASK                                     # 既定は環の上の値として 2^64 で回す【実装】
 def atom_node(t):
     k, s = t.kind, t.text
     if k == "NUM":
         if "." in s: return ("lit", float(s))
         v = int(s)
-        if INTCHK[0] and v > INT_MAX: raise SignError(f"十進の字面 {s} は Int の値域(-{INT_MAX} 〜 {INT_MAX})の外です(コンパイルエラー。integer_overflow.md §1.1 末。回したい数は 0r で書く)")
+        if v > INT_MAX: raise SignError(f"十進の字面 {s} は Int の値域(-{INT_MAX} 〜 {INT_MAX})の外です(コンパイルエラー。integer_overflow.md §1.1 末。回したい数は 0r で書く)")
         return ("lit", v)
     if k == "STR": return ("lit", UNIT if s == "``" else s[1:-1])
     if k == "CHAR": return ("lit", Char(s[1:]))
