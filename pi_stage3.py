@@ -1,7 +1,7 @@
 """第三段階: AArch64 実機検証。整数オーバーフロー・関数呼出し・メモリ境界・末尾再帰の最小プログラム。
   python3 pi_stage3.py make DIR        DIR に cases/NNN.s・expected.tsv・run.sh を作る(作る前に strict 評価器とエミュレータでも照合する)
   python3 pi_stage3.py compare DIR     実機の出力(DIR/out)を期待値と突き合わせる
-期待値: 整数の算術は Python の厳密な計算から(値域 ±(2^63-1) の外なら罠)、そのほかは strict 評価器の答え。
+期待値: 整数の算術は Python の厳密な計算から(値域 ±(2^63-1) の外なら `!_`。設計者の答え 2026-11-25。以前は罠)、そのほかは strict 評価器の答え。
 重い形(百万〜千万回の末尾再帰など)は、評価器・エミュレータでは重いので、同じ形の小さな回数で 3 者(期待値・評価器・エミュレータ)を確かめ、実機は閉じた式の期待値と照らす。
 分類: 一致 / 罠(wfi。実機ではタイムアウトで見える。期待値が罠なら一致) / 異常終了(スタック溢れなどの signal。答えを出さないので許容、ただし記録) / 誤答。"""
 import sys, os, json
@@ -11,12 +11,12 @@ MAX = 2 ** 63 - 1
 
 def arith(op, a, b):
     r = {"+": a + b, "-": a - b, "*": a * b}[op]
-    return ("trap",) if abs(r) > MAX else ("val", r)
+    return ("void",) if abs(r) > MAX else ("val", r)       # 溢れは罠でなく `!_`(設計者の答え 2026-11-25)
 
 C = []   # (category, name, source, expected or None(=評価器が答え), heavy?, mode "s"=strict / "d"=既定, noeval=評価器と比べない)
 def add(cat, name, src, exp=None, heavy=False, mode="s", noeval=False): C.append((cat, name, src, exp, heavy, mode, noeval))
 
-# --- 整数オーバーフロー(値域 ±(2^63-1): 内側は答え、外側は罠)
+# --- 整数オーバーフロー(値域 ±(2^63-1): 内側は答え、外側は `!_`)
 for nm, op, a, b in [
     ("最大 + 0", "+", MAX, 0), ("最大 - 1 + 1", "+", MAX - 1, 1), ("最大 + 1", "+", MAX, 1), ("最大 + 最大", "+", MAX, MAX),
     ("最小 - 0", "-", -MAX, 0), ("最小 + 1 - 1", "-", -MAX + 1, 1), ("最小 - 1", "-", -MAX, 1), ("最小 - 最大", "-", -MAX, MAX),
@@ -33,9 +33,9 @@ add("整数", "最大 / 2", f"{MAX} / 2\n")
 add("整数", "負の除算", "(0 - 7) / 2\n")
 add("整数", "負の剰余", "(0 - 7) % 3\n")
 add("整数", "累積で溢れる(3^39 まで)", "p : n acc ?\n\tn = 0 : acc\n\tp (n - 1) (acc * 3)\np 39 1\n", ("val", 3 ** 39))
-add("整数", "累積で溢れる(3^40)", "p : n acc ?\n\tn = 0 : acc\n\tp (n - 1) (acc * 3)\np 40 1\n", ("trap",) if 3 ** 40 > MAX else ("val", 3 ** 40))
-add("整数", "累積で溢れる(3^41)", "p : n acc ?\n\tn = 0 : acc\n\tp (n - 1) (acc * 3)\np 41 1\n", ("trap",))
-add("整数", "関数の中で溢れる", f"f : x ? x + x\nf {MAX}\n", ("trap",))
+add("整数", "累積で溢れる(3^40)", "p : n acc ?\n\tn = 0 : acc\n\tp (n - 1) (acc * 3)\np 40 1\n", None)       # 溢れた枝の扱い(R129)は評価器が答え
+add("整数", "累積で溢れる(3^41)", "p : n acc ?\n\tn = 0 : acc\n\tp (n - 1) (acc * 3)\np 41 1\n", None)
+add("整数", "関数の中で溢れる", f"f : x ? x + x\nf {MAX}\n", ("void",))
 add("整数", "関数の中で溢れない", f"f : x ? x + x\nf {MAX // 2}\n", ("val", (MAX // 2) * 2))
 # --- 関数呼出し
 add("呼出し", "実引数 8 個(レジスタ)", "f : a b c d e g h i ? a + b * 2 + c * 3 + d * 4 + e * 5 + g * 6 + h * 7 + i * 8\nf 1 2 3 4 5 6 7 8\n", ("val", 1 + 4 + 9 + 16 + 25 + 36 + 49 + 64))
