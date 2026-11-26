@@ -6398,8 +6398,18 @@ PAR = [None]                  # --par=N: 並列実行(N = スレッドの数。s
 REALDEV = [False]            # --real-dev: 装置の番地(0x9000000 以上)への # と @ を、実機の装置の中継(sign_realdev.py)へ回す
 
 GFXSZ = [(64, 32)]
+def drop_duplicate_defs(nodes):
+    """ファイルのいちばん外の同じ名前の定義は、どちらも使わず `!_`(設計者の答え 2026-11-25。処理系と同じ)。名前の定義が無かったことにする。"""
+    cnt = {}
+    for n in nodes:
+        d = n[1] if n[0] == "export" else n
+        if d[0] == "def" and isinstance(d[1], str) and d[2] != ("hole",): cnt[d[1]] = cnt.get(d[1], 0) + 1
+    if not any(c > 1 for c in cnt.values()): return nodes
+    return [n for n in nodes if not ((n[1] if n[0] == "export" else n)[0] == "def" and cnt.get((n[1] if n[0] == "export" else n)[1], 0) > 1 and (n[1] if n[0] == "export" else n)[2] != ("hole",))]
+
 def generate(nodes, target="bare", source=None, charset="ascii", real_dev=False, fps=60, real_db=False, display=(64, 32), par=None, par_spec=False):
     global LAST_INFOS, CW
+    nodes = drop_duplicate_defs(nodes)
     PAR[0] = par if (par and par > 1) else None
     SPEC[0] = bool(par_spec and PAR[0] is not None)
     if PAR[0] is not None and target != "linux": raise AsmError("--par は --target=linux のときだけ使えます(スレッドを Linux の clone で作るため)")
