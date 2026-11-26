@@ -1,0 +1,24 @@
+`led_pure.sn — 関数型の L チカ。LED の状態は「時刻の純粋な関数」で、変数を書き換えず、sleep もしない(led_gpio.sn の状態遷移版と並べて読む)。
+`  つなぎ方: GPIO17(基板の 11 番ピン)── 330Ω ── LED の足の長い方(+)、短い方(−)── GND。動かし方: python3 sign_console.py led_pure.sn --display=null --gpio     止めるのは Ctrl+C
+`  パソコンでの練習: --gpio=fake(ピンの変化が標準エラーに「[gpio] 17 = 1」と出る)
+`  考え方: Haskell の blinkStream = iterate toggle On(状態の無限の列)と、FRP の Behavior LedState(時刻の関数)の 2 つを、Sign の関数だけで書いた(状態 = n 番目の要素の閉じた式。時刻 = 関数の引数)。
+`  副作用は最後の 1 行(tick の中のピンへの書き込み)だけ。状態を持つ変数(led_gpio.sn の LED の番地)も、アラームも要らない
+
+GPIO : 0x9500000
+T : 0x9200000
+LED_PIN : 17
+PERIOD : 500
+
+`1. 状態遷移の純粋関数: 点いていれば消し、消えていれば点ける(1 - 状態)`
+toggle : s ? 1 - s
+
+`2. n 番目の状態 = 点灯から toggle を n 回かけた値(iterate toggle On の n 番目)。toggle を n 回かけると、n が偶数なら点灯・奇数なら消灯なので、閉じた式で書く(再帰で n 回かけると、時間とともに深くなる)`
+state : n ? toggle (n % 2)
+
+`3. 振る舞い(Behavior): 時刻(ミリ秒)から LED の状態への関数。PERIOD ごとに列の次の要素へ進む`
+led_at : t ? state (t / PERIOD)
+
+`4. 副作用はここだけ: 1 こまごとに「今の時刻」の状態をピンへ書く(同じ値の書き込みは何も変えない)`
+pin : n v ? (GPIO + (4 * n)) # v
+init : z ? pin LED_PIN 0
+tick : z ? pin LED_PIN (led_at (@T))
