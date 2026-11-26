@@ -1844,11 +1844,11 @@ class FnGen:
         self.emit("ldr x9, [x29, #%d]" % self.off(cells[0]), "start")
         self.emit("ldr x10, [x29, #%d]" % self.off(cells[1]), "歩幅(等比なら比)")
         if n[1] == "~+":
-            self.niche("x12"); self.emit("mov x11, x10")
+            self.niche("x12"); self.emit("mov x14, x10")
         else:
-            self.emit("mov x12, x10"); self.emit("mov x11, #0", "step 0 = 等比の印")
+            self.emit("mov x12, x10"); self.emit("mov x14, #0", "step 0 = 等比の印")
         for _ in cells: self.free()
-        for r, src in ((r0, "x9"), (r1, "x11"), (r2, "x12")):
+        for r, src in ((r0, "x9"), (r1, "x14"), (r2, "x12")):
             if r != src: self.emit("mov %s, %s" % (r, src))
         self.prog.open_used = True
 
@@ -1926,7 +1926,7 @@ class FnGen:
         self.lines.append("%s:" % geo)
         self.emit("mov x0, x9"); self.emit("cbz x9, %s" % done, "start 0 は 0"); self.emit("cbz x11, %s" % done, "0 番目は start")
         self.emit("cbz x12, %s" % zero); self.emit("cmp x12, #1"); self.emit("b.eq %s" % done)
-        self.emit("cmn x12, #1"); self.emit("b.ne %s" % lp)
+        self.emit("movn x13, #0", "−1"); self.emit("cmp x12, x13"); self.emit("b.ne %s" % lp)
         self.emit("tbz x11, #0, %s" % done, "比 -1: 偶数番目は start"); self.emit("neg x0, x9"); self.emit("b %s" % done)
         self.lines.append("%s:" % zero); self.emit("mov x0, #0"); self.emit("b %s" % done)
         self.lines.append("%s:" % lp)
