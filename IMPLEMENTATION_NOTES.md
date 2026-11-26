@@ -3937,7 +3937,7 @@ A1・A4・A6 は仕様に答えがあり実装も一致(問いを閉じてよい
 - 機種は Pi 4(chip は gpiochip0・1・4)で `/dev/gpiochip0` のまま通った。出力のあとの待ち 5 ms、プルの反映待ち 20 ms で足りた。
 - 前の実機検証(第 80 段)は何もつながない状態の読み戻しとプルまでだった。今回で、ピンの外へ出た値が別のピンに届くところまで実機で確かめられた。LED の点滅(`led_gpio.sn`)は未確認。
 
-**見つかった実装の不具合(未修正)**: 引数なしの定義に副作用の式(`pu : seq3 …`)を書くと、`--real-dev` のアセンブルが「SHT_NOBITS section '.bss' cannot have instructions」で失敗する。引数つきの関数にすれば出る(`pi_gpio/src/g_pull.sn` はそうした)。
+**見つかった実装の不具合(2026-11-26 に直した)**: 引数なしの定義に副作用の式(`pu : seq3 …`)を書くと、`--real-dev` のアセンブルが「SHT_NOBITS section '.bss' cannot have instructions」で失敗する。引数つきの関数にすれば出る(`pi_gpio/src/g_pull.sn` はそうした)。 原因: 起動で評価する定義のセル(`.bss`)の直後に、`--real-dev` の中継ルーチンを `.text` の指定なしで置いていた。中継ルーチンの前に `.text` を置くようにした(test_asm_real に回帰の試験)。
 
 ### LED(GPIO17 ── 330Ω ── LED ── GND)の実機確認(2026-11-26、Pi 4)
 
