@@ -1,0 +1,170 @@
+{
+ "t_par_args_s": {
+  "name": "par t_par_args_s",
+  "stdout": "14930352\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_args_p2": {
+  "name": "par t_par_args_p2",
+  "stdout": "14930352\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_args_p3": {
+  "name": "par t_par_args_p3",
+  "stdout": "14930352\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_args_p4": {
+  "name": "par t_par_args_p4",
+  "stdout": "14930352\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib_s": {
+  "name": "par t_par_fib_s",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib_p2": {
+  "name": "par t_par_fib_p2",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib_p3": {
+  "name": "par t_par_fib_p3",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib_p4": {
+  "name": "par t_par_fib_p4",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib1_s": {
+  "name": "par t_par_fib1_s",
+  "stdout": "63245986\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib1_p2": {
+  "name": "par t_par_fib1_p2",
+  "stdout": "63245986\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib1_p3": {
+  "name": "par t_par_fib1_p3",
+  "stdout": "63245986\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib1_p4": {
+  "name": "par t_par_fib1_p4",
+  "stdout": "63245986\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib4_s": {
+  "name": "par t_par_fib4_s",
+  "stdout": "96631268\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib4_p2": {
+  "name": "par t_par_fib4_p2",
+  "stdout": "96631268\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib4_p3": {
+  "name": "par t_par_fib4_p3",
+  "stdout": "96631268\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_fib4_p4": {
+  "name": "par t_par_fib4_p4",
+  "stdout": "96631268\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_list_s": {
+  "name": "par t_par_list_s",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_list_p2": {
+  "name": "par t_par_list_p2",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_list_p3": {
+  "name": "par t_par_list_p3",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_list_p4": {
+  "name": "par t_par_list_p4",
+  "stdout": "48315634\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_local_s": {
+  "name": "par t_par_local_s",
+  "stdout": "44791056\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_local_p2": {
+  "name": "par t_par_local_p2",
+  "stdout": "44791056\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_local_p3": {
+  "name": "par t_par_local_p3",
+  "stdout": "44791056\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_local_p4": {
+  "name": "par t_par_local_p4",
+  "stdout": "44791056\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_loop_s": {
+  "name": "par t_par_loop_s",
+  "stdout": "80000000400000000\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_loop_p2": {
+  "name": "par t_par_loop_p2",
+  "stdout": "80000000400000000\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_loop_p3": {
+  "name": "par t_par_loop_p3",
+  "stdout": "80000000400000000\n",
+  "exit": 0,
+  "par": true
+ },
+ "t_par_loop_p4": {
+  "name": "par t_par_loop_p4",
+  "stdout": "80000000400000000\n",
+  "exit": 0,
+  "par": true
+ }
+}
