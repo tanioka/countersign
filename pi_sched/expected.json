@@ -1,0 +1,50 @@
+{
+ "divloop_o": {
+  "stdout": "3333392544834\n",
+  "exit": 0
+ },
+ "divloop_n": {
+  "stdout": "3333392544834\n",
+  "exit": 0
+ },
+ "divloop_s": {
+  "stdout": "3333392544834\n",
+  "exit": 0
+ },
+ "horner_o": {
+  "stdout": "367025\n",
+  "exit": 0
+ },
+ "horner_n": {
+  "stdout": "367025\n",
+  "exit": 0
+ },
+ "horner_s": {
+  "stdout": "367025\n",
+  "exit": 0
+ },
+ "memsum_o": {
+  "stdout": "17685000000\n",
+  "exit": 0
+ },
+ "memsum_n": {
+  "stdout": "17685000000\n",
+  "exit": 0
+ },
+ "memsum_s": {
+  "stdout": "17685000000\n",
+  "exit": 0
+ },
+ "mulchain_o": {
+  "stdout": "290032\n",
+  "exit": 0
+ },
+ "mulchain_n": {
+  "stdout": "290032\n",
+  "exit": 0
+ },
+ "mulchain_s": {
+  "stdout": "290032\n",
+  "exit": 0
+ }
+}
