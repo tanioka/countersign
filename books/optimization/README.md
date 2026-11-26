@@ -27,8 +27,22 @@
 | 第18章 器の配置と特殊化 | [18_container-placement.md](18_container-placement.md) |
 | 第19章 共通部分式と不変量の持ち上げ | [19_cse-hoisting.md](19_cse-hoisting.md) |
 | 第20章 式の独立性を見つける | [20_independence.md](20_independence.md) |
+| 第21章 --par=N スレッドプール | [21_par-thread-pool.md](21_par-thread-pool.md) |
+| 第22章 投機実行と巡り戻し | [22_speculation-rewind.md](22_speculation-rewind.md) |
+| 第23章 軽い仕事をどう扱うか | [23_light-work.md](23_light-work.md) |
+| 第24章 三者一致テスト | [24_three-way-agreement.md](24_three-way-agreement.md) |
+| 第25章 一致しないときの分類 | [25_classify-mismatch.md](25_classify-mismatch.md) |
+| 第26章 実機で確かめる | [26_check-on-hardware.md](26_check-on-hardware.md) |
+| 第27章 仕様を言語弁護士の目で読む | [27_spec-as-language-lawyer.md](27_spec-as-language-lawyer.md) |
+| 第28章 仕様が決めていないところでは最適化しない | [28_no-opt-where-undecided.md](28_no-opt-where-undecided.md) |
+| 第29章 試して残したもの、実装していないもの | [29_kept-and-not-built.md](29_kept-and-not-built.md) |
+| 第30章 この先へ | [30_beyond.md](30_beyond.md) |
+| 付録A 用語集 | [appendix-a_glossary.md](appendix-a_glossary.md) |
+| 付録B 実測表 | [appendix-b_measurements.md](appendix-b_measurements.md) |
+| 付録C テストの使い方 | [appendix-c_using-the-tests.md](appendix-c_using-the-tests.md) |
+| 付録D 仕様との対応 | [appendix-d_spec-correspondence.md](appendix-d_spec-correspondence.md) |
 
-(第21章以降と付録は順次置きます。)
+
 
 
 ## はじめに: 最適化が守るべきもの
