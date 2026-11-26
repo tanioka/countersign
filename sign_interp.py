@@ -516,7 +516,9 @@ def _pswcx(a, v):
     _pswrx(a, v); return True
 def _psshl(a, b):
     if b < 0 or b > 100000: raise _PureBail()          # 負・巨大なシフトは決めずに普通の道へ(そちらの扱いに任せる)
-    return a << b
+    r = a << b
+    if not -9223372036854775807 <= r <= 9223372036854775807: raise _PureBail()          # 溢れは `!_`(普通の道でやり直す)
+    return r
 def _psshr(a, b):
     if b < 0 or b > 100000: raise _PureBail()
     return a >> b
@@ -535,7 +537,7 @@ def _pga(op, a, b):                              # 文字が混ざりうる世�
     if (ta is int or ta is float) and (tb is int or tb is float):
         _r = a + b if op == "+" else a - b if op == "-" else a * b if op == "*" else None
         if _r is not None:
-            if STRICT_GATES and type(_r) is int and (_r > INT_MAX or _r < -INT_MAX): raise _PureBail()
+            if type(_r) is int and (_r > INT_MAX or _r < -INT_MAX): raise _PureBail()
             return _r
     r = arith(op, a, b); t = type(r)
     if t is not int and t is not float and t is not Char: raise _PureBail()
@@ -676,7 +678,7 @@ def _pxbin(op, a, b):                             # 'X' の足し引き掛け: �
         if op == "-": return Addr(_pa(a - b))
         raise _PureBail()
     _r = a + b if op == "+" else (a - b if op == "-" else a * b)
-    if STRICT_GATES and (_r > INT_MAX or _r < -INT_MAX): raise _PureBail()          # V5: Int の溢れは _(普通の道でやり直す)
+    if (_r > INT_MAX or _r < -INT_MAX): raise _PureBail()          # V5: Int の溢れは _(普通の道でやり直す)
     return _r
 def _pidk(*xs):                                   # 速い道の輪が同じ状態へ戻ったかの鍵(整数などはそのまま、List は長さと同一性。その場で伸ばす List があるので値では比べない)
     return tuple((len(x), id(x)) if type(x) is list else x for x in xs)
@@ -887,7 +889,9 @@ def _pure_expr(n, nd, nodes, index, depth, want=None):
         a = _coerce(a[0], a[1], "i"); b = _coerce(b[0], b[1], "i")
         if a is None or b is None: return None
         py = _PURE_BIN[op]
-        return ("(%s %s %s)" % (a, py, b) if py in ("+", "-", "*", "&", "|", "^") else "%s(%s, %s)" % (py, a, b), "i")
+        if py in ("+", "-", "*"):                                         # 設計者の答え 2026-11-26: 既定のモードも Int の溢れは `!_`。溢れたら普通の道(arith)でやり直す
+            return ("(_ot if -9223372036854775807 <= (_ot := %s %s %s) <= 9223372036854775807 else _pbail())" % (a, py, b), "i")
+        return ("(%s %s %s)" % (a, py, b) if py in ("&", "|", "^") else "%s(%s, %s)" % (py, a, b), "i")
     if k == "cmp" and len(n[2]) == 1 and n[2][0] in _PURE_CMP:       # 値としての比べ: 成り立てば左の値(witness)、外れれば __
         a = _pure_expr(n[1][0], nd, nodes, index, depth); b = _pure_expr(n[1][1], nd, nodes, index, depth)
         if a is None or b is None or a[1] == "s" or b[1] == "s": return None
@@ -1550,7 +1554,7 @@ def ei(n, vals, env):
             b = ei(n[3], vals, env)
             if b is None: return None
             _r = a + b if op == "+" else a - b if op == "-" else a * b
-            if STRICT_GATES and type(_r) is int and (_r > INT_MAX or _r < -INT_MAX): return None        # V5: 溢れは _ なので普通の道へ
+            if type(_r) is int and (_r > INT_MAX or _r < -INT_MAX): return None        # V5: 溢れは _ なので普通の道へ
             return _r
     return None
 
@@ -3058,7 +3062,7 @@ INT_MAX = (1 << 63) - 1
 _arith_plain = _arith_core
 def arith(op, a, b):
     r = _arith_core(op, a, b)
-    if STRICT_GATES and type(r) is int and (r > INT_MAX or r < -INT_MAX):        # V5: Int(64 bit)の溢れは _。生まれた行に information `int-overflow`
+    if type(r) is int and (r > INT_MAX or r < -INT_MAX):        # V5: Int(64 bit)の溢れは _(設計者の答え 2026-11-25・2026-11-26: 既定のモードも)。生まれた行に information `int-overflow`
         info("int-overflow", f"Int(64 bit)の溢れなので _ です: {show(a)} {op} {show(b)} の答え {r} は -{INT_MAX} 〜 {INT_MAX} の外です(V5・V11)")
         return UNIT
     return r
@@ -4565,7 +4569,7 @@ def fast_int(n, env):
             r = fast_int(n[3], env)
             if r is None: return None
             _v = l + r if op == "+" else l - r if op == "-" else l * r
-            if STRICT_GATES and (_v > INT_MAX or _v < -INT_MAX): return None        # V5: 溢れは _ なので、普通の道(arith)へ回す
+            if _v > INT_MAX or _v < -INT_MAX: return None        # V5: 溢れは _ なので、普通の道(arith)へ回す(既定のモードも)
             return _v
     return None
 
@@ -4653,7 +4657,7 @@ def _ev(n, env):
             else: l = ev(n[2], env); r = ev(n[3], env)
             if type(l) is int and type(r) is int and not INTCHK[0]:
                 _r = l + r if op == "+" else l - r if op == "-" else l * r
-                if STRICT_GATES and (_r > INT_MAX or _r < -INT_MAX): return arith(op, l, r)        # V5: 溢れは _(information)
+                if _r > INT_MAX or _r < -INT_MAX: return arith(op, l, r)        # V5: 溢れは _(information。既定のモードも)
                 return _r
             if type(l) is UInt and (type(r) is int or type(r) is UInt):      # UInt の速い道: 2^64 で回すのはビットマスク 1 つ
                 return UInt((l + r if op == "+" else l - r if op == "-" else l * r) & UMASK)
