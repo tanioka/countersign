@@ -3,7 +3,8 @@
 `(2) 深さの上限（--strict は 6237）を越えない範囲では、両方のモードで同じ答えになる`
 `(3) 上限を越えると --strict は呼び出しが __ になる（知らせが出る）。既定は続ける`
 `(3) の確かめ方：sum_to 1000 を sum_to 7000 に変えると、既定は 24503500、--strict は知らせ(resource-depth)つきで別の値になる`
-`走らせ方：python3 sign.py bench/strict_bench.sn と python3 sign.py --strict bench/strict_bench.sn`
+`走らせ方：python3 sign.py --charset=utf32 bench/strict_bench.sn と python3 sign.py --charset=utf32 --strict bench/strict_bench.sn`
+`（「終わり」を含むので、既定の charset(ascii)では仕様どおりコンパイルエラーになる。utf32 を付ける）`
 `../std.sn`@~
 seq2 : a b ? b
 
