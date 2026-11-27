@@ -6695,11 +6695,11 @@ def generate(nodes, target="bare", *a, **k):
     if deep:
         m = len(_DEEP_MSG)
         code += ["\t.text", "// 入れ子の深さの上限(V10): 起動で限界の番地を決める。RLIMIT_STACK(上限 64 MiB)から余白を引いた分まで使う",
-                 "_sign_depth_init:", "\tsub sp, sp, #16", "\tmov x0, #3  // RLIMIT_STACK", "\tmov x1, sp", "\tmov x8, #163  // getrlimit", "\tsvc #0",
-                 "\tldr x9, [sp]", "\tadd sp, sp, #16",
+                 "_sign_depth_init:", "\tsub sp, sp, #16", "\tstr xzr, [sp]", "\tmov x0, #3  // RLIMIT_STACK", "\tmov x1, sp", "\tmov x8, #163  // getrlimit", "\tsvc #0",
+                 "\tldr x9, [sp]", "\tadd sp, sp, #16", "\tcbnz x0, .Ldepth_off  // 上限が分からなければ検査しない(限界 0)", "\tcbz x9, .Ldepth_off",
                  "\tmov x10, #0x4000000  // 64 MiB", "\tcmp x9, x10", "\tcsel x9, x10, x9, hi",
                  "\tlsr x11, x9, #2", "\tmov x12, #0x40000  // 余白 256 KiB(小さい上限では 1/4)", "\tcmp x11, x12", "\tcsel x11, x12, x11, hi",
-                 "\tcmp x9, x11", "\tb.hi .Ldepth_ok", "\tmov x9, xzr", "\tmov x11, xzr", ".Ldepth_ok:", "\tsub x9, x9, x11", "\tmov x12, sp", "\tsub x12, x12, x9",
+                 "\tcmp x9, x11", "\tb.ls .Ldepth_off  // 上限が余白より小さければ検査しない", "\tsub x9, x9, x11", "\tmov x12, sp", "\tsub x12, x12, x9", "\tb .Ldepth_set", ".Ldepth_off:", "\tmov x12, xzr", ".Ldepth_set:",
                  "\tadrp x13, _sign_stack_limit", "\tadd x13, x13, :lo12:_sign_stack_limit", "\tstr x12, [x13]", "\tret",
                  "_sign_deep:  // 入口で限界を越えた: 知らせを 1 回だけ出して `!_` を返す(呼び元の x30 はそのまま)",
                  "\tstp x29, x30, [sp, #-16]!", "\tadrp x9, _sign_deep_told", "\tadd x9, x9, :lo12:_sign_deep_told", "\tldrb w10, [x9]", "\tcbnz w10, .Ldeep_done",
