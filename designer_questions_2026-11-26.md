@@ -131,3 +131,14 @@
 | 5 (N1) | **仕様どおりでは食い違ったまま**。`Float` は「ターゲットの FPU が持つ最高精度(自動選択)」で、`Float`/`Double` の幅の区別は存在しない(Pi 4 では 8 byte)。`Vector` は「ターゲットの SIMD 幅」(NEON の Q レジスタ 128 bit = 16 byte)。4 つの Float(32 byte)は 1 つの Vector に収まらない | type/type_system.md §2 の NOTE(幅の区別は存在しない)・§1651 | 機械の `--check-f32`(32 bit へ丸める)は、仕様の「幅を選ぶ構文は無い」の外の実装の選択(オプションであって構文ではない)。N1 は未決のまま |
 | 1 (L1)・2 (L2)・3 (L4) | **未決のまま**。NaN と `!_` の繋ぎは「未決」と書かれている(integer_overflow.md §1.1 の NOTE)。Float の `!_` の niche は「NaN のペイロードから採ることになるが、まだ決めていない」(value_representation.md)。Float の `%` は `x % 0.0` = NaN としか言わない | core/integer_overflow.md・core/value_representation.md | 変更なし |
 | 6 (N2)・7 (N3)・9 (G1)・11 | 仕様に新しい記述は無い(「ベクトル指定時」の定義・総和の結合順・R121 の見本の綴り・名前だけの行) | — | 変更なし |
+
+### 6e. SIR-Z(SIR の整数の核)を仕様から定義して見つけた食い違い(2026-11-28。`SIR_SUBSET.md`)
+
+| # | 問い | 仕様の側 | 実装の側 |
+| --- | --- | --- | --- |
+| P-1 | **比べが真のとき、左が `0`・`1` なら右を返すか。** | `type/comparison.md` §2.1(`select(LHS,RHS)`: `value(LHS)∈{0,1}` なら RHS。`1 < 5` は `5`)・`syntax/operator_table.md` L414-415 にこの例外が書かれている。`==`/`!==` は例外なしで左 | 実装は V6(`0 < 5` は `0`、`1 < 5` は `1`)。根拠は `alpha1/javascript/interpret.js` と `alpha1/docs/value_spec.md`。2026-11-06 に利用者の指示で既定にも入れた。documents の記述が遅れているのか、JS が古いのか |
+| P-2 | **`!=` は片方が `!_` なら非 `!_` 側を返す(両辺とも単位元)か。** | operator_table.md L424-425 | SIR の `cmp` は「どちらかが void なら void」。strict は補正 5 で別扱い。照合が要る |
+| P-3 | **溢れ・`INT64_MIN` に着く答えは `!_` か罠か。** | integer_overflow.md §1「答えが域に無い → `!_`」と、§1.1「溢れは `!_` を生まない(罠)」「溢れを `!_` にする案も退けた」が、読み方によって食い違って見える | strict の観測は V5 で `!_`。機械語は罠 |
+| P-4 | 行の値が `!_` なら次の行へ落ちる(V10)の、`documents` 側の根拠 | `syntax/match_case.md` に同じ記述があるか未確認(`alpha1/docs/value_spec.md` にはある) | 実装は V10 |
+
+SIR-Z の証明は、P-1 の `select` を引数にして、どちらの答えでも成り立つ形にする。
