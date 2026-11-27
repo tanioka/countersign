@@ -17,6 +17,27 @@ def compile_op(op):
             A.main([p, "--no-peephole", "--no-opt"])
     return buf.getvalue().split("\n")
 
+VARIANTS = {"N": "x {op} y", "L": "(x * y) {op} y", "R": "x {op} (x * y)"}
+
+def compile_src(src):
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "t.sn")
+        open(p, "w").write(f"f : x y ? {src}\nf 8 2\n")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            A.main([p, "--no-peephole", "--no-opt"])
+    return buf.getvalue().split("\n")
+
+def tail_block(lines):
+    """最後の演算の尾(最後に `x9`/`x10` を置く行の後から、枠を戻す行の前まで)"""
+    ls = [re.sub(r"//.*", "", l).strip() for l in lines]
+    ls = [l for l in ls if l]
+    a = ls.index("mov x29, sp")
+    z = next(i for i, l in enumerate(ls) if l.startswith("ldp x29, x30") and i > a)
+    body = ls[a + 1:z]
+    last = max(i for i, l in enumerate(body) if re.fullmatch(r"(ldr|mov) x(9|10), .*", l))
+    return body[last + 1:]
+
 def block(lines):
     ls = [re.sub(r"//.*", "", l).strip() for l in lines]
     ls = [l for l in ls if l]
@@ -59,7 +80,11 @@ def to_lean(name, blk):
     return f"def {name} : Array I := #[\n  " + ",\n  ".join(f"({x})" for x in ins) + "]\n"
 
 def generated():
-    return "".join(to_lean("tpl_" + n, block(compile_op(o))) + "\n" for n, o in OPS)
+    g = "".join(to_lean("tpl_" + n, block(compile_op(o))) + "\n" for n, o in OPS)
+    for v, pat in VARIANTS.items():
+        for n, o in OPS:
+            g += to_lean("tpl" + v + "_" + n, tail_block(compile_src(pat.format(op=o)))) + "\n"
+    return g
 
 if __name__ == "__main__":
     g = generated()
@@ -67,5 +92,5 @@ if __name__ == "__main__":
         s = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "formal/lean/SirZAsm.lean")).read()
         m = re.search(r"-- BEGIN GENERATED\n(.*?)-- END GENERATED", s, re.S)
         if not m or m.group(1) != g: print("SirZAsm.lean の GENERATED が、いまの sign_asm.py の出力と違う"); sys.exit(1)
-        print("ok: 5 つの命令列が sign_asm.py の出力と同じ"); sys.exit(0)
+        print("ok: N・L・R の 20 個の命令列が sign_asm.py の出力と同じ"); sys.exit(0)
     print(g)

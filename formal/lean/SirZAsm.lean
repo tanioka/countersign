@@ -358,6 +358,152 @@ def tpl_mod : Array I := #[
   (I.sdiv 11 9 10),
   (I.msub 0 11 10 9)]
 
+def tplN_add : Array I := #[
+  (I.movz 13),
+  (I.adds 9 9 10),
+  (I.csel 0 13 9 Cond.vs)]
+
+def tplN_sub : Array I := #[
+  (I.movz 13),
+  (I.subs 9 9 10),
+  (I.csel 0 13 9 Cond.vs)]
+
+def tplN_mul : Array I := #[
+  (I.movz 13),
+  (I.mul 11 9 10),
+  (I.smulh 12 9 10),
+  (I.cmpAsr 12 11 63),
+  (I.csel 0 13 11 Cond.ne)]
+
+def tplN_div : Array I := #[
+  (I.cmpI 10 0),
+  (I.bc Cond.ne 3),
+  (I.movz 0),
+  (I.b 2),
+  (I.sdiv 0 9 10)]
+
+def tplN_mod : Array I := #[
+  (I.cmpI 10 0),
+  (I.bc Cond.ne 3),
+  (I.movz 0),
+  (I.b 3),
+  (I.sdiv 11 9 10),
+  (I.msub 0 11 10 9)]
+
+def tplL_add : Array I := #[
+  (I.movz 13),
+  (I.cmpR 9 13),
+  (I.bc Cond.ne 3),
+  (I.mov 0 10),
+  (I.b 4),
+  (I.movz 13),
+  (I.adds 9 9 10),
+  (I.csel 0 13 9 Cond.vs)]
+
+def tplL_sub : Array I := #[
+  (I.movz 13),
+  (I.cmpR 9 13),
+  (I.bc Cond.ne 3),
+  (I.mov 0 10),
+  (I.b 4),
+  (I.movz 13),
+  (I.subs 9 9 10),
+  (I.csel 0 13 9 Cond.vs)]
+
+def tplL_mul : Array I := #[
+  (I.movz 13),
+  (I.cmpR 9 13),
+  (I.bc Cond.ne 3),
+  (I.mov 0 10),
+  (I.b 6),
+  (I.movz 13),
+  (I.mul 11 9 10),
+  (I.smulh 12 9 10),
+  (I.cmpAsr 12 11 63),
+  (I.csel 0 13 11 Cond.ne)]
+
+def tplL_div : Array I := #[
+  (I.movz 13),
+  (I.cmpR 9 13),
+  (I.bc Cond.ne 3),
+  (I.mov 0 10),
+  (I.b 6),
+  (I.cmpI 10 0),
+  (I.bc Cond.ne 3),
+  (I.movz 0),
+  (I.b 2),
+  (I.sdiv 0 9 10)]
+
+def tplL_mod : Array I := #[
+  (I.movz 13),
+  (I.cmpR 9 13),
+  (I.bc Cond.ne 3),
+  (I.mov 0 10),
+  (I.b 7),
+  (I.cmpI 10 0),
+  (I.bc Cond.ne 3),
+  (I.movz 0),
+  (I.b 3),
+  (I.sdiv 11 9 10),
+  (I.msub 0 11 10 9)]
+
+def tplR_add : Array I := #[
+  (I.movz 13),
+  (I.cmpR 10 13),
+  (I.bc Cond.ne 3),
+  (I.mov 0 9),
+  (I.b 4),
+  (I.movz 13),
+  (I.adds 9 9 10),
+  (I.csel 0 13 9 Cond.vs)]
+
+def tplR_sub : Array I := #[
+  (I.movz 13),
+  (I.cmpR 10 13),
+  (I.bc Cond.ne 3),
+  (I.mov 0 9),
+  (I.b 4),
+  (I.movz 13),
+  (I.subs 9 9 10),
+  (I.csel 0 13 9 Cond.vs)]
+
+def tplR_mul : Array I := #[
+  (I.movz 13),
+  (I.cmpR 10 13),
+  (I.bc Cond.ne 3),
+  (I.mov 0 9),
+  (I.b 6),
+  (I.movz 13),
+  (I.mul 11 9 10),
+  (I.smulh 12 9 10),
+  (I.cmpAsr 12 11 63),
+  (I.csel 0 13 11 Cond.ne)]
+
+def tplR_div : Array I := #[
+  (I.movz 13),
+  (I.cmpR 10 13),
+  (I.bc Cond.ne 3),
+  (I.mov 0 9),
+  (I.b 6),
+  (I.cmpI 10 0),
+  (I.bc Cond.ne 3),
+  (I.movz 0),
+  (I.b 2),
+  (I.sdiv 0 9 10)]
+
+def tplR_mod : Array I := #[
+  (I.movz 13),
+  (I.cmpR 10 13),
+  (I.bc Cond.ne 3),
+  (I.mov 0 9),
+  (I.b 7),
+  (I.cmpI 10 0),
+  (I.bc Cond.ne 3),
+  (I.movz 0),
+  (I.b 3),
+  (I.sdiv 11 9 10),
+  (I.msub 0 11 10 9)]
+
 -- END GENERATED
 
 theorem decode_ne (x : W) (h : x ≠ NICHE) : decode x = some x.toInt := by simp [decode, h]
@@ -484,6 +630,220 @@ theorem tpl_ok (o : AOp) (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h1
   · exact tpl_mul_ok s hs x y h9 h10
   · exact tpl_div_ok s hs x y h9 h10
   · exact tpl_mod_ok s hs x y h9 h10
+
+/-! ### `!_` にならないと分かっている所の短い形(N: 両方、L: 左だけ `!_` になりうる、R: 右だけ) -/
+
+theorem tplN_add_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hx : x ≠ NICHE) (hy : y ≠ NICHE) :
+    (run tplN_add 30 s).r 0 = encode (arith .add (decode x) (decode y)) ∧ (run tplN_add 30 s).pc = tplN_add.size := by
+  have hdx := decode_ne x hx
+  have hdy := decode_ne y hy
+  simp [run, tplN_add, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt]
+  exact add_core x y
+
+theorem tplN_sub_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hx : x ≠ NICHE) (hy : y ≠ NICHE) :
+    (run tplN_sub 30 s).r 0 = encode (arith .sub (decode x) (decode y)) ∧ (run tplN_sub 30 s).pc = tplN_sub.size := by
+  have hdx := decode_ne x hx
+  have hdy := decode_ne y hy
+  simp [run, tplN_sub, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt]
+  exact sub_core x y
+
+theorem tplN_mul_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hx : x ≠ NICHE) (hy : y ≠ NICHE) :
+    (run tplN_mul 30 s).r 0 = encode (arith .mul (decode x) (decode y)) ∧ (run tplN_mul 30 s).pc = tplN_mul.size := by
+  have hdx := decode_ne x hx
+  have hdy := decode_ne y hy
+  simp [run, tplN_mul, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt]
+  exact mul_core x y
+
+theorem tplN_div_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hx : x ≠ NICHE) (hy : y ≠ NICHE) :
+    (run tplN_div 30 s).r 0 = encode (arith .div (decode x) (decode y)) ∧ (run tplN_div 30 s).pc = tplN_div.size := by
+  have hdx := decode_ne x hx
+  have hdy := decode_ne y hy
+  by_cases hy0 : y = 0
+  · have hz : decide (y = immW 0) = true := by rw [immW_zero]; exact decide_eq_true hy0
+    have h0 : (0 : W).toInt = 0 := by decide
+    have hyt : y.toInt = 0 := by rw [hy0]; exact h0
+    have hdy0 : decode y = some 0 := by rw [hdy, hyt]
+    simp [run, tplN_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hz]
+    rw [hdx, hdy0]; simp [arith, arithInt, encode]
+  · have hz : decide (y = immW 0) = false := by rw [immW_zero]; exact decide_eq_false hy0
+    have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
+    simp [run, tplN_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hz, hyz]
+    have h := div_core x y hx
+    simp only [hy0, hyz, ite_false, if_false] at h
+    exact h
+
+theorem tplN_mod_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hx : x ≠ NICHE) (hy : y ≠ NICHE) :
+    (run tplN_mod 30 s).r 0 = encode (arith .mod (decode x) (decode y)) ∧ (run tplN_mod 30 s).pc = tplN_mod.size := by
+  have hdx := decode_ne x hx
+  have hdy := decode_ne y hy
+  by_cases hy0 : y = 0
+  · have hz : decide (y = immW 0) = true := by rw [immW_zero]; exact decide_eq_true hy0
+    have h0 : (0 : W).toInt = 0 := by decide
+    have hyt : y.toInt = 0 := by rw [hy0]; exact h0
+    have hdy0 : decode y = some 0 := by rw [hdy, hyt]
+    simp [run, tplN_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hz]
+    rw [hdx, hdy0]; simp [arith, arithInt, encode]
+  · have hz : decide (y = immW 0) = false := by rw [immW_zero]; exact decide_eq_false hy0
+    have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
+    simp [run, tplN_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hz, hyz]
+    have h := mod_core x y hx
+    simp only [hy0, hyz, ite_false, if_false] at h
+    exact h
+
+theorem tplL_add_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hy : y ≠ NICHE) :
+    (run tplL_add 30 s).r 0 = encode (arith .add (decode x) (decode y)) ∧ (run tplL_add 30 s).pc = tplL_add.size := by
+  by_cases hx : x = NICHE
+  · subst hx
+    have : decode NICHE = none := by simp [decode]
+    simp [run, tplL_add, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, this, arith_none_left, encode_decode]
+  · have hdx := decode_ne x hx
+    have hdy := decode_ne y hy
+    simp [run, tplL_add, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt]
+    exact add_core x y
+
+theorem tplL_sub_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hy : y ≠ NICHE) :
+    (run tplL_sub 30 s).r 0 = encode (arith .sub (decode x) (decode y)) ∧ (run tplL_sub 30 s).pc = tplL_sub.size := by
+  by_cases hx : x = NICHE
+  · subst hx
+    have : decode NICHE = none := by simp [decode]
+    simp [run, tplL_sub, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, this, arith_none_left, encode_decode]
+  · have hdx := decode_ne x hx
+    have hdy := decode_ne y hy
+    simp [run, tplL_sub, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt]
+    exact sub_core x y
+
+theorem tplL_mul_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hy : y ≠ NICHE) :
+    (run tplL_mul 30 s).r 0 = encode (arith .mul (decode x) (decode y)) ∧ (run tplL_mul 30 s).pc = tplL_mul.size := by
+  by_cases hx : x = NICHE
+  · subst hx
+    have : decode NICHE = none := by simp [decode]
+    simp [run, tplL_mul, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, this, arith_none_left, encode_decode]
+  · have hdx := decode_ne x hx
+    have hdy := decode_ne y hy
+    simp [run, tplL_mul, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt]
+    exact mul_core x y
+
+theorem tplL_div_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hy : y ≠ NICHE) :
+    (run tplL_div 30 s).r 0 = encode (arith .div (decode x) (decode y)) ∧ (run tplL_div 30 s).pc = tplL_div.size := by
+  by_cases hx : x = NICHE
+  · subst hx
+    have : decode NICHE = none := by simp [decode]
+    simp [run, tplL_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, this, arith_none_left, encode_decode]
+  · have hdx := decode_ne x hx
+    have hdy := decode_ne y hy
+    by_cases hy0 : y = 0
+    · have hz : decide (y = immW 0) = true := by rw [immW_zero]; exact decide_eq_true hy0
+      have h0 : (0 : W).toInt = 0 := by decide
+      have hyt : y.toInt = 0 := by rw [hy0]; exact h0
+      have hdy0 : decode y = some 0 := by rw [hdy, hyt]
+      simp [run, tplL_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hz]
+      rw [hdx, hdy0]; simp [arith, arithInt, encode]
+    · have hz : decide (y = immW 0) = false := by rw [immW_zero]; exact decide_eq_false hy0
+      have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
+      simp [run, tplL_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hz, hyz]
+      have h := div_core x y hx
+      simp only [hy0, hyz, ite_false, if_false] at h
+      exact h
+
+theorem tplL_mod_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hy : y ≠ NICHE) :
+    (run tplL_mod 30 s).r 0 = encode (arith .mod (decode x) (decode y)) ∧ (run tplL_mod 30 s).pc = tplL_mod.size := by
+  by_cases hx : x = NICHE
+  · subst hx
+    have : decode NICHE = none := by simp [decode]
+    simp [run, tplL_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, this, arith_none_left, encode_decode]
+  · have hdx := decode_ne x hx
+    have hdy := decode_ne y hy
+    by_cases hy0 : y = 0
+    · have hz : decide (y = immW 0) = true := by rw [immW_zero]; exact decide_eq_true hy0
+      have h0 : (0 : W).toInt = 0 := by decide
+      have hyt : y.toInt = 0 := by rw [hy0]; exact h0
+      have hdy0 : decode y = some 0 := by rw [hdy, hyt]
+      simp [run, tplL_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hz]
+      rw [hdx, hdy0]; simp [arith, arithInt, encode]
+    · have hz : decide (y = immW 0) = false := by rw [immW_zero]; exact decide_eq_false hy0
+      have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
+      simp [run, tplL_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hz, hyz]
+      have h := mod_core x y hx
+      simp only [hy0, hyz, ite_false, if_false] at h
+      exact h
+
+theorem tplR_add_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hx : x ≠ NICHE) :
+    (run tplR_add 30 s).r 0 = encode (arith .add (decode x) (decode y)) ∧ (run tplR_add 30 s).pc = tplR_add.size := by
+  by_cases hy : y = NICHE
+  · subst hy
+    have : decode NICHE = none := by simp [decode]
+    simp [run, tplR_add, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, this, arith_none_right, encode_decode, hx]
+  · have hdx := decode_ne x hx
+    have hdy := decode_ne y hy
+    simp [run, tplR_add, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt]
+    exact add_core x y
+
+theorem tplR_sub_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hx : x ≠ NICHE) :
+    (run tplR_sub 30 s).r 0 = encode (arith .sub (decode x) (decode y)) ∧ (run tplR_sub 30 s).pc = tplR_sub.size := by
+  by_cases hy : y = NICHE
+  · subst hy
+    have : decode NICHE = none := by simp [decode]
+    simp [run, tplR_sub, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, this, arith_none_right, encode_decode, hx]
+  · have hdx := decode_ne x hx
+    have hdy := decode_ne y hy
+    simp [run, tplR_sub, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt]
+    exact sub_core x y
+
+theorem tplR_mul_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hx : x ≠ NICHE) :
+    (run tplR_mul 30 s).r 0 = encode (arith .mul (decode x) (decode y)) ∧ (run tplR_mul 30 s).pc = tplR_mul.size := by
+  by_cases hy : y = NICHE
+  · subst hy
+    have : decode NICHE = none := by simp [decode]
+    simp [run, tplR_mul, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, this, arith_none_right, encode_decode, hx]
+  · have hdx := decode_ne x hx
+    have hdy := decode_ne y hy
+    simp [run, tplR_mul, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt]
+    exact mul_core x y
+
+theorem tplR_div_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hx : x ≠ NICHE) :
+    (run tplR_div 30 s).r 0 = encode (arith .div (decode x) (decode y)) ∧ (run tplR_div 30 s).pc = tplR_div.size := by
+  by_cases hy : y = NICHE
+  · subst hy
+    have : decode NICHE = none := by simp [decode]
+    simp [run, tplR_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, this, arith_none_right, encode_decode, hx]
+  · have hdx := decode_ne x hx
+    have hdy := decode_ne y hy
+    by_cases hy0 : y = 0
+    · have hz : decide (y = immW 0) = true := by rw [immW_zero]; exact decide_eq_true hy0
+      have h0 : (0 : W).toInt = 0 := by decide
+      have hyt : y.toInt = 0 := by rw [hy0]; exact h0
+      have hdy0 : decode y = some 0 := by rw [hdy, hyt]
+      simp [run, tplR_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hz]
+      rw [hdx, hdy0]; simp [arith, arithInt, encode]
+    · have hz : decide (y = immW 0) = false := by rw [immW_zero]; exact decide_eq_false hy0
+      have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
+      simp [run, tplR_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hz, hyz]
+      have h := div_core x y hx
+      simp only [hy0, hyz, ite_false, if_false] at h
+      exact h
+
+theorem tplR_mod_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hx : x ≠ NICHE) :
+    (run tplR_mod 30 s).r 0 = encode (arith .mod (decode x) (decode y)) ∧ (run tplR_mod 30 s).pc = tplR_mod.size := by
+  by_cases hy : y = NICHE
+  · subst hy
+    have : decode NICHE = none := by simp [decode]
+    simp [run, tplR_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, this, arith_none_right, encode_decode, hx]
+  · have hdx := decode_ne x hx
+    have hdy := decode_ne y hy
+    by_cases hy0 : y = 0
+    · have hz : decide (y = immW 0) = true := by rw [immW_zero]; exact decide_eq_true hy0
+      have h0 : (0 : W).toInt = 0 := by decide
+      have hyt : y.toInt = 0 := by rw [hy0]; exact h0
+      have hdy0 : decode y = some 0 := by rw [hdy, hyt]
+      simp [run, tplR_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hz]
+      rw [hdx, hdy0]; simp [arith, arithInt, encode]
+    · have hz : decide (y = immW 0) = false := by rw [immW_zero]; exact decide_eq_false hy0
+      have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
+      simp [run, tplR_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hz, hyz]
+      have h := mod_core x y hx
+      simp only [hy0, hyz, ite_false, if_false] at h
+      exact h
+
 
 /-! ### 命令列をつなげる -/
 
