@@ -210,19 +210,25 @@ class Checker:
         return Fn(name, tuple(ptypes), (), ret)
 
     # --- 全体を解く: Pass 1b を不動点で ---
+    def step(self):
+        """Pass 1b の 1 回の更新 F: 今の観測 self.params のもとで全部を型付けし、呼び出しサイトの実引数から新しい観測を作って返す(self.params は変えない)。"""
+        self.callsites, self.types, self.diags = {}, {}, list(self.import_diags)
+        for name in self.order: self.def_type(name)
+        self.where = "<top>"
+        for node in self.nodes:
+            d = node[1] if node[0] == "export" else node
+            if d[0] != "def": self.type_of(d, Scope())
+        new = {}
+        for name, sites in self.callsites.items():
+            n = max(len(a) for a in sites)
+            new[name] = [unify([a[i] for a in sites if len(a) > i]) for i in range(n)]
+        return new
+
     def solve(self, rounds=5):
+        self.converged = False
         for _ in range(rounds):
-            self.callsites, self.types, self.diags = {}, {}, list(self.import_diags)
-            for name in self.order: self.def_type(name)
-            self.where = "<top>"
-            for node in self.nodes:
-                d = node[1] if node[0] == "export" else node
-                if d[0] != "def": self.type_of(d, Scope())
-            new = {}
-            for name, sites in self.callsites.items():
-                n = max(len(a) for a in sites)
-                new[name] = [unify([a[i] for a in sites if len(a) > i]) for i in range(n)]
-            if new == self.params: break
+            new = self.step()
+            if new == self.params: self.converged = True; break
             self.params = new
         return self
 
