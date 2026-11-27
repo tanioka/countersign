@@ -6524,6 +6524,14 @@ def _cli():                                       # コマンド行の入口(`py
     else:
         def repl():
             env = Env()
+            hist = None
+            try:                                                      # カーソルキー(←→ で編集、↑↓ でヒストリー)。readline が無い環境(Windows の素の Python など)は、あれば pyreadline3 を使い、無ければそのまま
+                import readline
+                hist = os.path.join(os.path.expanduser("~"), ".sign_history")
+                try: readline.read_history_file(hist)
+                except OSError: pass
+                readline.set_history_length(1000)
+            except ImportError: pass
             pending = []                                              # 定義の続きを読むとき、字下げの無い行に当たったら次の入力として取っておく
             while True:
                 if pending: line = pending.pop(0)
@@ -6547,6 +6555,9 @@ def _cli():                                       # コマンド行の入口(`py
                 except RecursionError: print("エラー: 再帰が深すぎます")
                 except MemoryError: print("エラー: メモリが足りません。この入力は処理を続けられません")
                 except Exception as e: print(f"エラー: 内部エラー({type(e).__name__}): この入力は処理を続けられません。{e}")       # 次の入力へ続ける
+            if hist:
+                try: readline.write_history_file(hist)
+                except OSError: pass
         run_with_big_stack(repl)
 
 if __name__ == "__main__":
