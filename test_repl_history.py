@@ -30,5 +30,7 @@ os.write(fd, b"\x04"); rd(1)
 try: os.waitpid(pid, 0)
 except OSError: pass
 h = os.path.join(home, ".sign_history")
-check("履歴ファイル ~/.sign_history に残る", os.path.exists(h) and "1\\040+\\0402" in open(h).read(), True)
+txt = open(h, encoding="utf-8", errors="replace").read().replace("\\040", " ") if os.path.exists(h) else ""      # readline の版で空白の書き方が違う(\\040 か空白)
+check("履歴ファイル ~/.sign_history に残る", "1 + 2" in txt, True)
+if "1 + 2" not in txt: print("   ディレクトリ:", os.listdir(home), repr(txt[:80]))
 print("%d 件 NG" % fails if fails else "全部 ok"); sys.exit(1 if fails else 0)
