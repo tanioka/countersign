@@ -51,6 +51,52 @@ PEEP = [True]       # ピープホール最適化(sign_peep.py)。--no-peephole 
 class AsmError(Exception):
     """出せない形(名指しで断る)。"""
 
+def drop_void_literals(nodes):
+    """字面の Int のリストへの範囲外のスライス `xs ' [5 ~ 6]`・取り出し `xs ' 7`(必ず `__`)を、入れ子の並び `(…) (…)` から消す
+    (`__` は入れ子に入らず並びから消える。実行時に個数が変わる形ではなく、書いた時点で決まる形だけを静的に畳む)。
+    消えて 1 つだけ残れば、その要素そのもの(`(x)` は x)。全部が消える形・先頭が関数の呼びの形は触らない。"""
+    lits = {}
+    def lv(x):
+        while x[0] == "block": x = x[1]
+        if x[0] == "id": return lits.get(x[1])
+        return _probe().list_values(x)
+    for n in nodes:
+        if n[0] == "def" and len(n) == 3 and n[2][0] in ("seq", "bin", "prod", "block") and _probe().list_values(n[2]) is not None:
+            lits[n[1]] = _probe().list_values(n[2])
+    fns = {n[1] for n in nodes if n[0] == "def" and n[2][0] == "lam"}
+    def cint(x):
+        while x[0] == "block": x = x[1]
+        if x[0] == "lit" and isinstance(x[1], int) and not isinstance(x[1], bool): return x[1]
+        if x[0] == "neg" and x[1][0] == "lit" and isinstance(x[1][1], int) and not isinstance(x[1][1], bool): return -x[1][1]
+        return None
+    def void(x):
+        while x[0] == "block": x = x[1]
+        if x[0] != "bin" or x[1] != "'": return False
+        vals = lv(x[2])
+        if vals is None: return False
+        idx = x[3]
+        while idx[0] == "block": idx = idx[1]
+        if idx[0] == "bin" and idx[1] == "~":
+            a, b = cint(idx[2]), cint(idx[3])
+            return a is not None and b is not None and 0 <= a <= b and b >= len(vals)
+        k = cint(idx)
+        return k is not None and (k >= len(vals) or k < -len(vals)) and idx[0] != "sec"
+    def fix(x):
+        if isinstance(x, tuple):
+            x = tuple(fix(y) for y in x)
+            if x[:1] == ("seq",) and len(x[1]) >= 2 and not (x[1][0][:1] == ("id",) and x[1][0][1] in fns) and all(it[:1] in (("block",), ("lit",)) for it in x[1]):
+                keep = [it for it in x[1] if not void(it)]
+                if keep and len(keep) < len(x[1]): return keep[0] if len(keep) == 1 else ("seq", keep)
+            return x
+        if isinstance(x, list): return [fix(y) for y in x]
+        return x
+    return [fix(n) for n in nodes]
+
+def _probe():
+    p = Program.__new__(Program); p.consts = {}
+    return p
+
+
 class KindConflict(AsmError):
     """1 つの仮引数に種類の違う実引数が渡された(関数を種類ごとに複製して直す。Program.split_kind)"""
     def __init__(self, msg, f, i, kd, site):
@@ -2840,6 +2886,7 @@ class Program:
             nodes = sign_fuse.scalarize_records(nodes)         # レコードの分解: 字面の器を受ける仮引数へ、要素をそのまま渡す(器を作らない)
         nodes = expand_aliases(nodes)                          # 別名 `p : inc`・算術の節 `[+] 2 3` の展開
         nodes = expand_mixed_spreads(nodes)                    # 字面の名前の混ざる入れ子の展開 `m~` は、要素を並べた並びへ
+        nodes = drop_void_literals(nodes)                      # 字面の器の範囲外のスライス・取り出し(必ず `__`)は、入れ子から消える
         import sign_inline                                     # 特殊化: `$関数` を渡す呼び出しを、渡された関数ごとの実体 `F$G` へ付け替える(仕様の「コンパイル時特殊化」)
         try: nodes = sign_inline.specialize(nodes)
         except sign_inline.SpecError as e: raise AsmError(str(e))
