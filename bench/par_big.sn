@@ -1,6 +1,6 @@
 `【注意】既定モード用のベンチ。--strict では終わらない：has / count_op / op_word / has_tok / jend などが底を持たず、`
 `「引数が尽きた呼び出しは __ に潰れる」ことに頼っているが、--strict では潰れず深さの上限に当たる。`
-`--strict の確認には bench/strict_bench.sn を使う`
+`--strict の確認には bench/strict_bench.sn を使う（--charset=utf32 を付けて走らせる）`
 `再帰下降パーサ。構文木（AST）を .ms の形で書き出す`
 `.ms は Sign の積の記法をそのままデータに使う形式（option_ms_schema.md）で、コンパイラは評価せずに`
 `key : value の入れ子として読む。木はデータであって、走らせるものではない`
