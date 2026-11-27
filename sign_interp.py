@@ -516,9 +516,7 @@ def _pswcx(a, v):
     _pswrx(a, v); return True
 def _psshl(a, b):
     if b < 0 or b > 100000: raise _PureBail()          # 負・巨大なシフトは決めずに普通の道へ(そちらの扱いに任せる)
-    r = a << b
-    if not -9223372036854775807 <= r <= 9223372036854775807: raise _PureBail()          # 溢れは `!_`(普通の道でやり直す)
-    return r
+    return a << b
 def _psshr(a, b):
     if b < 0 or b > 100000: raise _PureBail()
     return a >> b
@@ -537,7 +535,7 @@ def _pga(op, a, b):                              # 文字が混ざりうる世�
     if (ta is int or ta is float) and (tb is int or tb is float):
         _r = a + b if op == "+" else a - b if op == "-" else a * b if op == "*" else None
         if _r is not None:
-            if type(_r) is int and (_r > INT_MAX or _r < -INT_MAX): raise _PureBail()
+            if STRICT_GATES and type(_r) is int and (_r > INT_MAX or _r < -INT_MAX): raise _PureBail()
             return _r
     r = arith(op, a, b); t = type(r)
     if t is not int and t is not float and t is not Char: raise _PureBail()
@@ -678,7 +676,7 @@ def _pxbin(op, a, b):                             # 'X' の足し引き掛け: �
         if op == "-": return Addr(_pa(a - b))
         raise _PureBail()
     _r = a + b if op == "+" else (a - b if op == "-" else a * b)
-    if (_r > INT_MAX or _r < -INT_MAX): raise _PureBail()          # V5: Int の溢れは _(普通の道でやり直す)
+    if STRICT_GATES and (_r > INT_MAX or _r < -INT_MAX): raise _PureBail()          # V5: Int の溢れは _(普通の道でやり直す)
     return _r
 def _pidk(*xs):                                   # 速い道の輪が同じ状態へ戻ったかの鍵(整数などはそのまま、List は長さと同一性。その場で伸ばす List があるので値では比べない)
     return tuple((len(x), id(x)) if type(x) is list else x for x in xs)
@@ -889,9 +887,7 @@ def _pure_expr(n, nd, nodes, index, depth, want=None):
         a = _coerce(a[0], a[1], "i"); b = _coerce(b[0], b[1], "i")
         if a is None or b is None: return None
         py = _PURE_BIN[op]
-        if py in ("+", "-", "*"):                                         # 設計者の答え 2026-11-26: 既定のモードも Int の溢れは `!_`。溢れたら普通の道(arith)でやり直す
-            return ("(_ot if -9223372036854775807 <= (_ot := %s %s %s) <= 9223372036854775807 else _pbail())" % (a, py, b), "i")
-        return ("(%s %s %s)" % (a, py, b) if py in ("&", "|", "^") else "%s(%s, %s)" % (py, a, b), "i")
+        return ("(%s %s %s)" % (a, py, b) if py in ("+", "-", "*", "&", "|", "^") else "%s(%s, %s)" % (py, a, b), "i")
     if k == "cmp" and len(n[2]) == 1 and n[2][0] in _PURE_CMP:       # 値としての比べ: 成り立てば左の値(witness)、外れれば __
         a = _pure_expr(n[1][0], nd, nodes, index, depth); b = _pure_expr(n[1][1], nd, nodes, index, depth)
         if a is None or b is None or a[1] == "s" or b[1] == "s": return None
@@ -1554,7 +1550,7 @@ def ei(n, vals, env):
             b = ei(n[3], vals, env)
             if b is None: return None
             _r = a + b if op == "+" else a - b if op == "-" else a * b
-            if type(_r) is int and (_r > INT_MAX or _r < -INT_MAX): return None        # V5: 溢れは _ なので普通の道へ
+            if STRICT_GATES and type(_r) is int and (_r > INT_MAX or _r < -INT_MAX): return None        # V5: 溢れは _ なので普通の道へ
             return _r
     return None
 
@@ -3038,7 +3034,6 @@ def _arith_core(op, a, b):
             return r if a >= 0 else -r
         return a % b
     if op == "^":
-        if isinstance(a, int) and isinstance(b, int) and b > 0 and abs(a) > 1 and b * (a.bit_length() - 1) > 63: return UNIT         # Int の値域の外は `!_`(設計者の答え 2026-11-25)。巨大な冪は計算せずに決める
         if isinstance(a, int) and isinstance(b, int) and b > 0 and abs(a) > 1 and b * a.bit_length() > BIT_LIMIT: raise SignError(f"結果が大きすぎます(実装の上限は {BIT_LIMIT:,} ビット)")
         if isinstance(a, float) or isinstance(b, float): return f_pow(float(a), float(b))      # Float は IEEE 754: 桁あふれ ±∞・0.0 の負の冪 +∞・負の数の小数冪 NaN
         if STRICT_GATES and isinstance(a, int) and isinstance(b, int) and b < 0:      # V5・V11: 負の指数の冪は当たる演算が無く _
@@ -3053,8 +3048,6 @@ def _arith_core(op, a, b):
         if op == ";;": return a ^ b
         if op == "<<" or op == ">>":
             if b < 0: return UNIT                      # 負のシフト量: 仕様は未決(type_system.md「k が負の形は未決」)。Python の ValueError で落とさず、決まらない値 __ にする(判断。仕様で決まれば合わせる)
-            if op == "<<" and a != 0 and b > 64: return UNIT         # Int の値域の外は `!_`(巨大なシフトは計算せずに決める)
-            if op == "<<" and a == 0: return 0
             if op == "<<" and b > BIT_LIMIT: raise SignError(f"結果が大きすぎます(実装の上限は {BIT_LIMIT:,} ビット)")
             return a << b if op == "<<" else a >> b
         raise KeyError(op)
@@ -3065,7 +3058,7 @@ INT_MAX = (1 << 63) - 1
 _arith_plain = _arith_core
 def arith(op, a, b):
     r = _arith_core(op, a, b)
-    if type(r) is int and (r > INT_MAX or r < -INT_MAX):        # V5: Int(64 bit)の溢れは _(設計者の答え 2026-11-25・2026-11-26: 既定のモードも)。生まれた行に information `int-overflow`
+    if STRICT_GATES and type(r) is int and (r > INT_MAX or r < -INT_MAX):        # V5: Int(64 bit)の溢れは _。生まれた行に information `int-overflow`
         info("int-overflow", f"Int(64 bit)の溢れなので _ です: {show(a)} {op} {show(b)} の答え {r} は -{INT_MAX} 〜 {INT_MAX} の外です(V5・V11)")
         return UNIT
     return r
@@ -3370,8 +3363,7 @@ def product(vals):                             # 直積: Unit は落ち、後置
 def logical_not(v): return ID if is_unit(v) else UNIT
 FACT_LIMIT = 100_000                           # 実装の守り: 階乗の引数の上限(超えると結果が大きすぎて計算を終えられない)
 def factorial(v):
-    if isinstance(v, int) and not is_unit(v) and v > 20:         # 21! は Int の値域の外(設計者の答え 2026-11-25: 溢れは `!_`。大きな階乗は計算せずに決める)
-        info("int-overflow", f"Int(64 bit)の溢れなので _ です: {v}! の答えは -{INT_MAX} 〜 {INT_MAX} の外です"); return UNIT
+    if isinstance(v, int) and not is_unit(v) and v > FACT_LIMIT: raise SignError(f"結果が大きすぎます(実装の上限は {FACT_LIMIT:,} の階乗まで)")
     return math.factorial(v) if isinstance(v, int) and v >= 0 and not is_unit(v) else UNIT
 _NOFN = frozenset([Closure])                  # 型の集合どうしの isdisjoint は C で回る(要素ごとの isinstance の生成式より桁違いに速い)
 _NOFN2 = frozenset([Closure, Stream])
@@ -3631,14 +3623,14 @@ PREFIX_START = {"!", "-", "!!", "$", "@", "~", "|", "||"}
 SECTION_OPS = set(INFIX) | CMPCHAIN
 
 def uint_lit(v, s):
-    if v > UMASK: raise SignError(f"字面 {s} は UInt の値域(0 〜 2^64 − 1)の外です(コンパイルエラー。integer_overflow.md §1.1 末)")
+    if v > UMASK and INTCHK[0]: raise SignError(f"字面 {s} は UInt の値域(0 〜 2^64 − 1)の外です(コンパイルエラー。integer_overflow.md §1.1 末)")
     return v & UMASK                                     # 既定は環の上の値として 2^64 で回す【実装】
 def atom_node(t):
     k, s = t.kind, t.text
     if k == "NUM":
         if "." in s: return ("lit", float(s))
         v = int(s)
-        if v > INT_MAX: raise SignError(f"十進の字面 {s} は Int の値域(-{INT_MAX} 〜 {INT_MAX})の外です(コンパイルエラー。integer_overflow.md §1.1 末。回したい数は 0r で書く)")
+        if INTCHK[0] and v > INT_MAX: raise SignError(f"十進の字面 {s} は Int の値域(-{INT_MAX} 〜 {INT_MAX})の外です(コンパイルエラー。integer_overflow.md §1.1 末。回したい数は 0r で書く)")
         return ("lit", v)
     if k == "STR": return ("lit", UNIT if s == "``" else s[1:-1])
     if k == "CHAR": return ("lit", Char(s[1:]))
@@ -4588,7 +4580,7 @@ def fast_int(n, env):
             r = fast_int(n[3], env)
             if r is None: return None
             _v = l + r if op == "+" else l - r if op == "-" else l * r
-            if _v > INT_MAX or _v < -INT_MAX: return None        # V5: 溢れは _ なので、普通の道(arith)へ回す(既定のモードも)
+            if STRICT_GATES and (_v > INT_MAX or _v < -INT_MAX): return None        # V5: 溢れは _ なので、普通の道(arith)へ回す
             return _v
     return None
 
@@ -4676,7 +4668,7 @@ def _ev(n, env):
             else: l = ev(n[2], env); r = ev(n[3], env)
             if type(l) is int and type(r) is int and not INTCHK[0]:
                 _r = l + r if op == "+" else l - r if op == "-" else l * r
-                if _r > INT_MAX or _r < -INT_MAX: return arith(op, l, r)        # V5: 溢れは _(information。既定のモードも)
+                if STRICT_GATES and (_r > INT_MAX or _r < -INT_MAX): return arith(op, l, r)        # V5: 溢れは _(information)
                 return _r
             if type(l) is UInt and (type(r) is int or type(r) is UInt):      # UInt の速い道: 2^64 で回すのはビットマスク 1 つ
                 return UInt((l + r if op == "+" else l - r if op == "-" else l * r) & UMASK)
