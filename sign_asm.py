@@ -2680,7 +2680,7 @@ class FnGen:
 
 IMPORT_DIR = [None]      # `f`@~ の相対パスの基準(読み込んだ原文のあるディレクトリ。無ければカレント)
 
-def expand_imports(nodes, seen=None, stack=()):
+def expand_imports(nodes, seen=None, stack=(), _nested=False):
     """最上位の `path`@~(importspread)を、そのファイルの定義に置き換える(interpreter の import_file と同じ解き方: パスは取り込む側のファイルからの相対)。
     取り込まれたファイルの最上位は定義だけ(式があれば断る: 取り込み時の副作用を出せない)。公開の印 `#` があるファイルは、
     撒かれるのが公開の名前だけになるので、まだ出せない。同じファイルは 1 回だけ。名前が既にある定義と重なれば断る。"""
@@ -2701,9 +2701,10 @@ def expand_imports(nodes, seen=None, stack=()):
         old = IMPORT_DIR[0]; IMPORT_DIR[0] = os.path.dirname(full)
         try:
             sub = sign_interp.parse_source(open(full, encoding="utf-8").read())
-            if any(x[0] == "export" or (x[0] == "def" and len(x) > 3 and x[3]) for x in sub): raise AsmError("%s: 公開の印 `#` があるファイルの取り込みはまだ出せません(撒かれるのが公開の名前だけになる)" % p[1])
-            sub = expand_imports(sub, seen, stack + (full,))
+            if any(x[0] == "def" and len(x) > 3 and x[3] for x in sub): raise AsmError("%s: 取り込むファイルの定義に、まだ出せない印があります" % p[1])
+            sub = expand_imports(sub, seen, stack + (full,), _nested=True)
         finally: IMPORT_DIR[0] = old
+        sub = hide_private(sub, p[1], full)
         bad = [x for x in sub if x[0] != "def"]
         if bad: raise AsmError("%s: 取り込むファイルの最上位に式があります(取り込み時の副作用はまだ出せません)" % p[1])
         out.extend(sub)
@@ -2719,6 +2720,50 @@ def expand_imports(nodes, seen=None, stack=()):
             raise AsmError("同じ名前の定義が重なっています(%s)。前の定義が値、または間に最上位の式があるので、どちらが勝つかをまだ決められません" % nm)
         drop.update(ps[:-1])
     if drop: out = [n for i, n in enumerate(out) if i not in drop]
+    if not _nested: out = [n[1] if n[0] == "export" else n for n in out]          # 実行する本体の公開の印は、定義と同じ(公開が効くのは取り込まれたときだけ)
+    return out
+
+
+_PRIV = [0]
+
+def hide_private(sub, shown, full):
+    """取り込んだファイルに公開の印 `#` の定義があれば、撒かれるのは公開の名前だけ(処理系の import: env.exports。execution_model.md §2)。
+    公開でない最上位の名前(そのファイルの中だけで使う)は、取り込む側と重ならない別の名前へ付け替える(`名前$p<番号>`)。
+    公開の定義は印を外して残す。付け替えで内側の定義・仮引数が同じ名前を隠す形は、まだ出せない。"""
+    if not any(x[0] == "export" for x in sub): return sub
+    exported = {x[1][1] for x in sub if x[0] == "export" and x[1][0] == "def"}
+    if any(x[0] == "export" and x[1][0] != "def" for x in sub): raise AsmError("%s: 公開の印が定義でない物にあります" % shown)
+    plain = [x[1] if x[0] == "export" else x for x in sub]
+    priv = {x[1] for x in plain if x[0] == "def" and isinstance(x[1], str)} - exported
+    if not priv: return plain
+    _PRIV[0] += 1
+    m = {nm: "%s$p%d" % (nm, _PRIV[0]) for nm in priv}
+    def pnames(ps):
+        o = set()
+        for q in ps:
+            if q[0] == "name": o.add(q[1])
+            elif q[0] == "destr":
+                o |= {x for x in q[1] if isinstance(x, str)}
+                if isinstance(q[2], str): o.add(q[2])
+                if len(q) > 4: o |= {x for x in q[4] if isinstance(x, str)}
+        return o
+    def rn(x, mp, top=False):
+        if isinstance(x, tuple):
+            if len(x) == 2 and x[0] == "id": return ("id", mp.get(x[1], x[1]))
+            if x and x[0] == "lam":
+                bound = pnames(x[1])
+                if bound & set(mp): raise AsmError("%s: 公開でない名前(%s)を仮引数が隠しています。付け替えがまだ出せません" % (shown, ", ".join(sorted(bound & set(mp)))))
+                return ("lam", rn(x[1], mp), rn(x[2], mp)) + tuple(rn(y, mp) for y in x[3:])
+            if x and x[0] == "def" and not top and isinstance(x[1], str) and x[1] in mp: raise AsmError("%s: 公開でない名前(%s)を内側の定義が隠しています。付け替えがまだ出せません" % (shown, x[1]))
+            return tuple(rn(y, mp) for y in x)
+        if isinstance(x, list): return [rn(y, mp) for y in x]
+        return x
+    out = []
+    for x in plain:
+        if x[0] == "def" and isinstance(x[1], str) and x[1] in m:
+            out.append(("def", m[x[1]]) + tuple(rn(y, m) for y in x[2:]))
+        elif x[0] == "def": out.append(("def", x[1]) + tuple(rn(y, m) for y in x[2:]))
+        else: out.append(x)
     return out
 
 
@@ -2784,6 +2829,7 @@ def rename_shadowing_params(nodes):
 class Program:
     def __init__(self, nodes):
         if any(n[0] == "importspread" for n in nodes): nodes = expand_imports(nodes)
+        else: nodes = [n[1] if n[0] == "export" else n for n in nodes]          # 実行する本体の公開の印は、定義と同じ
         nodes = rename_shadowing_params(nodes)                 # 仮引数が定義と同じ名前なら、仮引数を付け替える(asm は名前だけで呼びか器かを決めるため。処理系は仮引数が勝つ)
         if FUSE[0]:
             import sign_fuse
