@@ -504,6 +504,30 @@ def tplR_mod : Array I := #[
   (I.sdiv 11 9 10),
   (I.msub 0 11 10 9)]
 
+def tplZN_div : Array I := #[
+  (I.sdiv 0 9 10)]
+
+def tplZN_mod : Array I := #[
+  (I.sdiv 11 9 10),
+  (I.msub 0 11 10 9)]
+
+def tplZL_div : Array I := #[
+  (I.movz 13),
+  (I.cmpR 9 13),
+  (I.bc Cond.ne 3),
+  (I.mov 0 10),
+  (I.b 2),
+  (I.sdiv 0 9 10)]
+
+def tplZL_mod : Array I := #[
+  (I.movz 13),
+  (I.cmpR 9 13),
+  (I.bc Cond.ne 3),
+  (I.mov 0 10),
+  (I.b 3),
+  (I.sdiv 11 9 10),
+  (I.msub 0 11 10 9)]
+
 -- END GENERATED
 
 theorem decode_ne (x : W) (h : x ≠ NICHE) : decode x = some x.toInt := by simp [decode, h]
@@ -843,6 +867,61 @@ theorem tplR_mod_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s
       have h := mod_core x y hx
       simp only [hy0, hyz, ite_false, if_false] at h
       exact h
+
+
+/-! ### 右が 0 でない字面: 0 割りの検査を省いた形 -/
+
+theorem tplZN_div_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hy : y ≠ NICHE) (hy0 : y ≠ 0) (hx : x ≠ NICHE) :
+    (run tplZN_div 30 s).r 0 = encode (arith .div (decode x) (decode y)) ∧ (run tplZN_div 30 s).pc = tplZN_div.size := by
+  have hdx := decode_ne x hx
+  have hdy := decode_ne y hy
+  have hz : decide (y = immW 0) = false := by rw [immW_zero]; exact decide_eq_false hy0
+  have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
+  simp [run, tplZN_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hz, hyz]
+  have h := div_core x y hx
+  simp only [hy0, hyz, ite_false, if_false] at h
+  exact h
+
+theorem tplZN_mod_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hy : y ≠ NICHE) (hy0 : y ≠ 0) (hx : x ≠ NICHE) :
+    (run tplZN_mod 30 s).r 0 = encode (arith .mod (decode x) (decode y)) ∧ (run tplZN_mod 30 s).pc = tplZN_mod.size := by
+  have hdx := decode_ne x hx
+  have hdy := decode_ne y hy
+  have hz : decide (y = immW 0) = false := by rw [immW_zero]; exact decide_eq_false hy0
+  have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
+  simp [run, tplZN_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hz, hyz]
+  have h := mod_core x y hx
+  simp only [hy0, hyz, ite_false, if_false] at h
+  exact h
+
+theorem tplZL_div_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hy : y ≠ NICHE) (hy0 : y ≠ 0) :
+    (run tplZL_div 30 s).r 0 = encode (arith .div (decode x) (decode y)) ∧ (run tplZL_div 30 s).pc = tplZL_div.size := by
+  by_cases hx : x = NICHE
+  · subst hx
+    have : decode NICHE = none := by simp [decode]
+    simp [run, tplZL_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, this, arith_none_left, encode_decode]
+  · have hdx := decode_ne x hx
+    have hdy := decode_ne y hy
+    have hz : decide (y = immW 0) = false := by rw [immW_zero]; exact decide_eq_false hy0
+    have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
+    simp [run, tplZL_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hz, hyz]
+    have h := div_core x y hx
+    simp only [hy0, hyz, ite_false, if_false] at h
+    exact h
+
+theorem tplZL_mod_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hy : y ≠ NICHE) (hy0 : y ≠ 0) :
+    (run tplZL_mod 30 s).r 0 = encode (arith .mod (decode x) (decode y)) ∧ (run tplZL_mod 30 s).pc = tplZL_mod.size := by
+  by_cases hx : x = NICHE
+  · subst hx
+    have : decode NICHE = none := by simp [decode]
+    simp [run, tplZL_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, this, arith_none_left, encode_decode]
+  · have hdx := decode_ne x hx
+    have hdy := decode_ne y hy
+    have hz : decide (y = immW 0) = false := by rw [immW_zero]; exact decide_eq_false hy0
+    have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
+    simp [run, tplZL_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hz, hyz]
+    have h := mod_core x y hx
+    simp only [hy0, hyz, ite_false, if_false] at h
+    exact h
 
 
 /-! ### 命令列をつなげる -/
@@ -1285,6 +1364,52 @@ theorem compileV_ok (nov : AOp → E → E → Bool)
         rw [if_neg this]; exact m1 j (by omega)
 
 
+def tplZ (o : AOp) : Bool → Array I
+  | false => match o with | .mod => tplZN_mod | _ => tplZN_div
+  | true => match o with | .mod => tplZL_mod | _ => tplZL_div
+
+/-- 右が 0 でない字面(`nz`)の `/` `%` は 0 割りの検査を省く形、それ以外は `tplV` -/
+def tplW (o : AOp) (ml mr nz : Bool) : Array I :=
+  if nz = true ∧ (o = .div ∨ o = .mod) ∧ mr = false then tplZ o ml else tplV o ml mr
+
+theorem tplW_ok (o : AOp) (ml mr nz : Bool) (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y)
+    (hx : ml = false → x ≠ NICHE) (hy : mr = false → y ≠ NICHE) (hnz : nz = true → y ≠ 0) :
+    (run (tplW o ml mr nz) 30 s).r 0 = encode (arith o (decode x) (decode y)) ∧
+      (run (tplW o ml mr nz) 30 s).pc = (tplW o ml mr nz).size := by
+  unfold tplW
+  by_cases hc : nz = true ∧ (o = .div ∨ o = .mod) ∧ mr = false
+  · rw [if_pos hc]
+    obtain ⟨hn, ho, hm⟩ := hc
+    have hy' := hy hm
+    have hy0 := hnz hn
+    cases ml <;> rcases ho with rfl | rfl <;> simp only [tplZ]
+    · exact tplZN_div_ok s hs x y h9 h10 hy' hy0 (hx rfl)
+    · exact tplZN_mod_ok s hs x y h9 h10 hy' hy0 (hx rfl)
+    · exact tplZL_div_ok s hs x y h9 h10 hy' hy0
+    · exact tplZL_mod_ok s hs x y h9 h10 hy' hy0
+  · rw [if_neg hc]; exact tplV_ok o ml mr s hs x y h9 h10 hx hy
+
+theorem tplW_nostr (o : AOp) (ml mr nz : Bool) : ∀ i ∈ tplW o ml mr nz, i.isStr = false := by
+  unfold tplW
+  split
+  · cases ml <;> cases o <;> decide
+  · exact tplV_nostr o ml mr
+
+theorem nz_enc (ρ : Nat → Option Int) (r : E) (hr : r.lits) (hf : nzlit r = true) : encode (sem ρ r) ≠ 0 := by
+  cases r with
+  | lit n =>
+      have hn : n ≠ 0 := by simpa [nzlit] using hf
+      have h2 : -M ≤ n ∧ n ≤ M := hr
+      have hc : clamp n = some n := by simp [clamp, h2]
+      have hb : -(2 ^ 63 : Int) ≤ n ∧ n < 2 ^ 63 := by unfold M at h2; omega
+      intro e
+      have := toInt_ofInt' n hb
+      simp only [sem, hc, encode] at e
+      rw [e] at this
+      simp at this; omega
+  | var _ => simp [nzlit] at hf
+  | op _ _ _ => simp [nzlit] at hf
+
 def simpleR : E → Bool
   | .lit _ => true
   | .var _ => true
@@ -1301,10 +1426,10 @@ def compileS (nov : AOp → E → E → Bool) (base : Nat) : Nat → E → Array
   | _, .var k => #[I.ldr 0 k]
   | d, .op o l r =>
       if simpleR r = true then
-        compileS nov base d l ++ #[I.mov 9 0] ++ #[rld r] ++ tplV o (mb nov l) (mb nov r)
+        compileS nov base d l ++ #[I.mov 9 0] ++ #[rld r] ++ tplW o (mb nov l) (mb nov r) (nzlit r)
       else
         compileS nov base d l ++ #[I.str 0 (base + d)] ++ compileS nov base (d + 1) r
-          ++ #[I.mov 10 0, I.ldr 9 (base + d)] ++ tplV o (mb nov l) (mb nov r)
+          ++ #[I.mov 10 0, I.ldr 9 (base + d)] ++ tplW o (mb nov l) (mb nov r) (nzlit r)
 
 theorem compileS_ok (nov : AOp → E → E → Bool)
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem ρ l = some a → sem ρ r = some b → ∃ z, arithInt o a b = some z)
@@ -1370,17 +1495,18 @@ theorem compileS_ok (nov : AOp → E → E → Bool)
         let s5 : St := { s3 with pc := 0 }
         have h9' : s5.r 9 = encode (sem ρ l) := hs9
         have h10' : s5.r 10 = encode (sem ρ r) := hs10
-        have hT := tplV_ok o (mb nov l) (mb nov r) s5 rfl (s5.r 9) (s5.r 10) rfl rfl
+        have hT := tplW_ok o (mb nov l) (mb nov r) (nzlit r) s5 rfl (s5.r 9) (s5.r 10) rfl rfl
           (fun hf => by
             obtain ⟨z, hz⟩ := mb_sound nov hnov ρ hρ hvs l hll hf
             rw [h9', hz]; exact encode_ne_niche z (hz ▸ hl_in))
           (fun hf => by
             obtain ⟨z, hz⟩ := mb_sound nov hnov ρ hρ hvs r hlr hf
             rw [h10', hz]; exact encode_ne_niche z (hz ▸ hr_in))
-        have h5 : Steps (tplV o (mb nov l) (mb nov r)) s5 (run (tplV o (mb nov l) (mb nov r)) 30 s5) := run_steps _ _ _
-        have hmm : (run (tplV o (mb nov l) (mb nov r)) 30 s5).m = s5.m := Steps.m_eq (tplV_nostr o _ _) h5
+          (fun hf => by rw [h10']; exact nz_enc ρ r hlr hf)
+        have h5 : Steps (tplW o (mb nov l) (mb nov r) (nzlit r)) s5 (run (tplW o (mb nov l) (mb nov r) (nzlit r)) 30 s5) := run_steps _ _ _
+        have hmm : (run (tplW o (mb nov l) (mb nov r) (nzlit r)) 30 s5).m = s5.m := Steps.m_eq (tplW_nostr o _ _ _) h5
         have hpc3 : s3.pc = 1 := by simp only [s3]; cases r <;> simp [rld, step, St.set] at hsr ⊢
-        refine ⟨{ run (tplV o (mb nov l) (mb nov r)) 30 s5 with pc := (compileS nov base d (.op o l r)).size }, ?_, rfl, ?_, ?_, InR_arith o _ _ hl_in hr_in⟩
+        refine ⟨{ run (tplW o (mb nov l) (mb nov r) (nzlit r)) 30 s5 with pc := (compileS nov base d (.op o l r)).size }, ?_, rfl, ?_, ?_, InR_arith o _ _ hl_in hr_in⟩
         · have := Steps.append' h3 (by simp [hpc3]) h5 hT.2
           simpa [compileS, hsr, Array.append_assoc] using this
         · simp only []
@@ -1425,16 +1551,17 @@ theorem compileS_ok (nov : AOp → E → E → Bool)
         let s5 : St := { s4 with pc := 0 }
         have h9' : s5.r 9 = encode (sem ρ l) := hm9
         have h10' : s5.r 10 = encode (sem ρ r) := hm10
-        have hT := tplV_ok o (mb nov l) (mb nov r) s5 rfl (s5.r 9) (s5.r 10) rfl rfl
+        have hT := tplW_ok o (mb nov l) (mb nov r) (nzlit r) s5 rfl (s5.r 9) (s5.r 10) rfl rfl
           (fun hf => by
             obtain ⟨z, hz⟩ := mb_sound nov hnov ρ hρ hvs l hll hf
             rw [h9', hz]; exact encode_ne_niche z (hz ▸ hl_in))
           (fun hf => by
             obtain ⟨z, hz⟩ := mb_sound nov hnov ρ hρ hvs r hlr hf
             rw [h10', hz]; exact encode_ne_niche z (hz ▸ hr_in))
-        have h5 : Steps (tplV o (mb nov l) (mb nov r)) s5 (run (tplV o (mb nov l) (mb nov r)) 30 s5) := run_steps _ _ _
-        have hmm : (run (tplV o (mb nov l) (mb nov r)) 30 s5).m = s5.m := Steps.m_eq (tplV_nostr o _ _) h5
-        refine ⟨{ run (tplV o (mb nov l) (mb nov r)) 30 s5 with pc := (compileS nov base d (.op o l r)).size }, ?_, rfl, ?_, ?_, InR_arith o _ _ hl_in hr_in⟩
+          (fun hf => by rw [h10']; exact nz_enc ρ r hlr hf)
+        have h5 : Steps (tplW o (mb nov l) (mb nov r) (nzlit r)) s5 (run (tplW o (mb nov l) (mb nov r) (nzlit r)) 30 s5) := run_steps _ _ _
+        have hmm : (run (tplW o (mb nov l) (mb nov r) (nzlit r)) 30 s5).m = s5.m := Steps.m_eq (tplW_nostr o _ _ _) h5
+        refine ⟨{ run (tplW o (mb nov l) (mb nov r) (nzlit r)) 30 s5 with pc := (compileS nov base d (.op o l r)).size }, ?_, rfl, ?_, ?_, InR_arith o _ _ hl_in hr_in⟩
         · have := Steps.append' h234 (by simp [s4, step, St.set]) h5 hT.2
           simpa [compileS, hsr', Array.append_assoc] using this
         · simp only []

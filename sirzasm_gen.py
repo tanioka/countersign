@@ -19,6 +19,9 @@ def compile_op(op):
 
 VARIANTS = {"N": "x {op} y", "L": "(x * y) {op} y", "R": "x {op} (x * y)"}
 
+# 右が 0 でない字面: 0 割りの検査を省く(ZN: 左も `!_` にならない、ZL: 左は `!_` になりうる)
+ZVARIANTS = {"N": "x {op} 3", "L": "(x * y) {op} 3"}
+
 def compile_src(src):
     with tempfile.TemporaryDirectory() as d:
         p = os.path.join(d, "t.sn")
@@ -84,6 +87,9 @@ def generated():
     for v, pat in VARIANTS.items():
         for n, o in OPS:
             g += to_lean("tpl" + v + "_" + n, tail_block(compile_src(pat.format(op=o)))) + "\n"
+    for v, pat in ZVARIANTS.items():
+        for n, o in (("div", "/"), ("mod", "%")):
+            g += to_lean("tplZ" + v + "_" + n, tail_block(compile_src(pat.format(op=o)))) + "\n"
     return g
 
 if __name__ == "__main__":
