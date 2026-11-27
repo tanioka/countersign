@@ -1509,6 +1509,8 @@ class FnGen:
                 if self.prog.kind(a, self.kinds) != "R" and not (sa[0] == "bin" and sa[1] == "~" and self.prog.range_values(sa) is not None):
                     raise AsmError("%s: 規則を受ける仮引数に、別の種類の物が渡されています" % f)
                 self.load_rule(a, "x0", "x1", "x2")
+                if self.prog.void_rule:
+                    self.prog.trap_used = True; self.niche(); self.emit("cmp x0, x13"); self.emit("b.eq .Ltrap", "`!_` の規則を引数に渡す形はまだ(罠)")
                 ts = [self.tmp() for _ in range(3)]
                 for t, rg, nm in zip(ts, ("x0", "x1", "x2"), ("start", "step", "end")): self.emit("str %s, [x29, #%d]" % (rg, self.off(t)), "実引数(%s)" % nm)
                 tmps.append((ts, kd))
@@ -1733,7 +1735,9 @@ class FnGen:
     def call_unit(self, rk, args, gws):
         """呼びの引数が `__` だったときの結果。規則(R)は `__` を運べないので、引数が溢れの `__` にだけなりうる(溢れ以外の理由では `__` にならない)なら、
         溢れた時点で止める(ovf_guard と同じ。非答え)。そうでなければ従来どおり unit_result(R は断り)。"""
-        if rk == "R" and not gws and not any(self.mu_hard(a) for a in args):
+        if rk == "R" and self.prog.void_rule:
+            self.niche("x0"); self.emit("mov x1, #0"); self.emit("mov x2, #0", "`!_` の規則 {niche, 0, 0}")
+        elif rk == "R" and not gws and not any(self.mu_hard(a) for a in args):
             self.prog.trap_used = True; self.emit("b .Ltrap", "溢れで __ になった引数は、規則を返す呼びでは受けられない")
         else: self.unit_result(rk)
 
@@ -1840,6 +1844,8 @@ class FnGen:
         """要素数 = (end - start) / step + 1(向きが逆なら 0)を dst へ。x13 を壊す。溢れは罠(Int の算術)。"""
         self.prog.trap_used = True
         zero, one, done = self.prog.label(), self.prog.label(), self.prog.label()
+        if self.prog.void_rule:
+            self.niche(); self.emit("cmp %s, x13" % rs); self.emit("b.eq %s" % zero, "`!_` の規則(起点が niche)は 0 個")
         if self.prog.open_used:
             self.niche(); self.emit("cmp %s, x13" % re_); self.emit("b.eq .Ltrap", "終端の無い規則は数えられない(実装の選択: 罠)")
             self.emit("cbz %s, .Ltrap" % rst, "等比の規則も数えられない")
@@ -1864,9 +1870,13 @@ class FnGen:
             if self.prog.kind(x, self.kinds) != "I": raise AsmError("規則の端点・歩幅は Int だけです")
             if self.mu_hard(x): raise AsmError("端点・歩幅が `__` になりうる規則はまだ出せません(`__` の規則は起点を niche にして運ぶ)")
         cells = []
+        vl = self.prog.label() if self.prog.void_rule else None
         for x in (lo, step, hi):
             if x is None: continue
-            self.gen(x); self.ovf_guard(x); t = self.tmp(); cells.append(t)
+            self.gen(x)
+            if vl is not None and self.mu(x): self.niche(); self.emit("cmp x0, x13"); self.emit("b.eq %s" % vl, "端点・歩幅が `!_` なら、規則全体が `!_`(零射)")
+            else: self.ovf_guard(x)
+            t = self.tmp(); cells.append(t)
             self.emit("str x0, [x29, #%d]" % self.off(t))
         self.emit("ldr x9, [x29, #%d]" % self.off(cells[0]), "start")
         self.emit("ldr x12, [x29, #%d]" % self.off(cells[-1]), "end")
@@ -1879,6 +1889,11 @@ class FnGen:
             self.emit("csel x10, x10, x14, le", "昇順なら +1、降順なら −1(歩幅に畳む)")
         self.emit_rule_count("x9", "x10", "x12", "x14")
         self.emit("mov x0, x9"); self.emit("mov x1, x10"); self.emit("mov x2, x12")
+        if vl is not None:
+            dn = self.prog.label()
+            self.emit("b %s" % dn); self.lines.append("%s:" % vl)
+            self.niche("x0"); self.emit("mov x1, #0"); self.emit("mov x2, #0", "`!_` の規則 {niche, 0, 0}")
+            self.lines.append("%s:" % dn)
         for _ in cells: self.free()
 
     def gen_open_rule(self, n, r0, r1, r2):
@@ -1889,8 +1904,12 @@ class FnGen:
             if self.prog.kind(x, self.kinds) != "I": raise AsmError("規則の端点・歩幅は Int だけです")
             if self.mu_hard(x): raise AsmError("端点・歩幅が `__` になりうる規則はまだ出せません(`__` の規則は起点を niche にして運ぶ)")
         cells = []
+        vl = self.prog.label() if self.prog.void_rule else None
         for x in (n[2], n[3]):
-            self.gen(x); self.ovf_guard(x); t = self.tmp(); cells.append(t)
+            self.gen(x)
+            if vl is not None and self.mu(x): self.niche(); self.emit("cmp x0, x13"); self.emit("b.eq %s" % vl, "端点・歩幅が `!_` なら、規則全体が `!_`(零射)")
+            else: self.ovf_guard(x)
+            t = self.tmp(); cells.append(t)
             self.emit("str x0, [x29, #%d]" % self.off(t))
         self.emit("ldr x9, [x29, #%d]" % self.off(cells[0]), "start")
         self.emit("ldr x10, [x29, #%d]" % self.off(cells[1]), "歩幅(等比なら比)")
@@ -1901,6 +1920,11 @@ class FnGen:
         for _ in cells: self.free()
         for r, src in ((r0, "x9"), (r1, "x14"), (r2, "x12")):
             if r != src: self.emit("mov %s, %s" % (r, src))
+        if vl is not None:
+            dn = self.prog.label()
+            self.emit("b %s" % dn); self.lines.append("%s:" % vl)
+            self.niche(r0); self.emit("mov %s, #0" % r1); self.emit("mov %s, #0" % r2, "`!_` の規則 {niche, 0, 0}")
+            self.lines.append("%s:" % dn)
         self.prog.open_used = True
 
     def load_rule(self, n, r0, r1, r2):
@@ -1936,12 +1960,14 @@ class FnGen:
         if self.mu(r):
             self.niche(); self.emit("cmp x11, x13"); self.emit("b.eq %s" % unit, "添字が __ なら __")
         ll = self.strip(l)
-        if self.is_call(ll) or ll[0] == "cases":
+        if not (ll[0] == "id" or self.prog.range_values(ll) is not None):      # 規則の式の計算(積の x11・x12 など)が添字の x11 を壊す。名前・字面の範囲のほかは預ける
             t = self.tmp(); self.emit("str x11, [x29, #%d]" % self.off(t), "添字を預ける")
             self.load_rule(l, "x9", "x10", "x12")
             self.emit("ldr x11, [x29, #%d]" % self.off(t)); self.free()
         else:
             self.load_rule(l, "x9", "x10", "x12")
+        if self.prog.void_rule:
+            self.niche(); self.emit("cmp x9, x13"); self.emit("b.eq %s" % unit, "`!_` の規則(起点が niche)の取り出しは `!_`")
         lo_ = self.strip(l)
         if lo_[0] == "id" and lo_[1] in self.prog.orules and lo_[1] not in self.slot: lo_ = self.prog.orules[lo_[1]]
         if lo_[0] == "bin" and lo_[1] in ("~+", "~*"):             # 字面で終端の無い規則: 開いた取り出しだけ
@@ -2927,6 +2953,7 @@ class Program:
         self.maybe_ids = set() # 先に評価した葉の名前のうち、答えが `__` になりうる物
         self.defaults = {}     # 名前 → (既定値の無い仮引数の数, [(仮引数の名前, 既定値の式)]) 既定値のある関数。呼び出しの側で、足りない実引数を既定値の式で埋める(expand_defaults)
         self.orules = {}       # 名前 → 右辺(終端の無い規則 `[a ~+ s]` `[a ~* k]` の定義。端点・歩幅が定数 Int のものだけ。使う所で式を置き直す)
+        self.void_rule = False # `!_` の規則を運ぶ形がある(scan_void_rules)
         self.open_used = False # 終端の無い規則を作る式がある(実装の選択。運び方は gen_open_rule の注)
         self.dyn = {}          # 名前 → 右辺(値が計算で決まる Int の定義。起動で一度だけ評価して .bss のセル _sign_dyn_名前 に置く)
         self.trap_used = False
@@ -5411,6 +5438,30 @@ class Program:
                 if any(self.may_single(v, sp, relay) for v in self.ret_nodes(body)): sp.add(f); changed = True
         return sp
 
+    def scan_void_rules(self):
+        """`!_` の規則(質問書 12): 規則の端点・歩幅が溢れで `!_` になりうる式 `[a ~ b]`、`!_` を返しうる呼びで規則を返す式があるか。
+        あれば規則の値は「起点が niche の 3 つ組 {niche, 0, 0}」を `!_` の規則として運び(operator_table: `~` は両辺の `!_` が零射 = 全体が `!_`)、
+        数える(0 個)・取り出す(`!_`)側が見る。引数に渡す・返す・印字するときは、これまでどおり罠(誤答にしない)。"""
+        found = [False]
+        def walk(x):
+            if found[0]: return
+            if isinstance(x, tuple) and x:
+                if x[0] == "bin" and x[1] in ("~", "~+", "~*") and len(x) == 4:
+                    try:
+                        if any(self.maybe(y) for y in (x[2], x[3])) : found[0] = True; return
+                    except Exception: pass
+                if x[0] == "seq" and isinstance(x[1], list) and x[1] and x[1][0][:1] == ("id",) and self.retk.get(x[1][0][1]) == "R":
+                    try:
+                        if any(self.maybe(a) for a in x[1][1:]): found[0] = True; return
+                    except Exception: pass
+                for y in x: walk(y)
+            elif isinstance(x, list):
+                for y in x: walk(y)
+        for f, b in self.live_bodies(): walk(b)
+        for n in self.nodes:
+            if n[0] != "def": walk(n)
+        return found[0]
+
     def solve_maybe(self):
         """関数ごとの『返値が __ になりうるか』を、動かなくなるまで繰り返して決める(増える一方なので止まる)。"""
         for ovf, tab in ((False, self.ret_maybe_h), (True, self.ret_maybe)):
@@ -6130,6 +6181,7 @@ class Program:
             self.__dict__.update(sub.__dict__)
             return out
         self.check_dyn()
+        self.void_rule = self.scan_void_rules()
         self.sp = self.single_possible()
         ex0 = [n for n in self.nodes if n[0] not in ("def", "dyn")]
         if ex0 and self.kind(ex0[-1], {}) == "L" and self.may_single(ex0[-1], self.sp, self.relay) and self.flag_ok(ex0[-1]):
