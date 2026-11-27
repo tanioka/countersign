@@ -1284,6 +1284,170 @@ theorem compileV_ok (nov : AOp → E → E → Bool)
         have : j ≠ base + d := by omega
         rw [if_neg this]; exact m1 j (by omega)
 
+
+def simpleR : E → Bool
+  | .lit _ => true
+  | .var _ => true
+  | .op _ _ _ => false
+
+def rld : E → I
+  | .lit n => I.movi 10 n
+  | .var k => I.ldr 10 k
+  | .op _ _ _ => I.movi 10 0
+
+/-- `sign_asm.py` に近づけた骨組み: 右が字面・変数なら枠に預けず、左を `x9`、右を `x10` に置く -/
+def compileS (nov : AOp → E → E → Bool) (base : Nat) : Nat → E → Array I
+  | _, .lit n => #[I.movi 0 n]
+  | _, .var k => #[I.ldr 0 k]
+  | d, .op o l r =>
+      if simpleR r = true then
+        compileS nov base d l ++ #[I.mov 9 0] ++ #[rld r] ++ tplV o (mb nov l) (mb nov r)
+      else
+        compileS nov base d l ++ #[I.str 0 (base + d)] ++ compileS nov base (d + 1) r
+          ++ #[I.mov 10 0, I.ldr 9 (base + d)] ++ tplV o (mb nov l) (mb nov r)
+
+theorem compileS_ok (nov : AOp → E → E → Bool)
+    (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem ρ l = some a → sem ρ r = some b → ∃ z, arithInt o a b = some z)
+    (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z) (base : Nat) :
+    ∀ (e : E) (d : Nat) (s : St), e.lits → e.maxVar ≤ base → s.pc = 0 →
+      (∀ k < base, s.m k = encode (ρ k)) →
+      ∃ s', Steps (compileS nov base d e) s s' ∧ s'.pc = (compileS nov base d e).size ∧
+        s'.r 0 = encode (sem ρ e) ∧ (∀ j < base + d, s'.m j = s.m j) ∧ InR (sem ρ e) := by
+  intro e
+  induction e with
+  | lit n =>
+      intro d s hl _ hs _
+      have hl' : -M ≤ n ∧ n ≤ M := hl
+      refine ⟨step (I.movi 0 n) s, single _ s hs, ?_, ?_, ?_, InR_clamp n⟩
+      · simp [step, St.set, hs, compileS]
+      · have hc : clamp n = some n := by simp [clamp, hl']
+        simp [step, St.set, sem, hc, encode]
+      · intro j _; simp [step, St.set]
+  | var k =>
+      intro d s _ hv hs hm
+      refine ⟨step (I.ldr 0 k) s, single _ s hs, ?_, ?_, ?_, hρ k⟩
+      · simp [step, St.set, hs, compileS]
+      · simp [step, St.set, sem, hm k (by simp [E.maxVar] at hv; omega)]
+      · intro j _; simp [step, St.set]
+  | op o l r ihl ihr =>
+      intro d s hl hv hs hm
+      obtain ⟨hll, hlr⟩ := hl
+      by_cases hsr : simpleR r = true
+      · have hv1 : l.maxVar ≤ base := by simp only [E.maxVar] at hv; omega
+        have hv2 : r.maxVar ≤ base := by simp only [E.maxVar] at hv; omega
+        obtain ⟨s1, h1, p1, r1, m1, i1⟩ := ihl d s hll hv1 hs hm
+        let s2 : St := step (I.mov 9 0) { s1 with pc := 0 }
+        have h2 : Steps (compileS nov base d l ++ #[I.mov 9 0]) s
+            { s2 with pc := (compileS nov base d l ++ #[I.mov 9 0]).size } :=
+          Steps.append' h1 p1 (single _ _ rfl) (by simp [s2, step, St.set])
+        let t2 : St := { s2 with pc := (compileS nov base d l ++ #[I.mov 9 0]).size }
+        let s3 : St := step (rld r) { t2 with pc := 0 }
+        have h3 : Steps (compileS nov base d l ++ #[I.mov 9 0] ++ #[rld r]) s
+            { s3 with pc := (compileS nov base d l ++ #[I.mov 9 0] ++ #[rld r]).size } :=
+          Steps.append' h2 (by simp [t2]) (single _ _ rfl) (by
+            simp only [s3]; cases r <;> simp [rld, step, St.set] at hsr ⊢)
+        have hr_in : InR (sem ρ r) := sem_inR ρ hρ r hlr
+        have hl_in : InR (sem ρ l) := i1
+        have hs9 : s3.r 9 = encode (sem ρ l) := by
+          simp only [s3]; cases r <;> simp [rld, step, St.set, t2, s2, r1] at hsr ⊢ <;> exact r1
+        have hs10 : s3.r 10 = encode (sem ρ r) := by
+          simp only [s3]
+          cases r with
+          | lit n =>
+              have h2' : -M ≤ n ∧ n ≤ M := hlr
+              have hc : clamp n = some n := by simp [clamp, h2']
+              simp [rld, step, St.set, sem, hc, encode]
+          | var k =>
+              have hk : k < base := by simp [E.maxVar] at hv2; omega
+              have : t2.m k = s.m k := by simp [t2, s2, step, St.set]; exact m1 k (by omega)
+              simp [rld, step, St.set, sem]
+              show t2.m k = _
+              rw [this]; exact hm k hk
+          | op _ _ _ => simp [simpleR] at hsr
+        have hs3m : ∀ j, j < base + d → s3.m j = s.m j := by
+          intro j hj
+          simp only [s3]; cases r <;> simp [rld, step, St.set, t2, s2, simpleR] at hsr ⊢ <;> exact m1 j hj
+        let s5 : St := { s3 with pc := 0 }
+        have h9' : s5.r 9 = encode (sem ρ l) := hs9
+        have h10' : s5.r 10 = encode (sem ρ r) := hs10
+        have hT := tplV_ok o (mb nov l) (mb nov r) s5 rfl (s5.r 9) (s5.r 10) rfl rfl
+          (fun hf => by
+            obtain ⟨z, hz⟩ := mb_sound nov hnov ρ hρ hvs l hll hf
+            rw [h9', hz]; exact encode_ne_niche z (hz ▸ hl_in))
+          (fun hf => by
+            obtain ⟨z, hz⟩ := mb_sound nov hnov ρ hρ hvs r hlr hf
+            rw [h10', hz]; exact encode_ne_niche z (hz ▸ hr_in))
+        have h5 : Steps (tplV o (mb nov l) (mb nov r)) s5 (run (tplV o (mb nov l) (mb nov r)) 30 s5) := run_steps _ _ _
+        have hmm : (run (tplV o (mb nov l) (mb nov r)) 30 s5).m = s5.m := Steps.m_eq (tplV_nostr o _ _) h5
+        have hpc3 : s3.pc = 1 := by simp only [s3]; cases r <;> simp [rld, step, St.set] at hsr ⊢
+        refine ⟨{ run (tplV o (mb nov l) (mb nov r)) 30 s5 with pc := (compileS nov base d (.op o l r)).size }, ?_, rfl, ?_, ?_, InR_arith o _ _ hl_in hr_in⟩
+        · have := Steps.append' h3 (by simp [hpc3]) h5 hT.2
+          simpa [compileS, hsr, Array.append_assoc] using this
+        · simp only []
+          rw [hT.1, h9', h10', decode_encode _ hl_in, decode_encode _ hr_in]; rfl
+        · intro j hj
+          simp only []
+          rw [hmm]
+          exact hs3m j (by omega)
+      · have hsr' : simpleR r = false := by simpa using hsr
+        have hv1 : l.maxVar ≤ base := by simp only [E.maxVar] at hv; omega
+        have hv2 : r.maxVar ≤ base := by simp only [E.maxVar] at hv; omega
+        obtain ⟨s1, h1, p1, r1, m1, i1⟩ := ihl d s hll hv1 hs hm
+        let s2 : St := step (I.str 0 (base + d)) { s1 with pc := 0 }
+        have h2 : Steps (compileS nov base d l ++ #[I.str 0 (base + d)]) s
+            { s2 with pc := (compileS nov base d l ++ #[I.str 0 (base + d)]).size } :=
+          Steps.append' h1 p1 (single _ _ rfl) (by simp [s2, step])
+        let t2 : St := { s2 with pc := (compileS nov base d l ++ #[I.str 0 (base + d)]).size }
+        have t2m : ∀ j, t2.m j = if j = base + d then s1.r 0 else s1.m j := by
+          intro j; simp [t2, s2, step]
+        obtain ⟨s3, h3, p3, r3, m3, i3⟩ := ihr (d + 1) { t2 with pc := 0 } hlr hv2 rfl (by
+          intro k hk
+          have : k ≠ base + d := by omega
+          show t2.m k = _
+          rw [t2m, if_neg this, m1 k (by omega)]; exact hm k hk)
+        have h23 := Steps.append' h2 (by simp [t2]) h3 p3
+        let t3 : St := { s3 with pc := (compileS nov base d l ++ #[I.str 0 (base + d)] ++ compileS nov base (d + 1) r).size }
+        let u : St := step (I.mov 10 0) { t3 with pc := 0 }
+        let s4 : St := step (I.ldr 9 (base + d)) { u with pc := 0 }
+        have h4 : Steps #[I.mov 10 0, I.ldr 9 (base + d)] { t3 with pc := 0 } { s4 with pc := 2 } := by
+          have := Steps.append' (single (I.mov 10 0) { t3 with pc := 0 } rfl) (by simp [step, St.set])
+            (single (I.ldr 9 (base + d)) { u with pc := 0 } rfl) (by simp [s4, step, St.set])
+          simpa using this
+        have hm9 : s4.r 9 = encode (sem ρ l) := by
+          have a1 : s3.m (base + d) = t2.m (base + d) := m3 (base + d) (by omega)
+          simp only [s4, u, step, St.set, t3]
+          simp [a1, t2m, r1]
+        have hm10 : s4.r 10 = encode (sem ρ r) := by
+          simp [s4, u, step, St.set, t3, r3]
+        have h234 := Steps.append' h23 (by simp [t3]) h4 (by simp [s4, step, St.set])
+        have hl_in : InR (sem ρ l) := i1
+        have hr_in : InR (sem ρ r) := i3
+        let s5 : St := { s4 with pc := 0 }
+        have h9' : s5.r 9 = encode (sem ρ l) := hm9
+        have h10' : s5.r 10 = encode (sem ρ r) := hm10
+        have hT := tplV_ok o (mb nov l) (mb nov r) s5 rfl (s5.r 9) (s5.r 10) rfl rfl
+          (fun hf => by
+            obtain ⟨z, hz⟩ := mb_sound nov hnov ρ hρ hvs l hll hf
+            rw [h9', hz]; exact encode_ne_niche z (hz ▸ hl_in))
+          (fun hf => by
+            obtain ⟨z, hz⟩ := mb_sound nov hnov ρ hρ hvs r hlr hf
+            rw [h10', hz]; exact encode_ne_niche z (hz ▸ hr_in))
+        have h5 : Steps (tplV o (mb nov l) (mb nov r)) s5 (run (tplV o (mb nov l) (mb nov r)) 30 s5) := run_steps _ _ _
+        have hmm : (run (tplV o (mb nov l) (mb nov r)) 30 s5).m = s5.m := Steps.m_eq (tplV_nostr o _ _) h5
+        refine ⟨{ run (tplV o (mb nov l) (mb nov r)) 30 s5 with pc := (compileS nov base d (.op o l r)).size }, ?_, rfl, ?_, ?_, InR_arith o _ _ hl_in hr_in⟩
+        · have := Steps.append' h234 (by simp [s4, step, St.set]) h5 hT.2
+          simpa [compileS, hsr', Array.append_assoc] using this
+        · simp only []
+          rw [hT.1, h9', h10', decode_encode _ hl_in, decode_encode _ hr_in]; rfl
+        · intro j hj
+          simp only []
+          rw [hmm]
+          have a1 : s3.m j = t2.m j := m3 j (by omega)
+          simp only [s5, s4, u, step, St.set, t3, a1, t2m]
+          have : j ≠ base + d := by omega
+          rw [if_neg this]; exact m1 j (by omega)
+
 end SirZAsm
 
 #print axioms SirZAsm.compileV_ok
+#print axioms SirZAsm.compileS_ok
