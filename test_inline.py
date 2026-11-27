@@ -31,6 +31,18 @@ SAME = [
  ("部分適用して 2 引数が残る", "f : a b c ? a * 100 + b * 10 + c\ng : f 7\ng 8 9\n"),
  ("部分適用を高階関数へ渡す", "add : a b ? a + b\nadd3 : add 3\nap : f x ? @f x\nap $add3 4\n"),
  ("部分適用を 2 回通す", "add : a b ? a + b\nadd3 : add 3\ntw : f x ? @f (@f x)\ntw $add3 4\n"),
+ ("穴の部分適用を名前の定義に", "add : a b ? a + b\ninc : add 1 _\ninc 5\n"),
+ ("穴の定義を高階関数へ渡す", "add : a b ? a + b\ninc : add 1 _\nap : f x ? @f x\nap $inc 5\n"),
+ ("穴の部分適用を直接渡す $(…)", "add : a b ? a + b\nap : f x ? @f x\nap $(add 1 _) 5\n"),
+ ("穴の部分適用を直接渡す $[…]", "add : a b ? a + b\nap : f x ? @f x\nap $[add 1 _] 5\n"),
+ ("穴の部分適用をその場で適用", "add : a b ? a + b\n(add 1 _) 5\n"),
+ ("穴 2 つ(2 引数が残る)", "add3 : a b c ? a * 100 + b * 10 + c\nap : f x y ? @f x y\nap $(add3 1 _ _) 5 7\n"),
+ ("中間の穴", "sub3 : a b c ? a - b * c\nap : f x ? @f x\nap $(sub3 10 _ 2) 3\n"),
+ ("先頭の穴", "sub3 : a b c ? a - b * c\nap : f x ? @f x\nap $(sub3 _ 4 2) 30\n"),
+ ("穴の部分適用が仮引数を捕まえる", "add : a b ? a + b\nap : f x ? @f x\ng : k ? ap $(add k _) 5\ng 7\n"),
+ ("穴の定義の上の穴", "add3 : a b c ? a + b * c\nf : add3 1 _ _\ng : f 2 _\ng 5\n"),
+ ("穴の部分適用を 2 回通す", "add : a b ? a + b\ntw : f x ? @f (@f x)\ntw $(add 10 _) 1\n"),
+ ("穴の部分適用 + 部分適用(字面)", "add : a b ? a + b\nadd3 : add 3\nsub : a b ? a - b\ndec : sub _ 1\n(add3 4) + (dec 10)\n"),
  ("名前の関数を渡す", "sq : x ? x * x\nap : f x ? @f x\nap $sq 3\n"),
  ("2 回呼ぶ", "sq : x ? x * x\ntw : f x ? @f (@f x)\ntw $sq 3\n"),
  ("別の高階関数へ渡す", "sq : x ? x * x\nap : f x ? @f x\nap2 : f x ? ap f x\nap2 $sq 3\n"),
@@ -94,6 +106,8 @@ REFUSE = [
  ("引数を当てない @", "sq : x ? x * x\nk : f x ? (@f) + x\nk $sq 3\n", "引数を当てていません"),
  ("外の局所の名前", "ap : f x ? @f x\ng : k ? ap $[x ? x + zz] 1\ng 2\n", "外の局所の名前"),
  ("残りの後ろに名前", "f : [~i l] ? l\nf (1 2 3)\n", "残りの後ろの名前"),
+ ("穴の関数を返す(クロージャを持ち出す形)", "add : a b ? a + b\nmk : a ? add a _\nap : f x ? @f x\nap $(mk 5) 3\n", "hole"),
+ ("穴の数が仮引数の数と合わない", "add3 : a b c ? a + b + c\nap : f x ? @f x\nap $(add3 1 _) 5\n", "addr"),
 ]
 for name, src, word in REFUSE:
     try: asm_run(src); msg = "(断らなかった)"

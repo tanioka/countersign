@@ -287,8 +287,63 @@ def partial_apply(nodes):
     return out if changed else nodes
 
 
+def _walk_map(x, f):
+    """木 x の全ての部分木に、下から f を当てた木を返す(tuple・list だけ辿る)"""
+    if isinstance(x, tuple): return f(tuple(_walk_map(y, f) for y in x))
+    if isinstance(x, list): return [_walk_map(y, f) for y in x]
+    return x
+
+
+def hole_apply(nodes):
+    """穴 `_` による部分適用(仕様 hole_desugaring.md §2.1 の静的脱糖: 穴を仮引数に替えたラムダで包む)を、機械語が持っている形へ直す。
+
+        inc : add 1 _             →  inc : ph$0 ? add 1 ph$0          (名前の関数)
+        ap $(add 1 _) 5           →  ap $[ph$0 ? add 1 ph$0] 5        (名前の無い関数。囲む関数の仮引数を捕まえていれば、特殊化が持ち上げる)
+        (add 1 _) 5               →  add 1 5                          (穴の数と同じ数の実引数を、その場で穴へ入れる)
+
+    直す形: 呼ぶ関数 f が最上位の関数(仮引数が全部裸の名前で既定値なし)で、`f 実引数…` の実引数の数が f の仮引数の数に等しく、その中に穴が 1 つ以上ある。
+    穴の位置は適用の実引数の口だけ(穴の入れ子・中置の穴は仕様が置けないとしている)。それ以外の形・仮引数の数が合わない形(f の仮引数より少ない・多い)・既定値のある関数・
+    括りの仮引数の関数は、直さない(元の木のまま。その先の断りに任せる)。関数を返す形(`mk : a ? add a _`)も直さない(クロージャを値として持ち出す形は、仕様の設計(ヒープ無し)の外)。"""
+    arity = {}
+    for n in nodes:
+        if n[0] == "def" and len(n) == 3 and n[2][0] == "lam" and all(p[0] == "name" and p[2] is None for p in n[2][1]):
+            arity[n[1]] = len(n[2][1])
+    cnt = [0]
+    def holes_app(x):
+        """`f a b _` の形か(`("seq", [("id", f), …])`)。穴の位置の並びを返す"""
+        if not (isinstance(x, tuple) and x[:1] == ("seq",) and len(x[1]) >= 2 and x[1][0][:1] == ("id",)): return None
+        f = x[1][0][1]
+        if f not in arity or len(x[1]) - 1 != arity[f]: return None
+        hs = [i for i, a in enumerate(x[1]) if a == ("hole",)]
+        return hs or None
+    def lam_of(x, hs):
+        ps = []; items = list(x[1])
+        for i in hs:
+            nm = "ph$%d" % cnt[0]; cnt[0] += 1; ps.append(("name", nm, None)); items[i] = ("id", nm)
+        return ("lam", ps, ("seq", items))
+    changed = [False]
+    def fix(x):
+        if not isinstance(x, tuple): return x
+        if x[:1] == ("addr",) and len(x) == 2 and x[1][:1] == ("block",) and holes_app(x[1][1]):
+            changed[0] = True; return ("addr", ("block", lam_of(x[1][1], holes_app(x[1][1]))))
+        if x[:1] == ("seq",) and len(x[1]) >= 2 and x[1][0][:1] == ("block",) and holes_app(x[1][0][1]):
+            hs = holes_app(x[1][0][1]); inner = list(x[1][0][1][1]); rest = list(x[1][1:])
+            if len(rest) == len(hs):                                  # 穴の数と実引数の数が同じ: その場で入れる
+                for i, a in zip(hs, rest): inner[i] = a
+                changed[0] = True; return ("seq", inner)
+        return x
+    out = []
+    for n in nodes:
+        if n[0] == "def" and len(n) == 3 and holes_app(n[2]):        # 名前の定義の右辺
+            changed[0] = True; n = ("def", n[1], lam_of(n[2], holes_app(n[2])))
+            if all(p[0] == "name" for p in n[2][1]): arity[n[1]] = len(n[2][1])
+        out.append(_walk_map(n, fix))
+    return out if changed[0] else nodes
+
+
 def specialize(nodes):
     """関数を渡す呼び出しを実体へ付け替えた木を返す。対象が無ければ、渡された並びをそのまま返す。"""
+    nodes = hole_apply(nodes)
     nodes = partial_apply(nodes)
     if not any(_has_addr(n) for n in nodes): return nodes
     return Specializer(nodes).run()
