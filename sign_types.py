@@ -62,13 +62,15 @@ def norm(t):                                    # 演算子の項として読む
     if isinstance(t, tuple) and t[:1] in (("Reader",), ("Implicit",)): return t[1]
     return t
 
-def unify(ts):                                 # 観測した型を1つにまとめる(制約解決ではなく、揃うかどうかだけを見る)
+CONFLICT = "Conflict"                          # 観測が食い違った(Pass 1b の観測の順で最上位: 未観測 ANY < 具体的な型 < CONFLICT)。使うときは Atom(ANY)へ倒す
+
+def unify(ts, conflict=ANY):                   # 観測した型を1つにまとめる(制約解決ではなく、揃うかどうかだけを見る)
     ts = [t for t in ts if t not in (UNIT_T, ANY)]
     if not ts: return ANY
     if all(t in (CHAR, STRING) for t in ts) and STRING in ts: return STRING     # Char | String は広い方 String に揃える
     if all(t == ts[0] for t in ts): return ts[0]
     if all(t in NUMERIC for t in ts): return FLOAT if FLOAT in ts else SCALAR
-    return ANY
+    return conflict
 
 def seq_type(elems):                           # 要素の型が揃えば List(T)、揃わなければ Struct(§2)
     elems = [e for e in elems if e != UNIT_T]
@@ -169,7 +171,7 @@ class Checker:
         if name in self.resolving:
             rhs = self.defs[name]
             if rhs[0] == "lam":                         # `?` があれば Lambda(アリティも構文で決まる)。返値だけが未確定
-                obs = self.params.get(name, [])
+                obs = self.obs(name)
                 return Fn(name, tuple(obs[i] if i < len(obs) else ANY for i in range(len(rhs[1]))), (), ANY)
             if not getattr(self, "lift_depth", 0): self.note("name-cycle", f"{name} の定義が自分自身へ戻る輪に値の定義を含む(種類が決まらない)")
             return ANY                                  # 値としての自己参照・相互参照は Atom へ倒す
@@ -185,7 +187,7 @@ class Checker:
 
     def lam_type(self, name, node, scope):
         sc = Scope(scope); ptypes = []
-        obs = self.params.get(name, []) if name else []
+        obs = self.obs(name) if name else []
         if name: self.brackets[name] = {i for i, sp in enumerate(node[1]) if sp[0] == "destr"}
         if name: self.optional[name] = {i for i, sp in enumerate(node[1]) if (sp[0] == "name" and sp[2] is not None) or (sp[0] == "destr" and len(sp) > 3 and sp[3])}
         for i, spec in enumerate(node[1]):
@@ -210,19 +212,29 @@ class Checker:
         return Fn(name, tuple(ptypes), (), ret)
 
     # --- 全体を解く: Pass 1b を不動点で ---
+    def obs(self, name):
+        """名前の仮引数の観測(食い違った CONFLICT は、使うときは Atom へ倒す)。"""
+        return [ANY if t == CONFLICT else t for t in self.params.get(name, [])]
+
+    def step(self):
+        """Pass 1b の 1 回の更新 F: 今の観測 self.params のもとで全部を型付けし、呼び出しサイトの実引数から新しい観測を作って返す(self.params は変えない)。"""
+        self.callsites, self.types, self.diags = {}, {}, list(self.import_diags)
+        for name in self.order: self.def_type(name)
+        self.where = "<top>"
+        for node in self.nodes:
+            d = node[1] if node[0] == "export" else node
+            if d[0] != "def": self.type_of(d, Scope())
+        new = {}
+        for name, sites in self.callsites.items():
+            n = max(len(a) for a in sites)
+            new[name] = [unify([a[i] for a in sites if len(a) > i], CONFLICT) for i in range(n)]
+        return new
+
     def solve(self, rounds=5):
+        self.converged = False
         for _ in range(rounds):
-            self.callsites, self.types, self.diags = {}, {}, list(self.import_diags)
-            for name in self.order: self.def_type(name)
-            self.where = "<top>"
-            for node in self.nodes:
-                d = node[1] if node[0] == "export" else node
-                if d[0] != "def": self.type_of(d, Scope())
-            new = {}
-            for name, sites in self.callsites.items():
-                n = max(len(a) for a in sites)
-                new[name] = [unify([a[i] for a in sites if len(a) > i]) for i in range(n)]
-            if new == self.params: break
+            new = self.step()
+            if new == self.params: self.converged = True; break
             self.params = new
         return self
 
