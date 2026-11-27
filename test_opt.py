@@ -185,13 +185,13 @@ for t in range(1500):
 check("乱数 1500 本: 最適化の前後で x0〜x8・x19〜x28・sp・罠が一致", bad, 0)
 check("乱数: 命令は減っている(%d → %d 行)・x19〜に載せた関数 %d 本" % (total, total - shrunk, promoted), shrunk > 0 and promoted > 0, True)
 
-# ---- 2b. A53 向けの並べ替えの変種(SIGN_SCHED_MODEL=a53): 同じ乱数で、前後の答えが一致する ----
+# ---- 2b. A53 向けの並べ替えの変種(既定の A53 向け): 同じ乱数で、前後の答えが一致する ----
 import os
-os.environ["SIGN_SCHED_MODEL"] = "a53"
+os.environ["SIGN_SCHED_MODEL"] = ""
 rng = random.Random(109); bad = 0; moved = 0
 for t in range(800):
     code = gen_fn(rng); new = sign_opt.optimize(code)
-    os.environ["SIGN_SCHED_MODEL"] = ""; base = sign_opt.optimize(code); os.environ["SIGN_SCHED_MODEL"] = "a53"
+    os.environ["SIGN_SCHED_MODEL"] = "legacy"; base = sign_opt.optimize(code); os.environ["SIGN_SCHED_MODEL"] = ""
     if new != base: moved += 1
     for trial in range(3):
         init = mkinit(rng)
@@ -207,7 +207,7 @@ for t in range(800):
             if bad <= 2: print("A53 差:", "\n".join(code), "\n---\n", "\n".join(new), "\n", a, "\n", b)
             break
 check("乱数 800 本(A53 向けの並べ替え): 前後で x0〜x8・x19〜x28・sp・罠が一致", bad, 0)
-check("A53 向けは既定と並びが変わる関数がある(%d 本)" % moved, moved > 0, True)
+check("A53 向け(既定)は従来(legacy)と並びが変わる関数がある(%d 本)" % moved, moved > 0, True)
 # 乗算は単独発行: 同じサイクルに乗算の隣へ別の命令が来ない(乗算の直前直後の独立な命令が、乗算の前後の別のサイクルに回る)・読みは 2 本続けて同じサイクルにならない — 並びでの確認は難しいので、独立な 2 本の読みの間に別の命令が入ることを見る
 two = ["t:", "\tstp x29, x30, [sp, #-48]!", "\tmov x29, sp", "\tldr x9, [x29, #16]", "\tldr x10, [x29, #24]", "\tmov x1, #2", "\tmov x2, #3", "\tadd x0, x9, x10", "\tldp x29, x30, [sp], #48", "\tret"]
 o2 = [l for l in strip(sign_opt.optimize(two)) if "x29" not in l or "[x29" in l]

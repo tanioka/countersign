@@ -1,12 +1,12 @@
 """run_on_pi.py — 命令の並べ替えの効果を測る(既定 5 回、中央値)。プログラムごとに _o(最適化なし)・_n(並べ替えだけ無し)・_s(全部あり)を、
 「全部の変種を 1 周 → 次の周」と交互に回す(温度のぶれが変種に偏らない)。答えは毎回 expected.json と照合する。
 記録: 機種・CPU の周波数・温度(前後)。report.txt に書く。使い方: python3 run_on_pi.py [回数]   (他の処理を止めて、できれば冷えた状態で)
-見るところ: 「_a」があれば「s/a」が 1 より大きいとき A53 向けの並べ替えが既定より速い。「_n / _s」が 1 より大きければ、並べ替えが速くした。1 前後なら、A72 は並べ替えなしでも同じ(out-of-order で隠れる)。"""
+見るところ: 「_l」があれば「l/s」が 1 より大きいとき、既定の(A53 向けの)並べ替えが従来より速い。「_n / _s」が 1 より大きければ、並べ替えが速くした。1 前後なら、A72 は並べ替えなしでも同じ(out-of-order で隠れる)。"""
 import json, os, statistics, subprocess, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 5
 exp = json.load(open(os.path.join(HERE, "expected.json")))
-progs = sorted({b.rsplit("_", 1)[0] for b in exp}); sufs = [x for x in ["o", "n", "s", "a"] if all(os.path.exists(os.path.join(HERE, "bin", p + "_" + x)) for p in progs)]
+progs = sorted({b.rsplit("_", 1)[0] for b in exp}); sufs = [x for x in ["o", "n", "s", "l"] if all(os.path.exists(os.path.join(HERE, "bin", p + "_" + x)) for p in progs)]
 def rd(p):
     try: return open(p).read().strip()
     except Exception: return "?"
@@ -24,10 +24,10 @@ for rnd in range(N):
                 bad += 1; L.append("食い違い %s 周%d: %r rc=%d" % (b, rnd, r.stdout.decode(errors="replace")[:60], r.returncode))
             t[(p, s)].append(dt)
     L.append("周 %d 終了: 温度 %s / 周波数 %s" % (rnd + 1, temp(), freq()))
-L += ["", "## 中央値 ms(最小〜最大)。o = 最適化なし / n = 並べ替えだけ無し / s = 全部あり(既定の並べ替え) / a = A53 向けの並べ替え", ""]
+L += ["", "## 中央値 ms(最小〜最大)。o = 最適化なし / n = 並べ替えだけ無し / s = 全部あり(既定。並べ替えは A53 向け) / l = 従来の並べ替え", ""]
 for p in progs:
     m = {s: statistics.median(t[(p, s)]) for s in sufs}
-    ex = (" / a %d (%d〜%d)  →  A53 向けの並べ替え s/a = x%.3f" % (m["a"], min(t[(p, "a")]), max(t[(p, "a")]), m["s"] / m["a"] if m["a"] else 0)) if "a" in m else ""
+    ex = (" / l %d (%d〜%d)  →  既定(A53 向け)の並べ替え l/s = x%.3f" % (m["l"], min(t[(p, "l")]), max(t[(p, "l")]), m["l"] / m["s"] if m["s"] else 0)) if "l" in m else ""
     L.append("%s: o %d (%d〜%d) / n %d (%d〜%d) / s %d (%d〜%d)  →  並べ替えの効果 n/s = x%.3f  並べ替え以外 o/n = x%.3f" % (
         p, m["o"], min(t[(p, "o")]), max(t[(p, "o")]), m["n"], min(t[(p, "n")]), max(t[(p, "n")]), m["s"], min(t[(p, "s")]), max(t[(p, "s")]),
         m["n"] / m["s"] if m["s"] else 0, m["o"] / m["n"] if m["n"] else 0) + ex)
