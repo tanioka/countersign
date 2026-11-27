@@ -51,6 +51,52 @@ PEEP = [True]       # ピープホール最適化(sign_peep.py)。--no-peephole 
 class AsmError(Exception):
     """出せない形(名指しで断る)。"""
 
+def drop_void_literals(nodes):
+    """字面の Int のリストへの範囲外のスライス `xs ' [5 ~ 6]`・取り出し `xs ' 7`(必ず `__`)を、入れ子の並び `(…) (…)` から消す
+    (`__` は入れ子に入らず並びから消える。実行時に個数が変わる形ではなく、書いた時点で決まる形だけを静的に畳む)。
+    消えて 1 つだけ残れば、その要素そのもの(`(x)` は x)。全部が消える形・先頭が関数の呼びの形は触らない。"""
+    lits = {}
+    def lv(x):
+        while x[0] == "block": x = x[1]
+        if x[0] == "id": return lits.get(x[1])
+        return _probe().list_values(x)
+    for n in nodes:
+        if n[0] == "def" and len(n) == 3 and n[2][0] in ("seq", "bin", "prod", "block") and _probe().list_values(n[2]) is not None:
+            lits[n[1]] = _probe().list_values(n[2])
+    fns = {n[1] for n in nodes if n[0] == "def" and n[2][0] == "lam"}
+    def cint(x):
+        while x[0] == "block": x = x[1]
+        if x[0] == "lit" and isinstance(x[1], int) and not isinstance(x[1], bool): return x[1]
+        if x[0] == "neg" and x[1][0] == "lit" and isinstance(x[1][1], int) and not isinstance(x[1][1], bool): return -x[1][1]
+        return None
+    def void(x):
+        while x[0] == "block": x = x[1]
+        if x[0] != "bin" or x[1] != "'": return False
+        vals = lv(x[2])
+        if vals is None: return False
+        idx = x[3]
+        while idx[0] == "block": idx = idx[1]
+        if idx[0] == "bin" and idx[1] == "~":
+            a, b = cint(idx[2]), cint(idx[3])
+            return a is not None and b is not None and 0 <= a <= b and b >= len(vals)
+        k = cint(idx)
+        return k is not None and (k >= len(vals) or k < -len(vals)) and idx[0] != "sec"
+    def fix(x):
+        if isinstance(x, tuple):
+            x = tuple(fix(y) for y in x)
+            if x[:1] == ("seq",) and len(x[1]) >= 2 and not (x[1][0][:1] == ("id",) and x[1][0][1] in fns) and all(it[:1] in (("block",), ("lit",)) for it in x[1]):
+                keep = [it for it in x[1] if not void(it)]
+                if keep and len(keep) < len(x[1]): return keep[0] if len(keep) == 1 else ("seq", keep)
+            return x
+        if isinstance(x, list): return [fix(y) for y in x]
+        return x
+    return [fix(n) for n in nodes]
+
+def _probe():
+    p = Program.__new__(Program); p.consts = {}
+    return p
+
+
 class KindConflict(AsmError):
     """1 つの仮引数に種類の違う実引数が渡された(関数を種類ごとに複製して直す。Program.split_kind)"""
     def __init__(self, msg, f, i, kd, site):
@@ -2706,7 +2752,7 @@ class FnGen:
 
 IMPORT_DIR = [None]      # `f`@~ の相対パスの基準(読み込んだ原文のあるディレクトリ。無ければカレント)
 
-def expand_imports(nodes, seen=None, stack=()):
+def expand_imports(nodes, seen=None, stack=(), _nested=False):
     """最上位の `path`@~(importspread)を、そのファイルの定義に置き換える(interpreter の import_file と同じ解き方: パスは取り込む側のファイルからの相対)。
     取り込まれたファイルの最上位は定義だけ(式があれば断る: 取り込み時の副作用を出せない)。公開の印 `#` があるファイルは、
     撒かれるのが公開の名前だけになるので、まだ出せない。同じファイルは 1 回だけ。名前が既にある定義と重なれば断る。"""
@@ -2727,9 +2773,10 @@ def expand_imports(nodes, seen=None, stack=()):
         old = IMPORT_DIR[0]; IMPORT_DIR[0] = os.path.dirname(full)
         try:
             sub = sign_interp.parse_source(open(full, encoding="utf-8").read())
-            if any(x[0] == "export" or (x[0] == "def" and len(x) > 3 and x[3]) for x in sub): raise AsmError("%s: 公開の印 `#` があるファイルの取り込みはまだ出せません(撒かれるのが公開の名前だけになる)" % p[1])
-            sub = expand_imports(sub, seen, stack + (full,))
+            if any(x[0] == "def" and len(x) > 3 and x[3] for x in sub): raise AsmError("%s: 取り込むファイルの定義に、まだ出せない印があります" % p[1])
+            sub = expand_imports(sub, seen, stack + (full,), _nested=True)
         finally: IMPORT_DIR[0] = old
+        sub = hide_private(sub, p[1], full)
         bad = [x for x in sub if x[0] != "def"]
         if bad: raise AsmError("%s: 取り込むファイルの最上位に式があります(取り込み時の副作用はまだ出せません)" % p[1])
         out.extend(sub)
@@ -2745,6 +2792,50 @@ def expand_imports(nodes, seen=None, stack=()):
             raise AsmError("同じ名前の定義が重なっています(%s)。前の定義が値、または間に最上位の式があるので、どちらが勝つかをまだ決められません" % nm)
         drop.update(ps[:-1])
     if drop: out = [n for i, n in enumerate(out) if i not in drop]
+    if not _nested: out = [n[1] if n[0] == "export" else n for n in out]          # 実行する本体の公開の印は、定義と同じ(公開が効くのは取り込まれたときだけ)
+    return out
+
+
+_PRIV = [0]
+
+def hide_private(sub, shown, full):
+    """取り込んだファイルに公開の印 `#` の定義があれば、撒かれるのは公開の名前だけ(処理系の import: env.exports。execution_model.md §2)。
+    公開でない最上位の名前(そのファイルの中だけで使う)は、取り込む側と重ならない別の名前へ付け替える(`名前$p<番号>`)。
+    公開の定義は印を外して残す。付け替えで内側の定義・仮引数が同じ名前を隠す形は、まだ出せない。"""
+    if not any(x[0] == "export" for x in sub): return sub
+    exported = {x[1][1] for x in sub if x[0] == "export" and x[1][0] == "def"}
+    if any(x[0] == "export" and x[1][0] != "def" for x in sub): raise AsmError("%s: 公開の印が定義でない物にあります" % shown)
+    plain = [x[1] if x[0] == "export" else x for x in sub]
+    priv = {x[1] for x in plain if x[0] == "def" and isinstance(x[1], str)} - exported
+    if not priv: return plain
+    _PRIV[0] += 1
+    m = {nm: "%s$p%d" % (nm, _PRIV[0]) for nm in priv}
+    def pnames(ps):
+        o = set()
+        for q in ps:
+            if q[0] == "name": o.add(q[1])
+            elif q[0] == "destr":
+                o |= {x for x in q[1] if isinstance(x, str)}
+                if isinstance(q[2], str): o.add(q[2])
+                if len(q) > 4: o |= {x for x in q[4] if isinstance(x, str)}
+        return o
+    def rn(x, mp, top=False):
+        if isinstance(x, tuple):
+            if len(x) == 2 and x[0] == "id": return ("id", mp.get(x[1], x[1]))
+            if x and x[0] == "lam":
+                bound = pnames(x[1])
+                if bound & set(mp): raise AsmError("%s: 公開でない名前(%s)を仮引数が隠しています。付け替えがまだ出せません" % (shown, ", ".join(sorted(bound & set(mp)))))
+                return ("lam", rn(x[1], mp), rn(x[2], mp)) + tuple(rn(y, mp) for y in x[3:])
+            if x and x[0] == "def" and not top and isinstance(x[1], str) and x[1] in mp: raise AsmError("%s: 公開でない名前(%s)を内側の定義が隠しています。付け替えがまだ出せません" % (shown, x[1]))
+            return tuple(rn(y, mp) for y in x)
+        if isinstance(x, list): return [rn(y, mp) for y in x]
+        return x
+    out = []
+    for x in plain:
+        if x[0] == "def" and isinstance(x[1], str) and x[1] in m:
+            out.append(("def", m[x[1]]) + tuple(rn(y, m) for y in x[2:]))
+        elif x[0] == "def": out.append(("def", x[1]) + tuple(rn(y, m) for y in x[2:]))
+        else: out.append(x)
     return out
 
 
@@ -2810,6 +2901,7 @@ def rename_shadowing_params(nodes):
 class Program:
     def __init__(self, nodes):
         if any(n[0] == "importspread" for n in nodes): nodes = expand_imports(nodes)
+        else: nodes = [n[1] if n[0] == "export" else n for n in nodes]          # 実行する本体の公開の印は、定義と同じ
         nodes = rename_shadowing_params(nodes)                 # 仮引数が定義と同じ名前なら、仮引数を付け替える(asm は名前だけで呼びか器かを決めるため。処理系は仮引数が勝つ)
         if FUSE[0]:
             import sign_fuse
@@ -2820,6 +2912,7 @@ class Program:
             nodes = sign_fuse.scalarize_records(nodes)         # レコードの分解: 字面の器を受ける仮引数へ、要素をそのまま渡す(器を作らない)
         nodes = expand_aliases(nodes)                          # 別名 `p : inc`・算術の節 `[+] 2 3` の展開
         nodes = expand_mixed_spreads(nodes)                    # 字面の名前の混ざる入れ子の展開 `m~` は、要素を並べた並びへ
+        nodes = drop_void_literals(nodes)                      # 字面の器の範囲外のスライス・取り出し(必ず `__`)は、入れ子から消える
         import sign_inline                                     # 特殊化: `$関数` を渡す呼び出しを、渡された関数ごとの実体 `F$G` へ付け替える(仕様の「コンパイル時特殊化」)
         try: nodes = sign_inline.specialize(nodes)
         except sign_inline.SpecError as e: raise AsmError(str(e))
