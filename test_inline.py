@@ -25,6 +25,14 @@ def check(name, ok, detail=""):
     if not ok: FAIL.append(name); print("NG  %s  %s" % (name, detail))
 
 SAME = [
+ ("多種類: 規則とリスト", "mk : n ? [1 ~ n]\nf : r ? ||r||\n(f (mk 3)) + (f (1 2 3))\n"),
+ ("多種類: 長さ(リストと文字列)", "sz : x ? ||x||\n(sz [1, 2, 3]) + (sz `abc`)\n"),
+ ("多種類: Int を受ける関数と別の関数", "f : x ? ||x||\ng : x ? x + 1\n(f [1, 2]) + (g 4)\n"),
+ ("多種類: 2 番目の引数だけ", "h : x y ? x + (||y||)\n(h 1 [1,2,3]) + (h 2 `ab`)\n"),
+ ("多種類: 再帰", "cnt : x n ?\n\tn = 0 : 0\n\t(||x||) + (cnt x (n - 1))\n(cnt [1,2] 3) + (cnt `abc` 2)\n"),
+ ("多種類: 2 つの仮引数", "q : a b ? (||a||) * 10 + (||b||)\n(q [1,2] `abc`) + (q `x` [1,2,3,4])\n"),
+ ("多種類: 経由する関数", "len2 : x ? ||x||\nw : x ? (len2 x) + 1\n(w [1,2]) + (w `abc`)\n"),
+ ("多種類: リストと規則", "sz : x ? ||x||\n(sz [1, 2, 3]) + (sz [1 ~ 5])\n"),
  ("部分適用", "add : a b ? a + b\nadd3 : add 3\nadd3 5\n"),
  ("部分適用を 2 か所", "add : a b ? a + b\nadd3 : add 3\n(add3 1) + (add3 2) * 10\n"),
  ("部分適用の上の部分適用", "f : a b c ? a + b * c\nf1 : f 1\nf12 : f1 2\nf12 5\n"),
