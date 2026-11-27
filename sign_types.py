@@ -221,9 +221,10 @@ class Checker:
         self.callsites, self.types, self.diags = {}, {}, list(self.import_diags)
         for name in self.order: self.def_type(name)
         self.where = "<top>"
+        self.top_types = []                           # 最上位の式の型(定義でない節。性質検査が実行後の値の種類と突き合わせる)
         for node in self.nodes:
             d = node[1] if node[0] == "export" else node
-            if d[0] != "def": self.type_of(d, Scope())
+            if d[0] != "def": self.top_types.append(self.type_of(d, Scope()))
         new = {}
         for name, sites in self.callsites.items():
             n = max(len(a) for a in sites)
