@@ -51,6 +51,11 @@ PEEP = [True]       # ピープホール最適化(sign_peep.py)。--no-peephole 
 class AsmError(Exception):
     """出せない形(名指しで断る)。"""
 
+class KindConflict(AsmError):
+    """1 つの仮引数に種類の違う実引数が渡された(関数を種類ごとに複製して直す。Program.split_kind)"""
+    def __init__(self, msg, f, i, kd, site):
+        super().__init__(msg); self.f, self.i, self.kd, self.site = f, i, kd, site
+
 class StrictRefusal(AsmError):
     """--strict: コンパイラ(既定の読み)と strict の読みの答えが分かれうる形を、出さずに断る(strict_divergences の続き。コード生成の終わりで、証明器・解析を使って精密に調べた断り)"""
 
@@ -5147,7 +5152,7 @@ class Program:
                             if pk[f][i] == "I" and kd == "L" and (f, i) not in nonone: pk[f][i] = "L"; changed = True; continue      # Int の字面だけが先に来ていた
                             if pk[f][i] is None: pk[f][i] = kd; changed = True
                             elif pk[f][i] != kd:
-                                raise AsmError("%s の第 %d 引数に、種類の違う物(Int・リスト・文字列・規則)が渡されています(1 つの仮引数に複数の種類は、型ごとの実体がまだ作れないので出せません。compiler_pipeline.md §6.5)" % (f, i + 1))
+                                raise KindConflict("%s の第 %d 引数に、種類の違う物(Int・リスト・文字列・規則)が渡されています(複製しても決まりませんでした。compiler_pipeline.md §6.5)" % (f, i + 1), f, i, kd, x)
                 for f, body in self.live_bodies():
                     env = {p: (k or "?") for p, k in zip(self.fns[f], pk[f])}
                     walk(body, env, cb)
@@ -5164,6 +5169,38 @@ class Program:
             if sum(WIDTH[k] for k in ks) > 64:
                 raise AsmError("%s: 引数が多すぎます(スタック渡しを含め 64 語まで)" % f)
             env = dict(zip(self.fns[f], ks))
+
+    def split_kind(self, e):
+        """1 つの仮引数に複数の種類が渡される関数を、種類ごとの実体(複製 `f$k<番号><種類>`)に分ける(compiler_pipeline.md §6.5「型ごとの実体」。
+        衝突した呼びだけを複製へ向け直して作り直す。複製が増えすぎる形・呼びの場所が見つからない形は None(= 断る))。"""
+        if getattr(self, "kc_depth", 0) >= 24: return None
+        f, i, kd, site = e.f, e.i, e.kd, e.site
+        if f.count("$k") >= 3: return None
+        f2 = "%s$k%d%s" % (f, i, kd)
+        def fresh(x):
+            if isinstance(x, tuple): return tuple(fresh(y) for y in x)
+            if isinstance(x, list): return [fresh(y) for y in x]
+            return x
+        def ren(x):
+            if x == ("id", f): return ("id", f2)
+            if isinstance(x, tuple): return tuple(ren(y) for y in x)
+            if isinstance(x, list): return [ren(y) for y in x]
+            return x
+        found = [False]
+        def rw(x):
+            if x is site:
+                found[0] = True
+                return ("seq", [("id", f2)] + list(x[1][1:]))
+            if isinstance(x, tuple): return tuple(rw(y) for y in x)
+            if isinstance(x, list): return [rw(y) for y in x]
+            return x
+        nodes = [rw(n) for n in self.nodes]
+        if not found[0]: return None
+        if any(n[0] == "def" and n[1] == f2 for n in nodes): return nodes
+        d = next((n for n in nodes if n[0] == "def" and n[1] == f), None)
+        if d is None or d[2][0] != "lam": return None
+        nodes.append(("def", f2, ren(fresh(d[2]))) + tuple(d[3:]))
+        return nodes
 
     def label(self):
         self.nlabel += 1
@@ -5969,7 +6006,14 @@ class Program:
         self.drop_void_items()
         self.expand_defaults()
         self.find_live()
-        self.solve_kinds()
+        try: self.solve_kinds()
+        except KindConflict as e:
+            nn = self.split_kind(e)
+            if nn is None: raise
+            sub = Program(nn); sub.mk_const = getattr(self, "mkc_next", getattr(self, "mk_const", 0)); sub.kc_depth = getattr(self, "kc_depth", 0) + 1
+            out = sub.generate(target, source)
+            self.__dict__.update(sub.__dict__)
+            return out
         self.fold_nest_pick()
         nn = self.inline_wide_dyn()
         if nn is None: nn = self.lift_args()
