@@ -25,6 +25,7 @@ def check(name, ok, detail=""):
     if not ok: FAIL.append(name); print("NG  %s  %s" % (name, detail))
 
 SAME = [
+ ("多種類: 規則とリスト", "mk : n ? [1 ~ n]\nf : r ? ||r||\n(f (mk 3)) + (f (1 2 3))\n"),
  ("多種類: 長さ(リストと文字列)", "sz : x ? ||x||\n(sz [1, 2, 3]) + (sz `abc`)\n"),
  ("多種類: Int を受ける関数と別の関数", "f : x ? ||x||\ng : x ? x + 1\n(f [1, 2]) + (g 4)\n"),
  ("多種類: 2 番目の引数だけ", "h : x y ? x + (||y||)\n(h 1 [1,2,3]) + (h 2 `ab`)\n"),
