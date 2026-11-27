@@ -1574,7 +1574,74 @@ theorem compileS_ok (nov : AOp → E → E → Bool)
           have : j ≠ base + d := by omega
           rw [if_neg this]; exact m1 j (by omega)
 
+/-! ### 値域の解析 `no_overflow`(`sign_asm.py` の `const_int` + `no_overflow`)の写し -/
+
+/-- 定数の整数の式の値(字面・`+ - *` の定数。`sign_asm.py` の `const_int`)。範囲の外は定数としない -/
+def cst : E → Option Int
+  | .lit n => clamp n
+  | .var _ => none
+  | .op o l r =>
+      match o with
+      | .add | .sub | .mul =>
+          match cst l, cst r with
+          | some a, some b => arithInt o a b
+          | _, _ => none
+      | _ => none
+
+/-- `l op r` は溢れず、結果が `INT64_MIN` にもならないと静的に言えるか(両辺が定数のとき、その値で) -/
+def novR (o : AOp) (l r : E) : Bool :=
+  match cst l, cst r with
+  | some a, some b => (arithInt o a b).isSome
+  | _, _ => false
+
+theorem cst_sound (ρ : Nat → Option Int) : ∀ (e : E) (v : Int), cst e = some v → sem ρ e = some v
+  | .lit n, v, h => by simpa [cst, sem] using h
+  | .var _, v, h => by simp [cst] at h
+  | .op o l r, v, h => by
+      cases o <;> simp only [cst] at h
+      all_goals first
+        | (simp at h; done)
+        | (cases hl : cst l with
+            | none => simp [hl] at h
+            | some a =>
+                cases hr : cst r with
+                | none => simp [hl, hr] at h
+                | some b =>
+                    simp only [hl, hr] at h
+                    have e1 := cst_sound ρ l a hl
+                    have e2 := cst_sound ρ r b hr
+                    simp [sem, e1, e2, arith, h])
+
+/-- 値域の解析の健全性: `novR` が真なら、両辺が値のとき演算は溢れない -/
+theorem novR_sound : ∀ o l r, novR o l r = true → ∀ ρ a b, sem ρ l = some a → sem ρ r = some b →
+    ∃ z, arithInt o a b = some z := by
+  intro o l r h ρ a b ha hb
+  unfold novR at h
+  cases hl : cst l with
+  | none => simp [hl] at h
+  | some a' =>
+      cases hr : cst r with
+      | none => simp [hl, hr] at h
+      | some b' =>
+          simp only [hl, hr] at h
+          have e1 := cst_sound ρ l a' hl
+          have e2 := cst_sound ρ r b' hr
+          rw [ha] at e1; rw [hb] at e2
+          cases e1; cases e2
+          cases hz : arithInt o a b with
+          | none => simp [hz] at h
+          | some z => exact ⟨z, rfl⟩
+
+/-- 実際の値域の解析 `novR` を使った `compileS` の保存(仮定は、変数が `!_` でない整数であることだけ) -/
+theorem compileS_ok_real (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z) (base : Nat) :
+    ∀ (e : E) (d : Nat) (s : St), e.lits → e.maxVar ≤ base → s.pc = 0 →
+      (∀ k < base, s.m k = encode (ρ k)) →
+      ∃ s', Steps (compileS novR base d e) s s' ∧ s'.pc = (compileS novR base d e).size ∧
+        s'.r 0 = encode (sem ρ e) ∧ (∀ j < base + d, s'.m j = s.m j) ∧ InR (sem ρ e) :=
+  compileS_ok novR novR_sound ρ hρ hvs base
+
 end SirZAsm
 
 #print axioms SirZAsm.compileV_ok
 #print axioms SirZAsm.compileS_ok
+#print axioms SirZAsm.compileS_ok_real
