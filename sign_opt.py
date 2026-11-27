@@ -683,10 +683,11 @@ def promote(fn):
 # ---- 命令の並べ替え(ブロックの中の表のスケジューリング) ----
 LAT_LOAD = 4
 def _a53():
-    """SIGN_SCHED_MODEL=a53: Cortex-A53(in-order・2 命令同時発行)向けの変種(実験。既定は従来のまま)。資料(GCC・LLVM の A53 のモデル)の読み 3・乗算 3・除算 8・
-    同時発行の決め(1 サイクル 2 本まで・読み書きは 1 本ずつ・乗算は単独)に合わせる。実機で効くかは pi_sched/ で測る"""
+    """並べ替えのモデル。既定は Cortex-A53(in-order・2 命令同時発行)向け(2026-11-27 から既定。Pi 3A+ で 0〜2.7%、Pi 4 で 0〜0.5% 速く、遅くなる例は無かった)。
+    資料(GCC・LLVM の A53 のモデル)の読み 3・乗算 3・除算 8、同時発行の決め(1 サイクル 2 本まで・読み書きは 1 本ずつ・乗算は単独)に合わせる。
+    SIGN_SCHED_MODEL=legacy で従来の並べ替え(1 サイクル 1 本・読み 4)に戻る"""
     import os
-    return os.environ.get("SIGN_SCHED_MODEL", "") == "a53"
+    return os.environ.get("SIGN_SCHED_MODEL", "") != "legacy"
 def _lat(i):
     if i.mn in sign_peep.LOADS or i.mn == "ldr": return 3 if _a53() else LAT_LOAD
     if i.mn in ("mul", "smulh", "umulh", "madd", "msub", "smull", "umull"): return 3
