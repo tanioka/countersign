@@ -222,9 +222,13 @@ inductive I
   | csel (d a b : Nat) (c : Cond)      -- xd = c ? xa : xb
   | bc (c : Cond) (t : Nat)            -- 相対(今の命令から t 先。前向きだけ)
   | b (t : Nat)
+  | movi (d : Nat) (n : Int)           -- mov xd, #n(リテラル)
+  | str (a k : Nat)                    -- str xa, [x29, #16+8k]
+  | ldr (d k : Nat)                    -- ldr xd, [x29, #16+8k]
 
 structure St where
   r : Nat → W
+  m : Nat → W                          -- フレームの枠(x29 からの位置 k)
   z : Bool
   v : Bool
   pc : Nat
@@ -265,13 +269,16 @@ def step (i : I) (s : St) : St :=
   | .csel d a b c => s'.set d (if c.holds s then s.r a else s.r b)
   | .bc c t => if c.holds s then { s with pc := s.pc + t } else s'
   | .b t => { s with pc := s.pc + t }
+  | .movi d n => s'.set d (BitVec.ofInt 64 n)
+  | .str a k => { s' with m := fun i => if i = k then s.r a else s.m i }
+  | .ldr d k => s'.set d (s.m k)
 
 /-- 燃料つきの実行。`pc` が終わりに着いたら止まる -/
 def run (p : Array I) : Nat → St → St
   | 0, s => s
   | n + 1, s => if h : s.pc < p.size then run p n (step p[s.pc] s) else s
 
-def init (x y : W) : St := { r := fun i => if i = 9 then x else if i = 10 then y else 0, z := false, v := false, pc := 0 }
+def init (x y : W) : St := { r := fun i => if i = 9 then x else if i = 10 then y else 0, m := fun _ => 0, z := false, v := false, pc := 0 }
 
 -- BEGIN GENERATED
 def tpl_add : Array I := #[
@@ -478,6 +485,229 @@ theorem tpl_ok (o : AOp) (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h1
   · exact tpl_div_ok s hs x y h9 h10
   · exact tpl_mod_ok s hs x y h9 h10
 
+/-! ### 命令列をつなげる -/
+
+/-- 1 歩ずつ進んだ道(`pc` が列の中にある間だけ進める) -/
+inductive Steps (p : Array I) : St → St → Prop
+  | refl (s) : Steps p s s
+  | step (s s2) (h : s.pc < p.size) : Steps p (step p[s.pc] s) s2 → Steps p s s2
+
+theorem run_steps (p : Array I) : ∀ (n : Nat) (s : St), Steps p s (run p n s)
+  | 0, s => Steps.refl s
+  | n + 1, s => by
+      by_cases h : s.pc < p.size
+      · have : run p (n + 1) s = run p n (step p[s.pc] s) := by simp [run, h]
+        rw [this]; exact Steps.step s _ h (run_steps p n _)
+      · have : run p (n + 1) s = s := by simp [run, h]
+        rw [this]; exact Steps.refl s
+
+theorem Steps.trans {p : Array I} {a b c : St} (h1 : Steps p a b) (h2 : Steps p b c) : Steps p a c := by
+  induction h1 with
+  | refl s => exact h2
+  | step s s2 h _ ih => exact Steps.step s c h (ih h2)
+
+/-- 前に別の列があっても、同じ命令を同じ位置で実行する -/
+theorem Steps.left {p : Array I} (q : Array I) {a b : St} (h : Steps p a b) : Steps (p ++ q) a b := by
+  induction h with
+  | refl s => exact Steps.refl s
+  | step s s2 h _ ih =>
+      refine Steps.step s s2 (by simp; omega) ?_
+      have : (p ++ q)[s.pc]'(by simp; omega) = p[s.pc] := Array.getElem_append_left h
+      simpa [this] using ih
+
+theorem holds_pc (c : Cond) (s : St) (x : Nat) : c.holds { s with pc := x } = c.holds s := by cases c <;> rfl
+
+theorem step_shift (i : I) (s : St) (k : Nat) :
+    step i { s with pc := s.pc + k } = { step i s with pc := (step i s).pc + k } := by
+  cases i <;> simp only [step, St.set, St.flagsSub, holds_pc] <;> (try split) <;> (try simp) <;> (try omega)
+
+/-- 後ろに置いた列は、`pc` を長さぶんずらして実行する -/
+theorem Steps.shift (p : Array I) {q : Array I} {a b : St} (h : Steps q a b) :
+    Steps (p ++ q) { a with pc := a.pc + p.size } { b with pc := b.pc + p.size } := by
+  induction h with
+  | refl s => exact Steps.refl _
+  | step s s2 h _ ih =>
+      refine Steps.step _ _ (by simp; omega) ?_
+      have e : (p ++ q)[s.pc + p.size]'(by simp; omega) = q[s.pc] := by
+        rw [Array.getElem_append_right (by omega)]; simp
+      simp only [e]
+      rw [step_shift]
+      simpa using ih
+
+/-- つなげる: `p` が終わりまで走り、その後 `q` が終わりまで走るなら、`p ++ q` が終わりまで走る -/
+theorem Steps.append {p q : Array I} {a b c : St} (h1 : Steps p a b) (hb : b.pc = p.size)
+    (h2 : Steps q { b with pc := 0 } c) :
+    Steps (p ++ q) a { c with pc := c.pc + p.size } := by
+  have h1' := h1.left q
+  have h2' := h2.shift p
+  simp only [Nat.zero_add] at h2'
+  have : ({ b with pc := p.size } : St) = b := by cases b; simp at hb ⊢; exact hb.symm
+  rw [this] at h2'
+  exact h1'.trans h2'
+
+/-! ### 式木から命令列へ(整数の `+ - * / %`、字面、変数) -/
+
+inductive E
+  | lit (n : Int)
+  | var (k : Nat)
+  | op (o : AOp) (l r : E)
+
+/-- 意味(`!_` を含む)。変数の値は環境 `ρ` -/
+def sem (ρ : Nat → Option Int) : E → Option Int
+  | .lit n => clamp n
+  | .var k => ρ k
+  | .op o l r => arith o (sem ρ l) (sem ρ r)
+
+def E.lits : E → Prop
+  | .lit n => -M ≤ n ∧ n ≤ M
+  | .var _ => True
+  | .op _ l r => l.lits ∧ r.lits
+
+def E.maxVar : E → Nat
+  | .lit _ => 0
+  | .var k => k + 1
+  | .op _ l r => max l.maxVar r.maxVar
+
+/-- `sign_asm.py` の骨組み: 左を作って枠へ、右を作って `x10`、左を `x9` に戻し、`bin_tail` の列。
+    `base + d` 番目の枠が深さ `d` の途中の値。 -/
+def compile (base : Nat) : Nat → E → Array I
+  | _, .lit n => #[I.movi 0 n]
+  | _, .var k => #[I.ldr 0 k]
+  | d, .op o l r =>
+      compile base d l ++ #[I.str 0 (base + d)] ++ compile base (d + 1) r
+        ++ #[I.mov 10 0, I.ldr 9 (base + d)] ++ tpl o
+
+def InR (v : Option Int) : Prop := ∀ z, v = some z → -M ≤ z ∧ z ≤ M
+
+theorem InR_clamp (z : Int) : InR (clamp z) := by
+  intro w h; unfold clamp at h; split at h <;> simp_all
+
+theorem InR_arithInt (o : AOp) (a b : Int) : InR (arithInt o a b) := by
+  cases o <;> simp only [arithInt] <;> (try split) <;> first | exact InR_clamp _ | (intro z h; cases h)
+
+theorem InR_arith (o : AOp) (a b : Option Int) (ha : InR a) (hb : InR b) : InR (arith o a b) := by
+  cases a <;> cases b <;> simp only [arith]
+  · intro z h; cases h
+  · exact hb
+  · exact ha
+  · exact InR_arithInt o _ _
+
+theorem decode_encode (v : Option Int) (h : InR v) : decode (encode v) = v := by
+  cases v with
+  | none => simp [encode, decode]
+  | some z =>
+      obtain ⟨h1, h2⟩ := h z rfl
+      have hb : -(2 ^ 63 : Int) ≤ z ∧ z < 2 ^ 63 := by unfold M at h1 h2; omega
+      have e : (BitVec.ofInt 64 z).toInt = z := toInt_ofInt' z hb
+      have hne : BitVec.ofInt 64 z ≠ NICHE := by
+        rw [ne_niche_iff, e]; unfold M at h1; omega
+      simp [encode, decode, hne, e]
+
+def I.isStr : I → Bool
+  | .str _ _ => true
+  | _ => false
+
+theorem step_m (i : I) (s : St) (h : i.isStr = false) : (step i s).m = s.m := by
+  cases i <;> simp [I.isStr] at h <;> simp [step, St.set, St.flagsSub] <;> split <;> rfl
+
+theorem Steps.m_eq {p : Array I} {a b : St} (hp : ∀ i ∈ p, i.isStr = false) (h : Steps p a b) : b.m = a.m := by
+  induction h with
+  | refl s => rfl
+  | step s s2 h _ ih =>
+      rw [ih, step_m _ _ (hp _ (Array.getElem_mem h))]
+
+theorem tpl_nostr (o : AOp) : ∀ i ∈ tpl o, i.isStr = false := by
+  cases o <;> decide
+
+theorem single (i : I) (s : St) (hs : s.pc = 0) : Steps #[i] s (step i s) :=
+  Steps.step s _ (by simp [hs]) (by
+    have : (#[i] : Array I)[s.pc]'(by simp [hs]) = i := by simp [hs]
+    simp only [this]; exact Steps.refl _)
+
+/-- `append` の結果の状態を、`pc` が `(p ++ q).size` の形で言う -/
+theorem Steps.append' {p q : Array I} {a b c : St} (h1 : Steps p a b) (hb : b.pc = p.size)
+    (h2 : Steps q { b with pc := 0 } c) (hc : c.pc = q.size) :
+    Steps (p ++ q) a { c with pc := (p ++ q).size } := by
+  have := Steps.append h1 hb h2
+  simpa [hc, Nat.add_comm] using this
+
+/-- 段階 (c)(式の木): `compile` の命令列は、環境が枠に入っていれば、`x0` に式の値の表し方を置いて終わりまで走り、
+    変数の枠と、より浅い途中の枠を変えない。 -/
+theorem compile_ok (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (base : Nat) :
+    ∀ (e : E) (d : Nat) (s : St), e.lits → e.maxVar ≤ base → s.pc = 0 →
+      (∀ k < base, s.m k = encode (ρ k)) →
+      ∃ s', Steps (compile base d e) s s' ∧ s'.pc = (compile base d e).size ∧
+        s'.r 0 = encode (sem ρ e) ∧ (∀ j < base + d, s'.m j = s.m j) ∧ InR (sem ρ e) := by
+  intro e
+  induction e with
+  | lit n =>
+      intro d s hl _ hs _
+      have hl' : -M ≤ n ∧ n ≤ M := hl
+      refine ⟨step (I.movi 0 n) s, single _ s hs, ?_, ?_, ?_, InR_clamp n⟩
+      · simp [step, St.set, hs, compile]
+      · have hc : clamp n = some n := by simp [clamp, hl']
+        simp [step, St.set, sem, hc, encode]
+      · intro j _; simp [step, St.set]
+  | var k =>
+      intro d s _ hv hs hm
+      refine ⟨step (I.ldr 0 k) s, single _ s hs, ?_, ?_, ?_, hρ k⟩
+      · simp [step, St.set, hs, compile]
+      · simp [step, St.set, sem, hm k (by simp [E.maxVar] at hv; omega)]
+      · intro j _; simp [step, St.set]
+  | op o l r ihl ihr =>
+      intro d s hl hv hs hm
+      obtain ⟨hll, hlr⟩ := hl
+      have hv1 : l.maxVar ≤ base := by simp only [E.maxVar] at hv; omega
+      have hv2 : r.maxVar ≤ base := by simp only [E.maxVar] at hv; omega
+      obtain ⟨s1, h1, p1, r1, m1, i1⟩ := ihl d s hll hv1 hs hm
+      let s2 : St := step (I.str 0 (base + d)) { s1 with pc := 0 }
+      have h2 : Steps (compile base d l ++ #[I.str 0 (base + d)]) s
+          { s2 with pc := (compile base d l ++ #[I.str 0 (base + d)]).size } :=
+        Steps.append' h1 p1 (single _ _ rfl) (by simp [s2, step])
+      let t2 : St := { s2 with pc := (compile base d l ++ #[I.str 0 (base + d)]).size }
+      have t2m : ∀ j, t2.m j = if j = base + d then s1.r 0 else s1.m j := by
+        intro j; simp [t2, s2, step]
+      obtain ⟨s3, h3, p3, r3, m3, i3⟩ := ihr (d + 1) { t2 with pc := 0 } hlr hv2 rfl (by
+        intro k hk
+        have : k ≠ base + d := by omega
+        show t2.m k = _
+        rw [t2m, if_neg this, m1 k (by omega)]; exact hm k hk)
+      have h23 := Steps.append' h2 (by simp [t2]) h3 p3
+      let t3 : St := { s3 with pc := (compile base d l ++ #[I.str 0 (base + d)] ++ compile base (d + 1) r).size }
+      let u : St := step (I.mov 10 0) { t3 with pc := 0 }
+      let s4 : St := step (I.ldr 9 (base + d)) { u with pc := 0 }
+      have h4 : Steps #[I.mov 10 0, I.ldr 9 (base + d)] { t3 with pc := 0 } { s4 with pc := 2 } := by
+        have := Steps.append' (single (I.mov 10 0) { t3 with pc := 0 } rfl) (by simp [step, St.set])
+          (single (I.ldr 9 (base + d)) { u with pc := 0 } rfl) (by simp [s4, step, St.set])
+        simpa using this
+      have hm9 : s4.r 9 = encode (sem ρ l) := by
+        have a1 : s3.m (base + d) = t2.m (base + d) := m3 (base + d) (by omega)
+        simp only [s4, u, step, St.set, t3]
+        simp [a1, t2m, r1]
+      have hm10 : s4.r 10 = encode (sem ρ r) := by
+        simp [s4, u, step, St.set, t3, r3]
+      have h234 := Steps.append' h23 (by simp [t3]) h4 (by simp [s4, step, St.set])
+      have hl_in : InR (sem ρ l) := i1
+      have hr_in : InR (sem ρ r) := i3
+      let s5 : St := { s4 with pc := 0 }
+      have hT := tpl_ok o s5 rfl (s5.r 9) (s5.r 10) rfl rfl
+      have h9' : s5.r 9 = encode (sem ρ l) := hm9
+      have h10' : s5.r 10 = encode (sem ρ r) := hm10
+      have h5 : Steps (tpl o) s5 (run (tpl o) 30 s5) := run_steps _ _ _
+      have hmm : (run (tpl o) 30 s5).m = s5.m := Steps.m_eq (tpl_nostr o) h5
+      refine ⟨{ run (tpl o) 30 s5 with pc := (compile base d (.op o l r)).size }, ?_, rfl, ?_, ?_, InR_arith o _ _ hl_in hr_in⟩
+      · have := Steps.append' h234 (by simp [s4, step, St.set]) h5 hT.2
+        simpa [compile, Array.append_assoc] using this
+      · simp only []
+        rw [hT.1, h9', h10', decode_encode _ hl_in, decode_encode _ hr_in]; rfl
+      · intro j hj
+        simp only []
+        rw [hmm]
+        have a1 : s3.m j = t2.m j := m3 j (by omega)
+        simp only [s5, s4, u, step, St.set, t3, a1, t2m]
+        have : j ≠ base + d := by omega
+        rw [if_neg this]; exact m1 j (by omega)
+
 end SirZAsm
 
-#print axioms SirZAsm.tpl_ok
+#print axioms SirZAsm.compile_ok
