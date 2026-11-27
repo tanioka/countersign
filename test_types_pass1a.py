@@ -6,7 +6,7 @@
 生成は 3 種類に分ける。
   (a) アリティの合った関数だけの輪   : O1 と O2 を失敗の条件にする(実装が満たすべき範囲)
   (b) アリティの合わない呼びを含む輪 : 数えて報告する(順に依る。ill-typed なので J.2 の前提の外)
-  (c) 値の定義が輪に混ざる         : 数えて報告する(順に依る。値の自己参照・相互参照は Atom に倒す、という約束が順の影響を受ける)"""
+  (c) 値の定義が輪に混ざる(アリティは合っている): O1 と O2 を失敗の条件にする(値の自己参照・相互参照は Atom に倒す)"""
 import itertools, random, sys
 import sign_interp as S
 import sign_types as T
@@ -29,15 +29,26 @@ def gen_a():
     f = random.choice(names); lines.append("%s %s" % (f, " ".join(random.choice(["1", "2.5"]) for _ in range(ar[f]))))
     return "\n".join(lines) + "\n"
 
-def gen_bc(values):
+def gen_b():
     n = random.randint(2, 4); names = ["n%d" % i for i in range(n)]
     lines = []
     for f in names:
-        g = random.choice(names); k = random.random()
-        if values and k < 0.5: lines.append("%s : %s" % (f, g) if k < 0.3 else "%s : %s + 1" % (f, g))
-        elif k < 0.75: lines.append("%s : a ? %s a" % (f, g))
-        else: lines.append("%s : a b ? %s a b" % (f, g))       # アリティの合わない呼びが混ざる
+        g = random.choice(names)
+        lines.append("%s : a ? %s a" % (f, g) if random.random() < 0.6 else "%s : a b ? %s a b" % (f, g))      # アリティの合わない呼びが混ざる
     lines.append("%s 1" % random.choice(names))
+    return "\n".join(lines) + "\n"
+
+def gen_c():
+    nl, nv = random.randint(1, 3), random.randint(1, 3)
+    ls = ["l%d" % i for i in range(nl)]; vs = ["v%d" % i for i in range(nv)]; ar = {f: random.randint(1, 2) for f in ls}
+    lines = []
+    for f in ls:
+        ps = ["a", "b"][:ar[f]]; g = random.choice(ls)
+        lines.append("%s : %s ? %s %s" % (f, " ".join(ps), g, " ".join(random.choice(ps + ["1", "2.5"] + vs) for _ in range(ar[g]))))
+    for v in vs:
+        k = random.random(); g = random.choice(ls)
+        lines.append("%s : %s" % (v, random.choice(vs)) if k < 0.4 else "%s : %s + 1" % (v, random.choice(vs)) if k < 0.6 else "%s : %s %s" % (v, g, " ".join(random.choice(["1", "2.5"] + vs) for _ in range(ar[g]))))
+    f = random.choice(ls); lines.append("%s %s" % (f, " ".join(random.choice(["1", "2.5"]) for _ in range(ar[f]))))
     return "\n".join(lines) + "\n"
 
 def run(gen, count):
@@ -57,10 +68,10 @@ def run(gen, count):
     return st, ex
 
 sa, _ = run(gen_a, 300)
-sb, _ = run(lambda: gen_bc(False), 300)
-sc, _ = run(lambda: gen_bc(True), 300)
+sb, _ = run(gen_b, 300)
+sc, _ = run(gen_c, 300)
 print("(a) アリティの合った関数の輪:", sa)
 print("(b) アリティの合わない呼びを含む:", sb)
 print("(c) 値の定義が輪に混ざる:", sc)
-if sa["order_dep"] or sa["not_fixed"] or sb["not_fixed"] or sc["not_fixed"]: print("NG"); sys.exit(1)
-print("全部 ok((a) は順に依らない。(b)(c) は報告)")
+if sa["order_dep"] or sa["not_fixed"] or sb["not_fixed"] or sc["order_dep"] or sc["not_fixed"]: print("NG"); sys.exit(1)
+print("全部 ok((a)(c) は順に依らない。(b) は報告)")

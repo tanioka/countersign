@@ -166,15 +166,34 @@ class Checker:
         if not sub.exports:                            # 公開の無いファイルは、自分が取り込んだ名前も見せる
             for n, t in sub.imported.items(): self.imported.setdefault(n, t)
 
+    def initial_guess(self, name):
+        """Pass 1a の最初の仮置き(Typing.lean J.2 の「全部 A」にあたる最上位): 関数は Lambda(アリティは構文で決まり、返値だけ未確定)、値は Atom。"""
+        rhs = self.defs[name]
+        if rhs[0] == "lam":
+            obs = self.obs(name)
+            return Fn(name, tuple(obs[i] if i < len(obs) else ANY for i in range(len(rhs[1]))), (), ANY)
+        return ANY
+
+    def compute_def(self, name):
+        """名前 name の型を、ほかの名前は今の見積もり(self.est)で読んで 1 回だけ決める(再帰して読まない)。"""
+        saved, saved_res = self.where, self.resolving
+        self.where = name; self.resolving = {name}; self.cur = name
+        try:
+            rhs = self.defs[name]
+            return self.lam_type(name, rhs, Scope()) if rhs[0] == "lam" else self.type_of(rhs, Scope())
+        finally:
+            self.where, self.resolving = saved, saved_res
+
     def def_type(self, name):
         if name in self.types: return self.types[name]
+        if self.jac:                                    # 解いている最中: 見積もりを読む(読む順に依らない不動点の反復。step)
+            if name != self.cur and not getattr(self, "lift_depth", 0) and self.defs[name][0] != "lam" and self.defs[self.cur][0] != "lam":
+                self.refs.setdefault(self.cur, set()).add(name)        # 値から値への辺(値の輪の検出用)
+            elif name == self.cur and not getattr(self, "lift_depth", 0) and self.defs[name][0] != "lam":
+                self.refs.setdefault(self.cur, set()).add(name)
+            return self.est[name]
         if name in self.resolving:
-            rhs = self.defs[name]
-            if rhs[0] == "lam":                         # `?` があれば Lambda(アリティも構文で決まる)。返値だけが未確定
-                obs = self.obs(name)
-                return Fn(name, tuple(obs[i] if i < len(obs) else ANY for i in range(len(rhs[1]))), (), ANY)
-            if not getattr(self, "lift_depth", 0): self.note("name-cycle", f"{name} の定義が自分自身へ戻る輪に値の定義を含む(種類が決まらない)")
-            return ANY                                  # 値としての自己参照・相互参照は Atom へ倒す
+            return self.initial_guess(name)
         self.resolving.add(name)
         saved = self.where; self.where = name
         try:
@@ -212,14 +231,44 @@ class Checker:
         return Fn(name, tuple(ptypes), (), ret)
 
     # --- 全体を解く: Pass 1b を不動点で ---
+    def value_cycles(self):
+        """値の定義だけを辿る輪(自己参照・相互参照)を見つけて、Atom に倒したと知らせる(従来は読む途中で戻ったときに知らせていた)。"""
+        for name in self.order:
+            seen, stack = set(), [name]
+            hit = False
+            while stack and not hit:
+                x = stack.pop()
+                for y in self.refs.get(x, ()):
+                    if y == name: hit = True; break
+                    if y not in seen: seen.add(y); stack.append(y)
+            if hit:
+                saved = self.where; self.where = name
+                self.note("name-cycle", f"{name} の定義が自分自身へ戻る輪に値の定義を含む(種類が決まらない)")
+                self.where = saved
+
+    jac = False; cur = None
+
     def obs(self, name):
         """名前の仮引数の観測(食い違った CONFLICT は、使うときは Atom へ倒す)。"""
         return [ANY if t == CONFLICT else t for t in self.params.get(name, [])]
 
     def step(self):
         """Pass 1b の 1 回の更新 F: 今の観測 self.params のもとで全部を型付けし、呼び出しサイトの実引数から新しい観測を作って返す(self.params は変えない)。"""
-        self.callsites, self.types, self.diags = {}, {}, list(self.import_diags)
-        for name in self.order: self.def_type(name)
+        self.types = {}
+        self.est = {n: self.initial_guess(n) for n in self.order}
+        self.jac = True; self.cur = None
+        try:
+            for _ in range(len(self.order) + 3):          # 全部を最上位に仮置きして、全部を読み直す(Lean の gIter)。1 巡で変わらなければ不動点
+                self.callsites, self.diags, self.refs = {}, list(self.import_diags), {}
+                changed = False
+                for name in self.order:
+                    t = self.compute_def(name)
+                    if t != self.est[name]: self.est[name] = t; changed = True
+                if not changed: break
+        finally:
+            self.jac = False
+        self.types = dict(self.est)
+        self.value_cycles()
         self.where = "<top>"
         for node in self.nodes:
             d = node[1] if node[0] == "export" else node
