@@ -1509,6 +1509,8 @@ class FnGen:
                 if self.prog.kind(a, self.kinds) != "R" and not (sa[0] == "bin" and sa[1] == "~" and self.prog.range_values(sa) is not None):
                     raise AsmError("%s: 規則を受ける仮引数に、別の種類の物が渡されています" % f)
                 self.load_rule(a, "x0", "x1", "x2")
+                if self.prog.void_rule:
+                    self.prog.trap_used = True; self.niche(); self.emit("cmp x0, x13"); self.emit("b.eq .Ltrap", "`!_` の規則を引数に渡す形はまだ(罠)")
                 ts = [self.tmp() for _ in range(3)]
                 for t, rg, nm in zip(ts, ("x0", "x1", "x2"), ("start", "step", "end")): self.emit("str %s, [x29, #%d]" % (rg, self.off(t)), "実引数(%s)" % nm)
                 tmps.append((ts, kd))
@@ -1733,7 +1735,9 @@ class FnGen:
     def call_unit(self, rk, args, gws):
         """呼びの引数が `__` だったときの結果。規則(R)は `__` を運べないので、引数が溢れの `__` にだけなりうる(溢れ以外の理由では `__` にならない)なら、
         溢れた時点で止める(ovf_guard と同じ。非答え)。そうでなければ従来どおり unit_result(R は断り)。"""
-        if rk == "R" and not gws and not any(self.mu_hard(a) for a in args):
+        if rk == "R" and self.prog.void_rule:
+            self.niche("x0"); self.emit("mov x1, #0"); self.emit("mov x2, #0", "`!_` の規則 {niche, 0, 0}")
+        elif rk == "R" and not gws and not any(self.mu_hard(a) for a in args):
             self.prog.trap_used = True; self.emit("b .Ltrap", "溢れで __ になった引数は、規則を返す呼びでは受けられない")
         else: self.unit_result(rk)
 
@@ -1840,6 +1844,8 @@ class FnGen:
         """要素数 = (end - start) / step + 1(向きが逆なら 0)を dst へ。x13 を壊す。溢れは罠(Int の算術)。"""
         self.prog.trap_used = True
         zero, one, done = self.prog.label(), self.prog.label(), self.prog.label()
+        if self.prog.void_rule:
+            self.niche(); self.emit("cmp %s, x13" % rs); self.emit("b.eq %s" % zero, "`!_` の規則(起点が niche)は 0 個")
         if self.prog.open_used:
             self.niche(); self.emit("cmp %s, x13" % re_); self.emit("b.eq .Ltrap", "終端の無い規則は数えられない(実装の選択: 罠)")
             self.emit("cbz %s, .Ltrap" % rst, "等比の規則も数えられない")
@@ -1864,9 +1870,13 @@ class FnGen:
             if self.prog.kind(x, self.kinds) != "I": raise AsmError("規則の端点・歩幅は Int だけです")
             if self.mu_hard(x): raise AsmError("端点・歩幅が `__` になりうる規則はまだ出せません(`__` の規則は起点を niche にして運ぶ)")
         cells = []
+        vl = self.prog.label() if self.prog.void_rule else None
         for x in (lo, step, hi):
             if x is None: continue
-            self.gen(x); self.ovf_guard(x); t = self.tmp(); cells.append(t)
+            self.gen(x)
+            if vl is not None and self.mu(x): self.niche(); self.emit("cmp x0, x13"); self.emit("b.eq %s" % vl, "端点・歩幅が `!_` なら、規則全体が `!_`(零射)")
+            else: self.ovf_guard(x)
+            t = self.tmp(); cells.append(t)
             self.emit("str x0, [x29, #%d]" % self.off(t))
         self.emit("ldr x9, [x29, #%d]" % self.off(cells[0]), "start")
         self.emit("ldr x12, [x29, #%d]" % self.off(cells[-1]), "end")
@@ -1879,6 +1889,11 @@ class FnGen:
             self.emit("csel x10, x10, x14, le", "昇順なら +1、降順なら −1(歩幅に畳む)")
         self.emit_rule_count("x9", "x10", "x12", "x14")
         self.emit("mov x0, x9"); self.emit("mov x1, x10"); self.emit("mov x2, x12")
+        if vl is not None:
+            dn = self.prog.label()
+            self.emit("b %s" % dn); self.lines.append("%s:" % vl)
+            self.niche("x0"); self.emit("mov x1, #0"); self.emit("mov x2, #0", "`!_` の規則 {niche, 0, 0}")
+            self.lines.append("%s:" % dn)
         for _ in cells: self.free()
 
     def gen_open_rule(self, n, r0, r1, r2):
@@ -1889,8 +1904,12 @@ class FnGen:
             if self.prog.kind(x, self.kinds) != "I": raise AsmError("規則の端点・歩幅は Int だけです")
             if self.mu_hard(x): raise AsmError("端点・歩幅が `__` になりうる規則はまだ出せません(`__` の規則は起点を niche にして運ぶ)")
         cells = []
+        vl = self.prog.label() if self.prog.void_rule else None
         for x in (n[2], n[3]):
-            self.gen(x); self.ovf_guard(x); t = self.tmp(); cells.append(t)
+            self.gen(x)
+            if vl is not None and self.mu(x): self.niche(); self.emit("cmp x0, x13"); self.emit("b.eq %s" % vl, "端点・歩幅が `!_` なら、規則全体が `!_`(零射)")
+            else: self.ovf_guard(x)
+            t = self.tmp(); cells.append(t)
             self.emit("str x0, [x29, #%d]" % self.off(t))
         self.emit("ldr x9, [x29, #%d]" % self.off(cells[0]), "start")
         self.emit("ldr x10, [x29, #%d]" % self.off(cells[1]), "歩幅(等比なら比)")
@@ -1901,6 +1920,11 @@ class FnGen:
         for _ in cells: self.free()
         for r, src in ((r0, "x9"), (r1, "x14"), (r2, "x12")):
             if r != src: self.emit("mov %s, %s" % (r, src))
+        if vl is not None:
+            dn = self.prog.label()
+            self.emit("b %s" % dn); self.lines.append("%s:" % vl)
+            self.niche(r0); self.emit("mov %s, #0" % r1); self.emit("mov %s, #0" % r2, "`!_` の規則 {niche, 0, 0}")
+            self.lines.append("%s:" % dn)
         self.prog.open_used = True
 
     def load_rule(self, n, r0, r1, r2):
@@ -1936,12 +1960,14 @@ class FnGen:
         if self.mu(r):
             self.niche(); self.emit("cmp x11, x13"); self.emit("b.eq %s" % unit, "添字が __ なら __")
         ll = self.strip(l)
-        if self.is_call(ll) or ll[0] == "cases":
+        if not (ll[0] == "id" or self.prog.range_values(ll) is not None):      # 規則の式の計算(積の x11・x12 など)が添字の x11 を壊す。名前・字面の範囲のほかは預ける
             t = self.tmp(); self.emit("str x11, [x29, #%d]" % self.off(t), "添字を預ける")
             self.load_rule(l, "x9", "x10", "x12")
             self.emit("ldr x11, [x29, #%d]" % self.off(t)); self.free()
         else:
             self.load_rule(l, "x9", "x10", "x12")
+        if self.prog.void_rule:
+            self.niche(); self.emit("cmp x9, x13"); self.emit("b.eq %s" % unit, "`!_` の規則(起点が niche)の取り出しは `!_`")
         lo_ = self.strip(l)
         if lo_[0] == "id" and lo_[1] in self.prog.orules and lo_[1] not in self.slot: lo_ = self.prog.orules[lo_[1]]
         if lo_[0] == "bin" and lo_[1] in ("~+", "~*"):             # 字面で終端の無い規則: 開いた取り出しだけ
@@ -2590,6 +2616,26 @@ class FnGen:
         if self.is_call(n): return self.gen_call(n)
         raise AsmError("この形の文字はまだ出せません(文字の字面・`s ' i`・比較だけ)")
 
+    def gen_str_eq(self, operands, false_label):
+        """文字列どうしの `=`(条件の位置だけ): 長さが同じで、文字が全部同じなら成り立つ。外れたら false_label へ。
+        文字列は {ptr, len}(len は文字の数。文字の幅は CW byte)。値として使う形(成り立てば左の文字列、外れれば `__`)はまだ出さない。"""
+        self._gen_any(operands[0], False, "S")
+        tp, tl = self.tmp(), self.tmp()
+        self.emit("str x0, [x29, #%d]" % self.off(tp), "左の文字列の番地")
+        self.emit("str x1, [x29, #%d]" % self.off(tl), "左の文字列の長さ")
+        self._gen_any(operands[1], False, "S")
+        self.emit("ldr x9, [x29, #%d]" % self.off(tp)); self.emit("ldr x10, [x29, #%d]" % self.off(tl))
+        self.emit("cmp x10, x1"); self.emit("b.ne %s" % false_label, "長さが違えば外れ")
+        loop, ok = self.prog.label(), self.prog.label()
+        self.lines.append("%s:" % loop)
+        self.emit("cbz x10, %s" % ok, "全部同じなら成り立つ")
+        self.emit("ldrb w11, [x9]" if CW == 1 else "ldr w11, [x9]"); self.emit("ldrb w12, [x0]" if CW == 1 else "ldr w12, [x0]")
+        self.emit("cmp w11, w12"); self.emit("b.ne %s" % false_label, "文字が違えば外れ")
+        self.emit("add x9, x9, #%d" % CW); self.emit("add x0, x0, #%d" % CW); self.emit("sub x10, x10, #1")
+        self.emit("b %s" % loop)
+        self.lines.append("%s:" % ok)
+        self.free(); self.free()
+
     def gen_cmp(self, c, false_label):
         """比較。false_label があれば条件として(外れたらそこへ飛ぶ)、無ければ値として
         (成り立てば最後の比較の左の項、外れれば `__`。処理系と同じ)。`__` の項があれば外れ。
@@ -2609,6 +2655,8 @@ class FnGen:
                 for _ in vals: self.free()
                 return
         ck = kinds[0]
+        if ck == "S" and all(k == "S" for k in kinds) and len(operands) == 2 and ops[0] in ("=", "==") and false_label is not None:
+            return self.gen_str_eq(operands, false_label)
         if ck not in ("I", "C") or any(k != ck for k in kinds):
             raise AsmError("比較できるのは Int 同士か文字同士だけです(リスト・文字列の比べや、種類の違う物の比べはまだ出せません)")
         isc = ck == "C"
@@ -2721,12 +2769,19 @@ class FnGen:
         if PEEP[0] and os.environ.get("SIGN_PEEP", "1") != "0":
             import sign_opt
             out = sign_opt.optimize(out)          # 制御フロー解析・共通部分式・デッドコード・ループ不変式・割り付け、そのあと窓の置き換え
+        if self.name in getattr(self.prog, "deep_check", ()) and not self.sret and self.name not in self.prog.flagfns and self.name not in self.prog.maskfns \
+                and any(l_.startswith("\tbl ") for l_ in lines):
+            # 入れ子の深さの上限(value_spec V10): スタックの残りが少なければ、この呼び出しは `!_` と information(SIGSEGV に頼らない)。入口(フレームを積む前)で sp を限界と比べる
+            i_ = next((k for k, l_ in enumerate(out) if l_ == "%s:" % label), 0)
+            out[i_ + 1:i_ + 1] = ["\tmov x9, sp  // 深さの上限の検査(V10)", "\tadrp x10, _sign_stack_limit", "\tadd x10, x10, :lo12:_sign_stack_limit", "\tldr x10, [x10]",
+                                 "\tcmp x9, x10", "\tb.lo _sign_deep"]
+            self.prog.deep_used = True
         return out
 
 
 IMPORT_DIR = [None]      # `f`@~ の相対パスの基準(読み込んだ原文のあるディレクトリ。無ければカレント)
 
-def expand_imports(nodes, seen=None, stack=()):
+def expand_imports(nodes, seen=None, stack=(), _nested=False):
     """最上位の `path`@~(importspread)を、そのファイルの定義に置き換える(interpreter の import_file と同じ解き方: パスは取り込む側のファイルからの相対)。
     取り込まれたファイルの最上位は定義だけ(式があれば断る: 取り込み時の副作用を出せない)。公開の印 `#` があるファイルは、
     撒かれるのが公開の名前だけになるので、まだ出せない。同じファイルは 1 回だけ。名前が既にある定義と重なれば断る。"""
@@ -2747,9 +2802,10 @@ def expand_imports(nodes, seen=None, stack=()):
         old = IMPORT_DIR[0]; IMPORT_DIR[0] = os.path.dirname(full)
         try:
             sub = sign_interp.parse_source(open(full, encoding="utf-8").read())
-            if any(x[0] == "export" or (x[0] == "def" and len(x) > 3 and x[3]) for x in sub): raise AsmError("%s: 公開の印 `#` があるファイルの取り込みはまだ出せません(撒かれるのが公開の名前だけになる)" % p[1])
-            sub = expand_imports(sub, seen, stack + (full,))
+            if any(x[0] == "def" and len(x) > 3 and x[3] for x in sub): raise AsmError("%s: 取り込むファイルの定義に、まだ出せない印があります" % p[1])
+            sub = expand_imports(sub, seen, stack + (full,), _nested=True)
         finally: IMPORT_DIR[0] = old
+        sub = hide_private(sub, p[1], full)
         bad = [x for x in sub if x[0] != "def"]
         if bad: raise AsmError("%s: 取り込むファイルの最上位に式があります(取り込み時の副作用はまだ出せません)" % p[1])
         out.extend(sub)
@@ -2765,6 +2821,50 @@ def expand_imports(nodes, seen=None, stack=()):
             raise AsmError("同じ名前の定義が重なっています(%s)。前の定義が値、または間に最上位の式があるので、どちらが勝つかをまだ決められません" % nm)
         drop.update(ps[:-1])
     if drop: out = [n for i, n in enumerate(out) if i not in drop]
+    if not _nested: out = [n[1] if n[0] == "export" else n for n in out]          # 実行する本体の公開の印は、定義と同じ(公開が効くのは取り込まれたときだけ)
+    return out
+
+
+_PRIV = [0]
+
+def hide_private(sub, shown, full):
+    """取り込んだファイルに公開の印 `#` の定義があれば、撒かれるのは公開の名前だけ(処理系の import: env.exports。execution_model.md §2)。
+    公開でない最上位の名前(そのファイルの中だけで使う)は、取り込む側と重ならない別の名前へ付け替える(`名前$p<番号>`)。
+    公開の定義は印を外して残す。付け替えで内側の定義・仮引数が同じ名前を隠す形は、まだ出せない。"""
+    if not any(x[0] == "export" for x in sub): return sub
+    exported = {x[1][1] for x in sub if x[0] == "export" and x[1][0] == "def"}
+    if any(x[0] == "export" and x[1][0] != "def" for x in sub): raise AsmError("%s: 公開の印が定義でない物にあります" % shown)
+    plain = [x[1] if x[0] == "export" else x for x in sub]
+    priv = {x[1] for x in plain if x[0] == "def" and isinstance(x[1], str)} - exported
+    if not priv: return plain
+    _PRIV[0] += 1
+    m = {nm: "%s$p%d" % (nm, _PRIV[0]) for nm in priv}
+    def pnames(ps):
+        o = set()
+        for q in ps:
+            if q[0] == "name": o.add(q[1])
+            elif q[0] == "destr":
+                o |= {x for x in q[1] if isinstance(x, str)}
+                if isinstance(q[2], str): o.add(q[2])
+                if len(q) > 4: o |= {x for x in q[4] if isinstance(x, str)}
+        return o
+    def rn(x, mp, top=False):
+        if isinstance(x, tuple):
+            if len(x) == 2 and x[0] == "id": return ("id", mp.get(x[1], x[1]))
+            if x and x[0] == "lam":
+                bound = pnames(x[1])
+                if bound & set(mp): raise AsmError("%s: 公開でない名前(%s)を仮引数が隠しています。付け替えがまだ出せません" % (shown, ", ".join(sorted(bound & set(mp)))))
+                return ("lam", rn(x[1], mp), rn(x[2], mp)) + tuple(rn(y, mp) for y in x[3:])
+            if x and x[0] == "def" and not top and isinstance(x[1], str) and x[1] in mp: raise AsmError("%s: 公開でない名前(%s)を内側の定義が隠しています。付け替えがまだ出せません" % (shown, x[1]))
+            return tuple(rn(y, mp) for y in x)
+        if isinstance(x, list): return [rn(y, mp) for y in x]
+        return x
+    out = []
+    for x in plain:
+        if x[0] == "def" and isinstance(x[1], str) and x[1] in m:
+            out.append(("def", m[x[1]]) + tuple(rn(y, m) for y in x[2:]))
+        elif x[0] == "def": out.append(("def", x[1]) + tuple(rn(y, m) for y in x[2:]))
+        else: out.append(x)
     return out
 
 
@@ -2830,6 +2930,7 @@ def rename_shadowing_params(nodes):
 class Program:
     def __init__(self, nodes):
         if any(n[0] == "importspread" for n in nodes): nodes = expand_imports(nodes)
+        else: nodes = [n[1] if n[0] == "export" else n for n in nodes]          # 実行する本体の公開の印は、定義と同じ
         nodes = rename_shadowing_params(nodes)                 # 仮引数が定義と同じ名前なら、仮引数を付け替える(asm は名前だけで呼びか器かを決めるため。処理系は仮引数が勝つ)
         if FUSE[0]:
             import sign_fuse
@@ -2874,6 +2975,7 @@ class Program:
         self.maybe_ids = set() # 先に評価した葉の名前のうち、答えが `__` になりうる物
         self.defaults = {}     # 名前 → (既定値の無い仮引数の数, [(仮引数の名前, 既定値の式)]) 既定値のある関数。呼び出しの側で、足りない実引数を既定値の式で埋める(expand_defaults)
         self.orules = {}       # 名前 → 右辺(終端の無い規則 `[a ~+ s]` `[a ~* k]` の定義。端点・歩幅が定数 Int のものだけ。使う所で式を置き直す)
+        self.void_rule = False # `!_` の規則を運ぶ形がある(scan_void_rules)
         self.open_used = False # 終端の無い規則を作る式がある(実装の選択。運び方は gen_open_rule の注)
         self.dyn = {}          # 名前 → 右辺(値が計算で決まる Int の定義。起動で一度だけ評価して .bss のセル _sign_dyn_名前 に置く)
         self.trap_used = False
@@ -5359,6 +5461,30 @@ class Program:
                 if any(self.may_single(v, sp, relay) for v in self.ret_nodes(body)): sp.add(f); changed = True
         return sp
 
+    def scan_void_rules(self):
+        """`!_` の規則(質問書 12): 規則の端点・歩幅が溢れで `!_` になりうる式 `[a ~ b]`、`!_` を返しうる呼びで規則を返す式があるか。
+        あれば規則の値は「起点が niche の 3 つ組 {niche, 0, 0}」を `!_` の規則として運び(operator_table: `~` は両辺の `!_` が零射 = 全体が `!_`)、
+        数える(0 個)・取り出す(`!_`)側が見る。引数に渡す・返す・印字するときは、これまでどおり罠(誤答にしない)。"""
+        found = [False]
+        def walk(x):
+            if found[0]: return
+            if isinstance(x, tuple) and x:
+                if x[0] == "bin" and x[1] in ("~", "~+", "~*") and len(x) == 4:
+                    try:
+                        if any(self.maybe(y) for y in (x[2], x[3])) : found[0] = True; return
+                    except Exception: pass
+                if x[0] == "seq" and isinstance(x[1], list) and x[1] and x[1][0][:1] == ("id",) and self.retk.get(x[1][0][1]) == "R":
+                    try:
+                        if any(self.maybe(a) for a in x[1][1:]): found[0] = True; return
+                    except Exception: pass
+                for y in x: walk(y)
+            elif isinstance(x, list):
+                for y in x: walk(y)
+        for f, b in self.live_bodies(): walk(b)
+        for n in self.nodes:
+            if n[0] != "def": walk(n)
+        return found[0]
+
     def solve_maybe(self):
         """関数ごとの『返値が __ になりうるか』を、動かなくなるまで繰り返して決める(増える一方なので止まる)。"""
         for ovf, tab in ((False, self.ret_maybe_h), (True, self.ret_maybe)):
@@ -6116,10 +6242,30 @@ class Program:
             self.__dict__.update(sub.__dict__)
             return out
         self.check_dyn()
+        self.void_rule = self.scan_void_rules()
         self.sp = self.single_possible()
         ex0 = [n for n in self.nodes if n[0] not in ("def", "dyn")]
         if ex0 and self.kind(ex0[-1], {}) == "L" and self.may_single(ex0[-1], self.sp, self.relay) and self.flag_ok(ex0[-1]):
             self.flagged = True; self.flagfns.add("_.main")      # 1 個だけ残ると Int になりうる結果を、旗(x2)つきで印字する
+        self.deep_check = set()
+        if target == "linux" and DEPTH_CHECK[0] and PAR[0] is None:
+            edges = {}
+            def refs(x, out):
+                if isinstance(x, tuple):
+                    if len(x) == 2 and x[0] == "id" and x[1] in self.live: out.add(x[1])
+                    for y in x: refs(y, out)
+                elif isinstance(x, list):
+                    for y in x: refs(y, out)
+            for f, b in self.live_bodies(): edges[f] = set(); refs(b, edges[f])
+            def reach(f):
+                seen, work = set(), list(edges.get(f, ()))
+                while work:
+                    g = work.pop()
+                    if g in seen: continue
+                    seen.add(g); work.extend(edges.get(g, ()))
+                return seen
+            for f in edges:
+                if f in reach(f) and self.retk.get(f) == "I": self.deep_check.add(f)
         out = ["// Sign — AArch64 (AAPCS64)"]
         if source: out.append("// source: %s" % source)
         out += ["\t.text", ""]
@@ -6730,6 +6876,7 @@ def add_realdev(text):
     return text.rstrip("\n") + "\n" + "\n".join(ro + bss) + "\n"
 
 
+_DEEP_MSG = "information resource-depth: the nesting depth reached the limit (the stack is nearly used up), so this call is !_ (value_spec V10, V11). Make the recursion a tail call to use no depth\n".encode("ascii")
 _SEGV_MSG = b"sign: stopped by a memory fault (deep recursion used up the stack, or a bad address)\n"
 
 
@@ -6739,6 +6886,7 @@ def generate(nodes, target="bare", *a, **k):
     text = _generate_core(nodes, target, *a, **k)
     if target != "linux" or "\n_start:\n" not in text: return text
     n = len(_SEGV_MSG)
+    deep = "_sign_deep" in text
     code = ["", "\t.text", "// SIGSEGV の受け皿(代替スタック 16 KiB)", "_sign_segv_init:",
             "\tadrp x9, _sign_altstk", "\tadd x9, x9, :lo12:_sign_altstk", "\tadrp x10, _sign_ss", "\tadd x10, x10, :lo12:_sign_ss",
             "\tstr x9, [x10]", "\tstr xzr, [x10, #8]", "\tmov x11, #16384", "\tstr x11, [x10, #16]",
@@ -6750,6 +6898,23 @@ def generate(nodes, target="bare", *a, **k):
             "\tmov x0, #1", "\tmov x8, #94  // exit_group", "\tsvc #0", "",
             "\t.section .rodata", "_sign_segv_msg:", "\t.byte " + ", ".join(str(b) for b in _SEGV_MSG), "\t.text", "",
             "\t.section .bss", "\t.balign 16", "_sign_altstk:", "\t.skip 16384", "_sign_ss:", "\t.skip 24", "_sign_sa:", "\t.skip 32", ""]
+    if deep:
+        m = len(_DEEP_MSG)
+        code += ["\t.text", "// 入れ子の深さの上限(V10): 起動で限界の番地を決める。RLIMIT_STACK(上限 64 MiB)から余白を引いた分まで使う",
+                 "_sign_depth_init:", "\tsub sp, sp, #16", "\tstr xzr, [sp]", "\tmov x0, #3  // RLIMIT_STACK", "\tmov x1, sp", "\tmov x8, #163  // getrlimit", "\tsvc #0",
+                 "\tldr x9, [sp]", "\tadd sp, sp, #16", "\tcbnz x0, .Ldepth_off  // 上限が分からなければ検査しない(限界 0)", "\tcbz x9, .Ldepth_off",
+                 "\tmov x10, #0x4000000  // 64 MiB", "\tcmp x9, x10", "\tcsel x9, x10, x9, hi",
+                 "\tlsr x11, x9, #2", "\tmov x12, #0x40000  // 余白 256 KiB(小さい上限では 1/4)", "\tcmp x11, x12", "\tcsel x11, x12, x11, hi",
+                 "\tcmp x9, x11", "\tb.ls .Ldepth_off  // 上限が余白より小さければ検査しない", "\tsub x9, x9, x11", "\tmov x12, sp", "\tsub x12, x12, x9", "\tb .Ldepth_set", ".Ldepth_off:", "\tmov x12, xzr", ".Ldepth_set:",
+                 "\tadrp x13, _sign_stack_limit", "\tadd x13, x13, :lo12:_sign_stack_limit", "\tstr x12, [x13]", "\tret",
+                 "_sign_deep:  // 入口で限界を越えた: 知らせを 1 回だけ出して `!_` を返す(呼び元の x30 はそのまま)",
+                 "\tstp x29, x30, [sp, #-16]!", "\tadrp x9, _sign_deep_told", "\tadd x9, x9, :lo12:_sign_deep_told", "\tldrb w10, [x9]", "\tcbnz w10, .Ldeep_done",
+                 "\tmov w10, #1", "\tstrb w10, [x9]", "\tmov x0, #2", "\tadrp x1, _sign_deep_msg", "\tadd x1, x1, :lo12:_sign_deep_msg",
+                 "\tmov x2, #%d" % m, "\tmov x8, #64  // write", "\tsvc #0",
+                 ".Ldeep_done:", "\tldp x29, x30, [sp], #16", "\tmovz x0, #0x8000, lsl #48  // !_", "\tret", "",
+                 "\t.section .rodata", "_sign_deep_msg:", "\t.byte " + ", ".join(str(b) for b in _DEEP_MSG), "\t.text", "",
+                 "\t.section .bss", "\t.balign 8", "_sign_stack_limit:", "\t.skip 8", "_sign_deep_told:", "\t.skip 8", ""]
+        text = text.replace("\n_start:\n", "\n_start:\n\tbl _sign_depth_init\n", 1)
     text = text.replace("\n_start:\n", "\n_start:\n\tbl _sign_segv_init\n", 1)
     return text.rstrip("\n") + "\n" + "\n".join(code) + "\n"
 
@@ -6782,6 +6947,7 @@ USAGE = """使い方: python3 sign.py --asm 〈プログラム.sn〉 [--target=b
 
 
 STRICT = [False]
+DEPTH_CHECK = [os.environ.get("SIGN_DEPTH_CHECK", "1") != "0"]      # 再帰する Int の関数の入口で、スタックの残りを見る(V10 の深さの上限)
 
 def _static_nonvoid(x):
     """旧 AST の式 x が、実行時に単位にならないと静的に言える(整数の字面とその符号・括り・`+ - *`)。"""
