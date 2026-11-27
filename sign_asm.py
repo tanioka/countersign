@@ -5220,6 +5220,7 @@ class Program:
             if self.nested_values(n) is not None:
                 self.nest_mark_lit(n)
                 return "N"
+            if self.prod_flat(n, env, True): return self.kind(("seq", n[1]), env)
             raise AsmError("`[a , b]`(積)で出せるのは、Int の字面・リストの字面・文字列の字面を並べた形だけです")
         if k == "seq":
             if n[1][0][0] == "id" and n[1][0][1] in self.fns: return self.retk.get(n[1][0][1], "?")
@@ -5927,6 +5928,43 @@ class Program:
         for n in self.nodes:                     # 節の本体と bodies は同じ物でなければならない(lift_args などが同一性で見る)
             if n[0] == "def" and n[1] in self.bodies and n[2][0] == "lam": self.bodies[n[1]] = n[2][2]
 
+    def prod_flat(self, n, env, lenient=False):
+        """積 `a , b , …` の要素がどれも Int か、`x~` の撒きなら、並置 `a b …` と同じ(Int の要素は 1 個ずつ並ぶ。撒きは相手の要素を並べる)。
+        要素にリスト・文字列・入れ子が混ざる積は入れ子になるので、ここでは扱わない(None)。"""
+        if n[0] != "prod" or len(n[1]) < 2: return False
+        if self.list_values(n) is not None or self.nested_values(n) is not None: return False
+        h = self.strip(n[1][0])
+        if h[0] == "id" and h[1] in self.fns: return False
+        for it in n[1]:
+            if it[0] == "post" and it[1] == "~": continue
+            it = self.strip(it)
+            if it[0] == "post" and it[1] == "~": continue
+            kd = self.kind(it, env)
+            if kd != "I" and not (lenient and kd == "?"): return False      # lenient: 種類を決めている途中の仮引数は、演算に使われるなら Int(決まったあとの prod_to_seq が確かめ直す)
+        return True
+
+    def prod_to_seq(self):
+        """Int の要素と撒きだけの積 `n , (f x)~` を、並置 `n (f x)~` に直す(意味は同じ。並置の道は組み立てて返せる)。種類が決まったあとに呼ぶ。"""
+        def hit(x, env):
+            if isinstance(x, tuple) and x:
+                if x[0] == "prod" and self.prod_flat(x, env): return True
+                return any(hit(y, env) for y in x if isinstance(y, (tuple, list)))
+            if isinstance(x, list): return any(hit(y, env) for y in x if isinstance(y, (tuple, list)))
+            return False
+        def walk(x, env):
+            if isinstance(x, tuple) and x:
+                t = tuple(walk(y, env) if isinstance(y, (tuple, list)) else y for y in x)
+                if x[0] == "prod" and self.prod_flat(x, env): return ("seq", t[1])
+                return t
+            if isinstance(x, list): return [walk(y, env) if isinstance(y, (tuple, list)) else y for y in x]
+            return x
+        envs = {f: dict(zip(self.fns[f], self.pkind[f])) for f in self.fns}
+        env_of = lambda n: envs.get(n[1], {}) if n[0] == "def" else {}
+        if not (any(hit(b, envs[f]) for f, b in self.bodies.items() if f in envs) or any(hit(n, env_of(n)) for n in self.nodes)): return
+        self.nodes = [walk(n, env_of(n)) for n in self.nodes]
+        for n in self.nodes:
+            if n[0] == "def" and n[1] in self.bodies and n[2][0] == "lam": self.bodies[n[1]] = n[2][2]
+
     def fold_nest_pick(self):
         """`((x 2) 3) ' 0` のように、中身が全部 `__` にならない入れ子の並びの字面から、定数の添字で入れ子の並びを選ぶ形は、選んだ内側の並び `(x 2)` に
         置き換える(位置は実行時にずれないので静的に決まる)。結果は普通の並びの字面になり、返値の位置・引数の位置など、並びの字面が使える所で使える。
@@ -6188,6 +6226,7 @@ class Program:
             self.__dict__.update(sub.__dict__)
             return out
         self.fold_nest_pick()
+        self.prod_to_seq()
         nn = self.inline_wide_dyn()
         if nn is None: nn = self.lift_args()
         if nn is not None:
