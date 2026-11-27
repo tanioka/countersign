@@ -1,10 +1,10 @@
 """make.py — src/*.sn を、3 通りの最適化で --target=linux の静的 ELF にする(Pi 4 で run_on_pi.py が測る)。
-  _o = --no-opt(最適化を全部切る)  _n = 最適化あり・命令の並べ替えだけ切る(SIGN_SCHED=0)  _s = 全部あり(既定)
+  _o = --no-opt(最適化を全部切る)  _n = 最適化あり・命令の並べ替えだけ切る(SIGN_SCHED=0)  _s = 全部あり(既定)  _a = 並べ替えを A53 向けの変種にする(SIGN_SCHED_MODEL=a53)
   _n と _s の差が「並べ替えの効果」、_o と _n の差が「並べ替え以外の最適化の効果」。答えは処理系(インタープリタ)で出して expected.json に置く。"""
 import json, os, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 os.makedirs(os.path.join(HERE, "bin"), exist_ok=True)
-VARS = {"o": ([ "--no-opt"], {"SIGN_OPT": "0"}), "n": ([], {"SIGN_SCHED": "0"}), "s": ([], {})}
+VARS = {"o": ([ "--no-opt"], {"SIGN_OPT": "0"}), "n": ([], {"SIGN_SCHED": "0"}), "s": ([], {}), "a": ([], {"SIGN_SCHED_MODEL": "a53"})}
 exp = {}; bad = 0
 for f in sorted(os.listdir(os.path.join(HERE, "src"))):
     if not f.endswith(".sn"): continue

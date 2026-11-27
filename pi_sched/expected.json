@@ -11,6 +11,10 @@
   "stdout": "3333392544834\n",
   "exit": 0
  },
+ "divloop_a": {
+  "stdout": "3333392544834\n",
+  "exit": 0
+ },
  "horner_o": {
   "stdout": "367025\n",
   "exit": 0
@@ -20,6 +24,10 @@
   "exit": 0
  },
  "horner_s": {
+  "stdout": "367025\n",
+  "exit": 0
+ },
+ "horner_a": {
   "stdout": "367025\n",
   "exit": 0
  },
@@ -35,6 +43,10 @@
   "stdout": "17685000000\n",
   "exit": 0
  },
+ "memsum_a": {
+  "stdout": "17685000000\n",
+  "exit": 0
+ },
  "mulchain_o": {
   "stdout": "290032\n",
   "exit": 0
@@ -44,6 +56,10 @@
   "exit": 0
  },
  "mulchain_s": {
+  "stdout": "290032\n",
+  "exit": 0
+ },
+ "mulchain_a": {
   "stdout": "290032\n",
   "exit": 0
  }

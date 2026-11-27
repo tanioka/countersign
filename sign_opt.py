@@ -682,8 +682,13 @@ def promote(fn):
 
 # ---- 命令の並べ替え(ブロックの中の表のスケジューリング) ----
 LAT_LOAD = 4
+def _a53():
+    """SIGN_SCHED_MODEL=a53: Cortex-A53(in-order・2 命令同時発行)向けの変種(実験。既定は従来のまま)。資料(GCC・LLVM の A53 のモデル)の読み 3・乗算 3・除算 8・
+    同時発行の決め(1 サイクル 2 本まで・読み書きは 1 本ずつ・乗算は単独)に合わせる。実機で効くかは pi_sched/ で測る"""
+    import os
+    return os.environ.get("SIGN_SCHED_MODEL", "") == "a53"
 def _lat(i):
-    if i.mn in sign_peep.LOADS or i.mn == "ldr": return LAT_LOAD
+    if i.mn in sign_peep.LOADS or i.mn == "ldr": return 3 if _a53() else LAT_LOAD
     if i.mn in ("mul", "smulh", "umulh", "madd", "msub", "smull", "umull"): return 3
     if i.mn in ("sdiv", "udiv"): return 8
     return 1
@@ -768,6 +773,26 @@ def _sched_seg(fn, a, seg, esc):
     done = [False] * m; ready_at = [0] * m; npred = [len(p) for p in preds]
     cyc = 0; order = []
     avail_ = [i for i in range(m) if npred[i] == 0]
+    if _a53():                                              # 1 サイクルに 2 本まで・読み書きは 1 本・乗算は単独
+        ismul = [seg[i][1].ins.mn in ("mul", "smulh", "umulh", "madd", "msub", "smull", "umull") for i in range(m)]
+        while len(order) < m:
+            slots = 2; used_mem = False; picked = []
+            while slots > 0:
+                ok = [i for i in avail_ if ready_at[i] <= cyc and i not in picked and not (mems[i] and used_mem) and not (ismul[i] and slots < 2)]
+                if not ok: break
+                pick = max(ok, key=lambda i: (prio[i], -i))
+                picked.append(pick); order.append(pick); avail_.remove(pick)
+                if mems[pick]: used_mem = True
+                slots = 0 if ismul[pick] else slots - 1
+            for pick in picked:
+                for j in succs[pick]:
+                    ready_at[j] = max(ready_at[j], cyc + _lat(seg[pick][1].ins))
+                    npred[j] -= 1
+                    if npred[j] == 0: avail_.append(j)
+            if picked: cyc += 1
+            elif avail_: cyc = max(cyc + 1, min(ready_at[i] for i in avail_))
+            else: break
+        return [seg[i][1] for i in order]
     while len(order) < m:
         ok = [i for i in avail_ if ready_at[i] <= cyc]
         if ok: pick = max(ok, key=lambda i: (prio[i], -i))
