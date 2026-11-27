@@ -2616,6 +2616,26 @@ class FnGen:
         if self.is_call(n): return self.gen_call(n)
         raise AsmError("この形の文字はまだ出せません(文字の字面・`s ' i`・比較だけ)")
 
+    def gen_str_eq(self, operands, false_label):
+        """文字列どうしの `=`(条件の位置だけ): 長さが同じで、文字が全部同じなら成り立つ。外れたら false_label へ。
+        文字列は {ptr, len}(len は文字の数。文字の幅は CW byte)。値として使う形(成り立てば左の文字列、外れれば `__`)はまだ出さない。"""
+        self._gen_any(operands[0], False, "S")
+        tp, tl = self.tmp(), self.tmp()
+        self.emit("str x0, [x29, #%d]" % self.off(tp), "左の文字列の番地")
+        self.emit("str x1, [x29, #%d]" % self.off(tl), "左の文字列の長さ")
+        self._gen_any(operands[1], False, "S")
+        self.emit("ldr x9, [x29, #%d]" % self.off(tp)); self.emit("ldr x10, [x29, #%d]" % self.off(tl))
+        self.emit("cmp x10, x1"); self.emit("b.ne %s" % false_label, "長さが違えば外れ")
+        loop, ok = self.prog.label(), self.prog.label()
+        self.lines.append("%s:" % loop)
+        self.emit("cbz x10, %s" % ok, "全部同じなら成り立つ")
+        self.emit("ldrb w11, [x9]" if CW == 1 else "ldr w11, [x9]"); self.emit("ldrb w12, [x0]" if CW == 1 else "ldr w12, [x0]")
+        self.emit("cmp w11, w12"); self.emit("b.ne %s" % false_label, "文字が違えば外れ")
+        self.emit("add x9, x9, #%d" % CW); self.emit("add x0, x0, #%d" % CW); self.emit("sub x10, x10, #1")
+        self.emit("b %s" % loop)
+        self.lines.append("%s:" % ok)
+        self.free(); self.free()
+
     def gen_cmp(self, c, false_label):
         """比較。false_label があれば条件として(外れたらそこへ飛ぶ)、無ければ値として
         (成り立てば最後の比較の左の項、外れれば `__`。処理系と同じ)。`__` の項があれば外れ。
@@ -2635,6 +2655,8 @@ class FnGen:
                 for _ in vals: self.free()
                 return
         ck = kinds[0]
+        if ck == "S" and all(k == "S" for k in kinds) and len(operands) == 2 and ops[0] in ("=", "==") and false_label is not None:
+            return self.gen_str_eq(operands, false_label)
         if ck not in ("I", "C") or any(k != ck for k in kinds):
             raise AsmError("比較できるのは Int 同士か文字同士だけです(リスト・文字列の比べや、種類の違う物の比べはまだ出せません)")
         isc = ck == "C"
