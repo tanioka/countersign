@@ -45,3 +45,14 @@ program ::= (f(x̄) = e)... ; e
 - **C-1 比べの返す値。** 仕様(`type/comparison.md` §2.1・`syntax/operator_table.md` L415): 左の値が `0` か `1`(算術単位元)なら**右**を返し、それ以外は左を返す。`==`/`!==` は例外なしで左。実装(V6、2026-11-06 に既定にも入れた。根拠は designer の `alpha1/javascript/interpret.js`)は `<`,`>`,`<=`,`>=`,`=` も**いつも左**(`1 < 5` は `1`)。documents と designer の JS が食い違う。**どちらが今の仕様か**を 6e P-1 で訊く。SIR-Z は `select` を引数にして、どちらでも証明できる形にする。
 - **C-2 `!=`。** 仕様(operator_table.md L424-425): 片方 `⊥` なら非 `⊥` 側(両辺とも単位元)。SIR の `cmp` は「どちらかが `⊥` なら `⊥`」(`!=` は strict で別の補正)。要照合。
 - **C-3 溢れ。** §1 の注。
+
+## 7. 段階 (b) の結果(2026-11-28): `formal/lean/SirZ.lean`
+- §2 の文法から、**呼び(`call`)を除いた**核を Lean(Mathlib なし。`lean formal/lean/SirZ.lean` だけで検査できる)に書いた。`sorry` 無し。公理は `propext` だけ。
+- `Ev`(§3 の規則をそのまま書いた大きな歩幅の意味)と `ev`(`sign_sir.py` の `evaluate` に対応する関数)について:
+  - `ev_Ev`(評価器は規則を満たす)・`Ev_ev`(規則を満たす値は評価器の値)・**`ev_iff`**(一致)・`Ev_det`(規則は決定的)。
+  - `row_eq_or_and`・`rowD_eq_or`: **V10 は `(c & v) | 次の行` そのもの**(値が `!_` なら次の行へ落ちる)。
+  - `arith_void_left/right`(`!_` は算術の単位元)、`clamp_range`、`arith_add_overflow`(域の外は `!_`)、`arith_div_zero`・`arith_mod_zero`、`chain3_short`(連鎖の短絡)。
+  - 比べが真のとき返す値は引数 `sel`。`selLeft`(実装 V6)と `selSpec`(comparison.md §2.1)のどちらでも定理は成り立つ(P-1)。
+- **Lean の `ev` を実際の `sign_sir.evaluate` と突き合わせる**: `python3 test_sirz_lean.py [個数] [種]`(`lean` が無ければ飛ばす)。閉じた乱数の項(算術・負・絶対値・比べ・連鎖・`&`・`|`・行)で、種 1〜3 × 300 本、食い違い 0。Lean の定義を手で書いたので、書き写しの誤りをここで押さえる。
+- 入っていない物: 呼び・関数(再帰と燃料。次)、リスト・文字列・Float・畳み・並び。段階 (c)(SIR = 機械語)は、その後。
+- CI には入れていない(Lean の取得が約 1 GB)。手元で `lean` を用意して走らせる。
