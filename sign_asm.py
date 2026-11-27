@@ -2721,6 +2721,13 @@ class FnGen:
         if PEEP[0] and os.environ.get("SIGN_PEEP", "1") != "0":
             import sign_opt
             out = sign_opt.optimize(out)          # 制御フロー解析・共通部分式・デッドコード・ループ不変式・割り付け、そのあと窓の置き換え
+        if self.name in getattr(self.prog, "deep_check", ()) and not self.sret and self.name not in self.prog.flagfns and self.name not in self.prog.maskfns \
+                and any(l_.startswith("\tbl ") for l_ in lines):
+            # 入れ子の深さの上限(value_spec V10): スタックの残りが少なければ、この呼び出しは `!_` と information(SIGSEGV に頼らない)。入口(フレームを積む前)で sp を限界と比べる
+            i_ = next((k for k, l_ in enumerate(out) if l_ == "%s:" % label), 0)
+            out[i_ + 1:i_ + 1] = ["\tmov x9, sp  // 深さの上限の検査(V10)", "\tadrp x10, _sign_stack_limit", "\tadd x10, x10, :lo12:_sign_stack_limit", "\tldr x10, [x10]",
+                                 "\tcmp x9, x10", "\tb.lo _sign_deep"]
+            self.prog.deep_used = True
         return out
 
 
@@ -6127,6 +6134,25 @@ class Program:
         ex0 = [n for n in self.nodes if n[0] not in ("def", "dyn")]
         if ex0 and self.kind(ex0[-1], {}) == "L" and self.may_single(ex0[-1], self.sp, self.relay) and self.flag_ok(ex0[-1]):
             self.flagged = True; self.flagfns.add("_.main")      # 1 個だけ残ると Int になりうる結果を、旗(x2)つきで印字する
+        self.deep_check = set()
+        if target == "linux" and DEPTH_CHECK[0] and PAR[0] is None:
+            edges = {}
+            def refs(x, out):
+                if isinstance(x, tuple):
+                    if len(x) == 2 and x[0] == "id" and x[1] in self.live: out.add(x[1])
+                    for y in x: refs(y, out)
+                elif isinstance(x, list):
+                    for y in x: refs(y, out)
+            for f, b in self.live_bodies(): edges[f] = set(); refs(b, edges[f])
+            def reach(f):
+                seen, work = set(), list(edges.get(f, ()))
+                while work:
+                    g = work.pop()
+                    if g in seen: continue
+                    seen.add(g); work.extend(edges.get(g, ()))
+                return seen
+            for f in edges:
+                if f in reach(f) and self.retk.get(f) == "I": self.deep_check.add(f)
         out = ["// Sign — AArch64 (AAPCS64)"]
         if source: out.append("// source: %s" % source)
         out += ["\t.text", ""]
@@ -6737,6 +6763,7 @@ def add_realdev(text):
     return text.rstrip("\n") + "\n" + "\n".join(ro + bss) + "\n"
 
 
+_DEEP_MSG = "information resource-depth: the nesting depth reached the limit (the stack is nearly used up), so this call is !_ (value_spec V10, V11). Make the recursion a tail call to use no depth\n".encode("ascii")
 _SEGV_MSG = b"sign: stopped by a memory fault (deep recursion used up the stack, or a bad address)\n"
 
 
@@ -6746,6 +6773,7 @@ def generate(nodes, target="bare", *a, **k):
     text = _generate_core(nodes, target, *a, **k)
     if target != "linux" or "\n_start:\n" not in text: return text
     n = len(_SEGV_MSG)
+    deep = "_sign_deep" in text
     code = ["", "\t.text", "// SIGSEGV の受け皿(代替スタック 16 KiB)", "_sign_segv_init:",
             "\tadrp x9, _sign_altstk", "\tadd x9, x9, :lo12:_sign_altstk", "\tadrp x10, _sign_ss", "\tadd x10, x10, :lo12:_sign_ss",
             "\tstr x9, [x10]", "\tstr xzr, [x10, #8]", "\tmov x11, #16384", "\tstr x11, [x10, #16]",
@@ -6757,6 +6785,23 @@ def generate(nodes, target="bare", *a, **k):
             "\tmov x0, #1", "\tmov x8, #94  // exit_group", "\tsvc #0", "",
             "\t.section .rodata", "_sign_segv_msg:", "\t.byte " + ", ".join(str(b) for b in _SEGV_MSG), "\t.text", "",
             "\t.section .bss", "\t.balign 16", "_sign_altstk:", "\t.skip 16384", "_sign_ss:", "\t.skip 24", "_sign_sa:", "\t.skip 32", ""]
+    if deep:
+        m = len(_DEEP_MSG)
+        code += ["\t.text", "// 入れ子の深さの上限(V10): 起動で限界の番地を決める。RLIMIT_STACK(上限 64 MiB)から余白を引いた分まで使う",
+                 "_sign_depth_init:", "\tsub sp, sp, #16", "\tstr xzr, [sp]", "\tmov x0, #3  // RLIMIT_STACK", "\tmov x1, sp", "\tmov x8, #163  // getrlimit", "\tsvc #0",
+                 "\tldr x9, [sp]", "\tadd sp, sp, #16", "\tcbnz x0, .Ldepth_off  // 上限が分からなければ検査しない(限界 0)", "\tcbz x9, .Ldepth_off",
+                 "\tmov x10, #0x4000000  // 64 MiB", "\tcmp x9, x10", "\tcsel x9, x10, x9, hi",
+                 "\tlsr x11, x9, #2", "\tmov x12, #0x40000  // 余白 256 KiB(小さい上限では 1/4)", "\tcmp x11, x12", "\tcsel x11, x12, x11, hi",
+                 "\tcmp x9, x11", "\tb.ls .Ldepth_off  // 上限が余白より小さければ検査しない", "\tsub x9, x9, x11", "\tmov x12, sp", "\tsub x12, x12, x9", "\tb .Ldepth_set", ".Ldepth_off:", "\tmov x12, xzr", ".Ldepth_set:",
+                 "\tadrp x13, _sign_stack_limit", "\tadd x13, x13, :lo12:_sign_stack_limit", "\tstr x12, [x13]", "\tret",
+                 "_sign_deep:  // 入口で限界を越えた: 知らせを 1 回だけ出して `!_` を返す(呼び元の x30 はそのまま)",
+                 "\tstp x29, x30, [sp, #-16]!", "\tadrp x9, _sign_deep_told", "\tadd x9, x9, :lo12:_sign_deep_told", "\tldrb w10, [x9]", "\tcbnz w10, .Ldeep_done",
+                 "\tmov w10, #1", "\tstrb w10, [x9]", "\tmov x0, #2", "\tadrp x1, _sign_deep_msg", "\tadd x1, x1, :lo12:_sign_deep_msg",
+                 "\tmov x2, #%d" % m, "\tmov x8, #64  // write", "\tsvc #0",
+                 ".Ldeep_done:", "\tldp x29, x30, [sp], #16", "\tmovz x0, #0x8000, lsl #48  // !_", "\tret", "",
+                 "\t.section .rodata", "_sign_deep_msg:", "\t.byte " + ", ".join(str(b) for b in _DEEP_MSG), "\t.text", "",
+                 "\t.section .bss", "\t.balign 8", "_sign_stack_limit:", "\t.skip 8", "_sign_deep_told:", "\t.skip 8", ""]
+        text = text.replace("\n_start:\n", "\n_start:\n\tbl _sign_depth_init\n", 1)
     text = text.replace("\n_start:\n", "\n_start:\n\tbl _sign_segv_init\n", 1)
     return text.rstrip("\n") + "\n" + "\n".join(code) + "\n"
 
@@ -6789,6 +6834,7 @@ USAGE = """使い方: python3 sign.py --asm 〈プログラム.sn〉 [--target=b
 
 
 STRICT = [False]
+DEPTH_CHECK = [os.environ.get("SIGN_DEPTH_CHECK", "1") != "0"]      # 再帰する Int の関数の入口で、スタックの残りを見る(V10 の深さの上限)
 
 def _static_nonvoid(x):
     """旧 AST の式 x が、実行時に単位にならないと静的に言える(整数の字面とその符号・括り・`+ - *`)。"""

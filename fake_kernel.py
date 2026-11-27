@@ -115,6 +115,10 @@ class Kernel:
     def handle(self, cpu, n):
         r = cpu.r; x = lambda i: r["x%d" % i]
         self.syscalls.append(n)
+        if n == 163:                                                   # getrlimit(RLIMIT_STACK): 現在の上限は rlimit_stack(既定 8 MiB)、最大は無制限
+            cur = getattr(self, "rlimit_stack", 8 << 20)
+            for i, b in enumerate(cur.to_bytes(8, "little") + (2**64 - 1).to_bytes(8, "little")): cpu.mem[x(1) + i] = b
+            return 0
         if n == 222 and x(0) == 0 and x(3) & 0x20:                     # 無名の mmap(アドレス 0): 空きの番地を順に返す(スレッドの積み)
             self.maps.append((x(0), x(1), x(2), x(3), x(4)))
             if getattr(self, "anon_fail", False): return -12
