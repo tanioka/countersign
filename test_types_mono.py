@@ -4,8 +4,8 @@ sign_types.py の Pass 1b がその前提を満たすかを、小さなランダ
   P1 止まる   : 5 回の反復で不動点に着く(着かないプログラムは数える)
   P2 不動点   : 着いたあと、もう 1 回更新しても観測は変わらない
   P3 単調     : 観測 p ⊑ q(ANY を未観測とみなした情報の順)なら F(p) ⊑ F(q)
-  P4 衝突の符号化: 「観測が無い」と「観測が食い違った」が同じ ANY になる(単調性が崩れる原因)の反例を数える
-FAIL は P2 の破れだけ(これは実装の誤り)。P1・P3・P4 は、数えて報告する(仕様の形式化への材料)。"""
+  P4 衝突の符号化: 食い違いは CONFLICT で、未観測の ANY と区別される
+衝突を ANY と別の値(CONFLICT)にして、順を 未観測 < 具体的な型 < 衝突 にした。P2 と P3 の破れは実装の誤りで、失敗にする。"""
 import random, sys
 import sign_interp as S
 import sign_types as T
@@ -30,14 +30,20 @@ def gen():
         lines.append("%s %s" % (f, " ".join(random.choice(ARGS) for _ in range(random.randint(1, 2)))))
     return "\n".join(lines) + "\n"
 
+def info_le(t, u):
+    """t ⊑ u: 未観測(ANY)が最下位、衝突(CONFLICT)が最上位、間は unify の合わせ(Address ⊑ Scalar ⊑ Float、Char ⊑ String)で t と u を合わせても u のまま。"""
+    if t == T.ANY or t == u or u == T.CONFLICT: return True
+    if t == T.CONFLICT: return False
+    return T.unify([t, u], T.CONFLICT) == u
+
 def leq(p, q):
-    """観測の順: ANY(未観測)は何にも ⊑。それ以外は同じ型どうしだけ。"""
+    """観測の順: 未観測(ANY) < 具体的な型 < 衝突(CONFLICT)。"""
     for f, ps in p.items():
         qs = q.get(f)
         if qs is None: return False
         for i, t in enumerate(ps):
             u = qs[i] if i < len(qs) else T.ANY
-            if t != T.ANY and t != u: return False
+            if not info_le(t, u): return False
     return True
 
 stats = {"programs": 0, "no_converge": 0, "p2_fail": 0, "p3_checked": 0, "p3_break": 0, "p4_conflict": 0}
@@ -72,9 +78,10 @@ for _ in range(400):
 
 # P4: 衝突の符号化(1 つの関数に Int と String を渡すと、型が ANY になり、未観測と区別できない)
 c = T.Checker(S.parse_source("f : a ? a\nf 1\nf `ab`\n")); c.solve(5)
-stats["p4_conflict"] = 1 if c.params.get("f") == [T.ANY] else 0
+stats["p4_conflict"] = 1 if c.params.get("f") == [T.CONFLICT] and c.obs("f") == [T.ANY] else 0
 c = T.Checker(S.parse_source("f : a ? a\n")); c.solve(5)
 unobserved_any = c.params.get("f", [T.ANY]) == [T.ANY]
 print("  ".join("%s=%s" % kv for kv in stats.items()), " 未観測も ANY=%s" % unobserved_any)
 if fails: print("NG P2(不動点で更新しても変わる):", len(fails)); print(fails[0]); sys.exit(1)
-print("全部 ok(P2)。P1/P3/P4 は上の数を報告する")
+if stats["p3_break"] or not stats["p4_conflict"] or stats["no_converge"]: print("NG P1/P3/P4", stats); sys.exit(1)
+print("全部 ok")
