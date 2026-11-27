@@ -211,7 +211,7 @@ inductive I
   | movz (d : Nat)                     -- movz xd, #0x8000, lsl #48(`!_` の印)
   | mov (d s : Nat)
   | cmpR (a b : Nat)
-  | cmpI (a : Nat) (n : W)             -- cmp xa, #n
+  | cmpI (a n : Nat)                   -- cmp xa, #n
   | cmpAsr (a b sh : Nat)              -- cmp xa, xb, asr #sh
   | adds (d a b : Nat)
   | subs (d a b : Nat)
@@ -237,6 +237,11 @@ def Cond.holds (c : Cond) (s : St) : Bool :=
   | .eq => s.z
   | .vs => s.v
 
+/-- 即値(simp が具体的な 64 ビットの値を展開しないよう、別の名前にしておく) -/
+@[irreducible] def immW (n : Nat) : W := BitVec.ofNat 64 n
+
+theorem immW_zero : immW 0 = (0 : W) := by unfold immW; rfl
+
 /-- 比べの V 旗。分岐が見るのは Z だけなので、simp が具体的な値で展開しないよう、別の名前にしておく -/
 @[irreducible] def cmpV (a b : W) : Bool := a.ssubOverflow b
 
@@ -249,7 +254,7 @@ def step (i : I) (s : St) : St :=
   | .movz d => s'.set d NICHE
   | .mov d a => s'.set d (s.r a)
   | .cmpR a b => s'.flagsSub (s.r a) (s.r b)
-  | .cmpI a n => s'.flagsSub (s.r a) n
+  | .cmpI a n => s'.flagsSub (s.r a) (immW n)
   | .cmpAsr a b sh => s'.flagsSub (s.r a) ((s.r b).sshiftRight sh)
   | .adds d a b => { (s'.set d (s.r a + s.r b)) with z := decide (s.r a + s.r b = 0), v := (s.r a).saddOverflow (s.r b) }
   | .subs d a b => { (s'.set d (s.r a - s.r b)) with z := decide (s.r a - s.r b = 0), v := (s.r a).ssubOverflow (s.r b) }
@@ -361,7 +366,7 @@ theorem arith_none_left (o : AOp) (d : Option Int) : arith o none d = d := by ca
 theorem arith_none_right (o : AOp) (d : Option Int) : arith o d none = d := by cases d <;> rfl
 
 theorem tpl_add_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) :
-    (run tpl_add 20 s).r 0 = encode (arith .add (decode x) (decode y)) ∧ (run tpl_add 20 s).pc = tpl_add.size := by
+    (run tpl_add 30 s).r 0 = encode (arith .add (decode x) (decode y)) ∧ (run tpl_add 30 s).pc = tpl_add.size := by
   by_cases hx : x = NICHE
   · subst hx
     have : decode NICHE = none := by simp [decode]
@@ -419,13 +424,18 @@ theorem tpl_div_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.
     · have hdx := decode_ne x hx
       have hdy := decode_ne y hy
       by_cases hy0 : y = 0
-      · subst hy0
+      · have hz : decide (y = immW 0) = true := by rw [immW_zero]; exact decide_eq_true hy0
         have h0 : (0 : W).toInt = 0 := by decide
-        simp [run, tpl_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hdx, hdy, arith, arithInt, h0, encode]
-      · have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
-        simp [run, tpl_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hy0, hyz]
-        trace_state
-        sorry
+        have hyt : y.toInt = 0 := by rw [hy0]; exact h0
+        have hdy0 : decode y = some 0 := by rw [hdy, hyt]
+        simp [run, tpl_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hz]
+        rw [hdx, hdy0]; simp [arith, arithInt, encode]
+      · have hz : decide (y = immW 0) = false := by rw [immW_zero]; exact decide_eq_false hy0
+        have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
+        simp [run, tpl_div, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hz, hyz]
+        have h := div_core x y hx
+        simp only [hy0, hyz, ite_false, if_false] at h
+        exact h
 
 theorem tpl_mod_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) :
     (run tpl_mod 30 s).r 0 = encode (arith .mod (decode x) (decode y)) ∧ (run tpl_mod 30 s).pc = tpl_mod.size := by
@@ -440,12 +450,34 @@ theorem tpl_mod_ok (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.
     · have hdx := decode_ne x hx
       have hdy := decode_ne y hy
       by_cases hy0 : y = 0
-      · subst hy0
+      · have hz : decide (y = immW 0) = true := by rw [immW_zero]; exact decide_eq_true hy0
         have h0 : (0 : W).toInt = 0 := by decide
-        simp [run, tpl_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hdx, hdy, arith, arithInt, h0, encode]
-      · have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
-        simp [run, tpl_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hy0, hyz]
-        trace_state
-        sorry
+        have hyt : y.toInt = 0 := by rw [hy0]; exact h0
+        have hdy0 : decode y = some 0 := by rw [hdy, hyt]
+        simp [run, tpl_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hz]
+        rw [hdx, hdy0]; simp [arith, arithInt, encode]
+      · have hz : decide (y = immW 0) = false := by rw [immW_zero]; exact decide_eq_false hy0
+        have hyz : y.toInt ≠ 0 := fun e => hy0 (by apply BitVec.eq_of_toInt_eq; rw [e]; simp)
+        simp [run, tpl_mod, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx, hy, hdx, hdy, arith, arithInt, hz, hyz]
+        have h := mod_core x y hx
+        simp only [hy0, hyz, ite_false, if_false] at h
+        exact h
+
+/-- 5 つの演算の命令列 -/
+def tpl : AOp → Array I
+  | .add => tpl_add | .sub => tpl_sub | .mul => tpl_mul | .div => tpl_div | .mod => tpl_mod
+
+/-- 段階 (c)(整数の核): `sign_asm.py` の `bin_tail` の命令列は、`x9`・`x10` が 64 ビットのどんな語でも(`!_` の印を含めて)、
+    最後に `x0` に `arith o (decode x9) (decode x10)` の表し方を置き、終わりまで走る。 -/
+theorem tpl_ok (o : AOp) (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) :
+    (run (tpl o) 30 s).r 0 = encode (arith o (decode x) (decode y)) ∧ (run (tpl o) 30 s).pc = (tpl o).size := by
+  cases o
+  · exact tpl_add_ok s hs x y h9 h10
+  · exact tpl_sub_ok s hs x y h9 h10
+  · exact tpl_mul_ok s hs x y h9 h10
+  · exact tpl_div_ok s hs x y h9 h10
+  · exact tpl_mod_ok s hs x y h9 h10
 
 end SirZAsm
+
+#print axioms SirZAsm.tpl_ok
