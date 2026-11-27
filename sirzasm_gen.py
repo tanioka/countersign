@@ -39,8 +39,10 @@ def to_lean(name, blk):
         else: idx += 1
     r = lambda s: int(s.strip()[1:])
     ins = []
+    cur = -1
     for l in blk:
         if l.endswith(":"): continue
+        cur += 1
         op, _, rest = l.partition(" ")
         a = [x.strip() for x in rest.split(",")]
         if op == "movz": assert a[1:] == ["#0x8000", "lsl #48"], l; ins.append(f"I.movz {r(a[0])}")
@@ -51,8 +53,8 @@ def to_lean(name, blk):
         elif op in ("adds", "subs", "mul", "smulh", "sdiv"): ins.append(f"I.{op} {r(a[0])} {r(a[1])} {r(a[2])}")
         elif op == "msub": ins.append(f"I.msub {r(a[0])} {r(a[1])} {r(a[2])} {r(a[3])}")
         elif op == "csel": ins.append(f"I.csel {r(a[0])} {r(a[1])} {r(a[2])} Cond.{a[3]}")
-        elif op.startswith("b."): ins.append(f"I.bc Cond.{op[2:]} {labels[rest.strip()]}")
-        elif op == "b": ins.append(f"I.b {labels[rest.strip()]}")
+        elif op.startswith("b."): ins.append(f"I.bc Cond.{op[2:]} {labels[rest.strip()] - cur}")
+        elif op == "b": ins.append(f"I.b {labels[rest.strip()] - cur}")
         else: raise SystemExit("知らない命令: " + l)
     return f"def {name} : Array I := #[\n  " + ",\n  ".join(f"({x})" for x in ins) + "]\n"
 

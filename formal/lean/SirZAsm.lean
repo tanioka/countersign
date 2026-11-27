@@ -220,7 +220,7 @@ inductive I
   | sdiv (d a b : Nat)
   | msub (d a b c : Nat)               -- xd = xc - xa * xb
   | csel (d a b : Nat) (c : Cond)      -- xd = c ? xa : xb
-  | bc (c : Cond) (t : Nat)
+  | bc (c : Cond) (t : Nat)            -- 相対(今の命令から t 先。前向きだけ)
   | b (t : Nat)
 
 structure St where
@@ -263,8 +263,8 @@ def step (i : I) (s : St) : St :=
   | .sdiv d a b => s'.set d (sdivW (s.r a) (s.r b))
   | .msub d a b c => s'.set d (s.r c - s.r a * s.r b)
   | .csel d a b c => s'.set d (if c.holds s then s.r a else s.r b)
-  | .bc c t => if c.holds s then { s with pc := t } else s'
-  | .b t => { s with pc := t }
+  | .bc c t => if c.holds s then { s with pc := s.pc + t } else s'
+  | .b t => { s with pc := s.pc + t }
 
 /-- 燃料つきの実行。`pc` が終わりに着いたら止まる -/
 def run (p : Array I) : Nat → St → St
@@ -277,13 +277,13 @@ def init (x y : W) : St := { r := fun i => if i = 9 then x else if i = 10 then y
 def tpl_add : Array I := #[
   (I.movz 13),
   (I.cmpR 9 13),
-  (I.bc Cond.ne 5),
+  (I.bc Cond.ne 3),
   (I.mov 0 10),
-  (I.b 12),
+  (I.b 8),
   (I.cmpR 10 13),
-  (I.bc Cond.ne 9),
+  (I.bc Cond.ne 3),
   (I.mov 0 9),
-  (I.b 12),
+  (I.b 4),
   (I.movz 13),
   (I.adds 9 9 10),
   (I.csel 0 13 9 Cond.vs)]
@@ -291,13 +291,13 @@ def tpl_add : Array I := #[
 def tpl_sub : Array I := #[
   (I.movz 13),
   (I.cmpR 9 13),
-  (I.bc Cond.ne 5),
+  (I.bc Cond.ne 3),
   (I.mov 0 10),
-  (I.b 12),
+  (I.b 8),
   (I.cmpR 10 13),
-  (I.bc Cond.ne 9),
+  (I.bc Cond.ne 3),
   (I.mov 0 9),
-  (I.b 12),
+  (I.b 4),
   (I.movz 13),
   (I.subs 9 9 10),
   (I.csel 0 13 9 Cond.vs)]
@@ -305,13 +305,13 @@ def tpl_sub : Array I := #[
 def tpl_mul : Array I := #[
   (I.movz 13),
   (I.cmpR 9 13),
-  (I.bc Cond.ne 5),
+  (I.bc Cond.ne 3),
   (I.mov 0 10),
-  (I.b 14),
+  (I.b 10),
   (I.cmpR 10 13),
-  (I.bc Cond.ne 9),
+  (I.bc Cond.ne 3),
   (I.mov 0 9),
-  (I.b 14),
+  (I.b 6),
   (I.movz 13),
   (I.mul 11 9 10),
   (I.smulh 12 9 10),
@@ -321,33 +321,33 @@ def tpl_mul : Array I := #[
 def tpl_div : Array I := #[
   (I.movz 13),
   (I.cmpR 9 13),
-  (I.bc Cond.ne 5),
+  (I.bc Cond.ne 3),
   (I.mov 0 10),
-  (I.b 14),
+  (I.b 10),
   (I.cmpR 10 13),
-  (I.bc Cond.ne 9),
+  (I.bc Cond.ne 3),
   (I.mov 0 9),
-  (I.b 14),
+  (I.b 6),
   (I.cmpI 10 0),
-  (I.bc Cond.ne 13),
+  (I.bc Cond.ne 3),
   (I.movz 0),
-  (I.b 14),
+  (I.b 2),
   (I.sdiv 0 9 10)]
 
 def tpl_mod : Array I := #[
   (I.movz 13),
   (I.cmpR 9 13),
-  (I.bc Cond.ne 5),
+  (I.bc Cond.ne 3),
   (I.mov 0 10),
-  (I.b 15),
+  (I.b 11),
   (I.cmpR 10 13),
-  (I.bc Cond.ne 9),
+  (I.bc Cond.ne 3),
   (I.mov 0 9),
-  (I.b 15),
+  (I.b 7),
   (I.cmpI 10 0),
-  (I.bc Cond.ne 13),
+  (I.bc Cond.ne 3),
   (I.movz 0),
-  (I.b 15),
+  (I.b 3),
   (I.sdiv 11 9 10),
   (I.msub 0 11 10 9)]
 
