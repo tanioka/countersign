@@ -38,6 +38,21 @@ def lean_term(e):
     if e[0] == "cmp": return "(E.cmp .%s %s %s)" % (CMPS[e[1]], lean_term(e[2]), lean_term(e[3]))
     return "(E.op .%s %s %s)" % (OPS[e[1]], lean_term(e[2]), lean_term(e[3]))
 
+def gen_cn(rnd, depth):
+    if depth == 0 or rnd.random() < 0.4:
+        e = gen(rnd, rnd.randrange(1, 3))
+        if e[0] == "lit": e = ("var", rnd.randrange(3))
+        return ("val", e)
+    return (rnd.choice(["and", "or"]), gen_cn(rnd, depth - 1), gen_cn(rnd, depth - 1))
+
+def src_cn(c):
+    if c[0] == "val": return src(c[1])
+    return "(%s %s %s)" % (src_cn(c[1]), "&" if c[0] == "and" else "|", src_cn(c[2]))
+
+def lean_cn(c):
+    if c[0] == "val": return "(Cn.val %s)" % lean_term(c[1])
+    return "(Cn.%s %s %s)" % (c[0], lean_cn(c[1]), lean_cn(c[2]))
+
 HEAD = r'''import SirZAsm
 open SirZAsm
 def shc : Cond → String
@@ -51,10 +66,11 @@ def sh : I → String
 def out (p : Array I) : IO Unit := IO.println (String.intercalate ";" (p.toList.map sh))
 '''
 
-def asm_body(e):
+def asm_body(e, cond=None):
     with tempfile.TemporaryDirectory() as d:
         p = os.path.join(d, "t.sn")
-        open(p, "w").write("f : x y z ? %s\nf 8 2 1\n" % src(e))
+        if cond is None: open(p, "w").write("f : x y z ? %s\nf 8 2 1\n" % src(e))
+        else: open(p, "w").write("f : x y z ?\n\t%s : 1\n\t0\nf 8 2 1\n" % src_cn(cond))
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             A.main([p, "--no-peephole", "--no-opt"])
@@ -91,28 +107,40 @@ def asm_body(e):
         elif op.startswith("b."): out.append("bc %s %d" % (op[2:], labels[rest.strip()] - cur))
         elif op == "b": out.append("b %d" % (labels[rest.strip()] - cur))
         else: raise SystemExit("知らない命令: " + l)
-    return ";".join(out)
+    if cond is not None:                    # 条件の後ろの `mov x0, #1`・`b 終わり`・`mov x0, #0` は外す(外れの飛び先は条件の大きさ + 2)
+        assert out[-3] == "movi 0 1" and out[-1] == "movi 0 0", out[-3:]
+        out = out[:-3]
+    stores = [int(o.split()[2]) for o in out if o.startswith("str 0 ")]
+    return ";".join(out), (min(stores) if stores else 3)      # 預けた枠のいちばん小さい番号 = 枠の底(行の条件では、器の都合で 3 でないことがある)
 
 def main(n=60, seed=1):
     if not LEAN or not os.path.exists(LEAN): print("lean が無いので飛ばす"); return 0
     rnd = random.Random(seed)
     trees = [gen(rnd, rnd.randrange(1, 4)) for _ in range(n)]
+    conds = [gen_cn(rnd, rnd.randrange(1, 4)) for _ in range(n)]
+    items = []                                  # (見出し, 式の木か条件の木, asm の出力, 枠の底)
+    skipped = 0
+    for t in trees + conds:
+        isc = t[0] in ("val", "and", "or")
+        try: want, base = asm_body(None, t) if isc else asm_body(t)
+        except AsmErrorLike: skipped += 1; continue
+        items.append((src_cn(t) if isc else src(t), t, isc, want, base))
     with tempfile.TemporaryDirectory() as d:
         env = dict(os.environ, LEAN_PATH=d)
         subprocess.run([LEAN, "-o", os.path.join(d, "SirZAsm.olean"), os.path.join(HERE, "formal/lean/SirZAsm.lean")], check=True, capture_output=True, env=env)
-        prog = HEAD + "".join("#eval out (compileS novR 3 0 %s)\n" % lean_term(t) for t in trees)
+        prog = HEAD + "".join(
+            ("#eval let c := %s; out (compileC novR %d 0 ((compileC novR %d 0 0 c).size + 2) c)\n" % (lean_cn(t), b, b)) if isc
+            else "#eval out (compileS novR %d 0 %s)\n" % (b, lean_term(t)) for _, t, isc, _, b in items)
         f = os.path.join(d, "T.lean"); open(f, "w").write(prog)
         res = subprocess.run([LEAN, f], capture_output=True, text=True, env=env)
     got = [l for l in res.stdout.split("\n") if l]
-    if len(got) != len(trees): print("Lean の出力が足りない:", res.stdout[-500:], res.stderr[-500:]); return 1
-    bad = 0; skipped = 0
-    for t, g in zip(trees, got):
-        try: want = asm_body(t)
-        except AsmErrorLike: skipped += 1; continue
+    if len(got) != len(items): print("Lean の出力が足りない:", res.stdout[-500:], res.stderr[-500:]); return 1
+    bad = 0
+    for (name, t, isc, want, b), g in zip(items, got):
         if want != g:
             bad += 1
-            if bad <= 3: print("食い違い:", src(t), "\n  asm :", want, "\n  lean:", g)
-    print("式 %d 個(出せない %d)、食い違い %d" % (len(trees), skipped, bad)); return 1 if bad else 0
+            if bad <= 3: print("食い違い:", name, "(底 %d)" % b, "\n  asm :", want, "\n  lean:", g)
+    print("式 %d 個・条件 %d 個(出せない %d)、食い違い %d" % (len(trees), len(conds), skipped, bad)); return 1 if bad else 0
 
 AsmErrorLike = (A.AsmError, SystemExit, StopIteration, ValueError)
 if __name__ == "__main__":
