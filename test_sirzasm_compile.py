@@ -66,10 +66,23 @@ def sh : I → String
 def out (p : Array I) : IO Unit := IO.println (String.intercalate ";" (p.toList.map sh))
 '''
 
+def gen_rows(rnd):
+    rows = [(gen_cn(rnd, rnd.randrange(0, 3)), gen(rnd, rnd.randrange(0, 3))) for _ in range(rnd.randrange(1, 4))]
+    return ("rows", rows, gen(rnd, rnd.randrange(0, 3)) if rnd.random() < 0.7 else None)
+
+def src_rows(t):
+    return "".join("\t%s : %s\n" % (src_cn(c), src(v)) for c, v in t[1]) + ("\t%s\n" % src(t[2]) if t[2] else "")
+
+def lean_rows(t):
+    r = "(Rows.dflt %s)" % lean_term(t[2]) if t[2] else "Rows.nil"
+    for c, v in reversed(t[1]): r = "(Rows.row %s %s %s)" % (lean_cn(c), lean_term(v), r)
+    return r
+
 def asm_body(e, cond=None):
     with tempfile.TemporaryDirectory() as d:
         p = os.path.join(d, "t.sn")
-        if cond is None: open(p, "w").write("f : x y z ? %s\nf 8 2 1\n" % src(e))
+        if e is not None and e[0] == "rows": open(p, "w").write("f : x y z ?\n%sf 8 2 1\n" % src_rows(e))
+        elif cond is None: open(p, "w").write("f : x y z ? %s\nf 8 2 1\n" % src(e))
         else: open(p, "w").write("f : x y z ?\n\t%s : 1\n\t0\nf 8 2 1\n" % src_cn(cond))
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
@@ -118,18 +131,20 @@ def main(n=60, seed=1):
     rnd = random.Random(seed)
     trees = [gen(rnd, rnd.randrange(1, 4)) for _ in range(n)]
     conds = [gen_cn(rnd, rnd.randrange(1, 4)) for _ in range(n)]
+    rowss = [gen_rows(rnd) for _ in range(n)]
     items = []                                  # (見出し, 式の木か条件の木, asm の出力, 枠の底)
     skipped = 0
-    for t in trees + conds:
+    for t in trees + conds + rowss:
         isc = t[0] in ("val", "and", "or")
         try: want, base = asm_body(None, t) if isc else asm_body(t)
         except AsmErrorLike: skipped += 1; continue
-        items.append((src_cn(t) if isc else src(t), t, isc, want, base))
+        items.append((src_cn(t) if isc else (src_rows(t) if t[0] == "rows" else src(t)), t, isc, want, base))
     with tempfile.TemporaryDirectory() as d:
         env = dict(os.environ, LEAN_PATH=d)
         subprocess.run([LEAN, "-o", os.path.join(d, "SirZAsm.olean"), os.path.join(HERE, "formal/lean/SirZAsm.lean")], check=True, capture_output=True, env=env)
         prog = HEAD + "".join(
             ("#eval let c := %s; out (compileC novR %d 0 ((compileC novR %d 0 0 c).size + 2) c)\n" % (lean_cn(t), b, b)) if isc
+            else "#eval out (compileR novR %d 0 %s)\n" % (b, lean_rows(t)) if t[0] == "rows"
             else "#eval out (compileS novR %d 0 %s)\n" % (b, lean_term(t)) for _, t, isc, _, b in items)
         f = os.path.join(d, "T.lean"); open(f, "w").write(prog)
         res = subprocess.run([LEAN, f], capture_output=True, text=True, env=env)
@@ -140,7 +155,7 @@ def main(n=60, seed=1):
         if want != g:
             bad += 1
             if bad <= 3: print("食い違い:", name, "(底 %d)" % b, "\n  asm :", want, "\n  lean:", g)
-    print("式 %d 個・条件 %d 個(出せない %d)、食い違い %d" % (len(trees), len(conds), skipped, bad)); return 1 if bad else 0
+    print("式 %d 個・条件 %d 個・行 %d 個(出せない %d)、食い違い %d" % (len(trees), len(conds), len(rowss), skipped, bad)); return 1 if bad else 0
 
 AsmErrorLike = (A.AsmError, SystemExit, StopIteration, ValueError)
 if __name__ == "__main__":
