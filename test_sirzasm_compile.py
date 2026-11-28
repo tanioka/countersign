@@ -9,11 +9,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 LEAN = os.environ.get("SIRZ_LEAN") or __import__("shutil").which("lean")
 OPS = {"+": "add", "-": "sub", "*": "mul", "/": "div", "%": "mod"}
 VARS = ["x", "y", "z"]
+CMPS = {"<": "lt", "<=": "le", ">": "gt", ">=": "ge", "=": "eq"}
 
 def gen(rnd, depth):
     if depth == 0 or rnd.random() < 0.25:
         return ("var", rnd.randrange(3)) if rnd.random() < 0.6 else ("lit", rnd.randrange(0, 10))
     if rnd.random() < 0.15: return ("neg", gen(rnd, depth - 1))
+    if rnd.random() < 0.25:
+        l, r = gen(rnd, depth - 1), gen(rnd, depth - 1)
+        if l[0] == "lit" and r[0] == "lit": l = ("var", rnd.randrange(3))
+        return ("cmp", rnd.choice(list(CMPS)), l, r)
     o = rnd.choice(list(OPS))
     l, r = gen(rnd, depth - 1), gen(rnd, depth - 1)
     # 字面どうしは畳み込みや値域の解析で形が変わるので、少なくとも片方に変数を含める
@@ -24,18 +29,19 @@ def src(e):
     if e[0] == "var": return VARS[e[1]]
     if e[0] == "lit": return str(e[1])
     if e[0] == "neg": return "-%s" % (src(e[1]) if e[1][0] in ("var", "lit") else "(%s)" % src(e[1]))
-    return "(%s %s %s)" % (src(e[2]), e[1], src(e[3]))
+    return "(%s %s %s)" % (src(e[2]), e[1], src(e[3]))   # op・cmp とも
 
 def lean_term(e):
     if e[0] == "var": return "(E.var %d)" % e[1]
     if e[0] == "lit": return "(E.lit %d)" % e[1]
     if e[0] == "neg": return "(E.neg %s)" % lean_term(e[1])
+    if e[0] == "cmp": return "(E.cmp .%s %s %s)" % (CMPS[e[1]], lean_term(e[2]), lean_term(e[3]))
     return "(E.op .%s %s %s)" % (OPS[e[1]], lean_term(e[2]), lean_term(e[3]))
 
 HEAD = r'''import SirZAsm
 open SirZAsm
 def shc : Cond → String
-  | .ne => "ne" | .eq => "eq" | .vs => "vs"
+  | .ne => "ne" | .eq => "eq" | .vs => "vs" | .lt => "lt" | .ge => "ge" | .gt => "gt" | .le => "le"
 def sh : I → String
   | .movz d => s!"movz {d}" | .mov d a => s!"mov {d} {a}" | .cmpR a b => s!"cmpR {a} {b}" | .cmpI a n => s!"cmpI {a} {n}"
   | .cmpAsr a b s => s!"cmpAsr {a} {b} {s}" | .adds d a b => s!"adds {d} {a} {b}" | .subs d a b => s!"subs {d} {a} {b}"
