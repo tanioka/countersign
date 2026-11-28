@@ -23,6 +23,11 @@
     元と先が重ならなければ先の `[0, 長さ×幅)` バイトが元と同じ(幅 `w = 2^sh ≤ 4`)。作業領域を取る後ろ半分は `x9 = n`(要素数)から
     `((n·w+15)/16)×16+16` バイトを取り、輪では `n = ||acc|| + d × Σ(食う器の長さ)` を `x9` に足し上げる前半(`sumPre_ok`)をつける
     (食う器が 1 つなら `growPre` の前半と同じ)。リストの輪 `ringEntryL_ok`、文字列の輪 `ringEntryS_ok`。
+  * `loopH_ok`(ループの中の append の接続): `loop_ok` と同じ形の自分への末尾呼びで、条件が偽の回に、実引数 `as`(累積の仮引数 `ps`(ptr)=`var ps`・`pl`(len)=`var pl + lit kk`)に加え
+    累積へ足す要素 `elems`(`kk` 個)も評価して枠 `2n+i` に置き、`appendCode`(`append_inv`)で器の末尾へ書き、実引数を仮引数へ並べ替えて(`stI`+`bk`)次の回へ戻る。
+    コードの並びは `part1H`(条件・値・`b`・実引数・要素)・append の領域(`jmp 自分` で埋めた `Q` の上では動かない: `stuck_eq`・`lift2x`)・`stH`(並べ替え)。
+    結論: 止まる条件 `LDom`・`LOk`(各回の `elems` も値を持ち `Term`)のもとで、`r0 = encode (LΦ k ρ)`・`AccInv` が `L ++ appVals k ρ`(各回の要素の値を並べたもの)・
+    `ps` の枠・器の `ptr/8 - 1` の語(容量)・`sp`・`stk` が元のまま。`append_ok`/`append_inv` には「`t1,t2,ps,pl` 以外の枠は変わらない」を足した。
   * 範囲: 累積 1 つ。文字列の `commit_grow`(U+0000 を飛ばす append)、複数の累積、`ringcall`(`.rec` を通る関数をまたいだ累積)、
     `gen_copy_result`(作業領域から置き場へ写す)は次。
 -/
@@ -1081,6 +1086,7 @@ theorem append_ok (P : Array I3) (b ps pl k t1 t2 te o : Nat)
     (hal : (x.s.m ps).toNat % 8 = 0) (h8 : 8 ≤ (x.s.m ps).toNat)
     (hlen : (x.s.m pl).toNat + k < 2 ^ 50) (hptr : (x.s.m ps).toNat + 8 * ((x.s.m pl).toNat + k) < 2 ^ 64) :
     ∃ y : HSt, Steps3 P x y ∧ y.sp = x.sp ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk ∧
+      (∀ j, j ≠ t1 → j ≠ t2 → j ≠ ps → j ≠ pl → y.s.m j = x.s.m j) ∧
       (((x.h (((x.s.m ps).toNat - 8) / 8)).toNat < (x.s.m pl).toNat + k ∧ y.s.pc = b + 10 + o ∧ y.h = x.h) ∨
        ((x.s.m pl).toNat + k ≤ (x.h (((x.s.m ps).toNat - 8) / 8)).toNat ∧ y.s.pc = b + 19 + 2 * k ∧
         (∀ w, y.h w = if (x.s.m ps).toNat / 8 + (x.s.m pl).toNat ≤ w ∧ w < (x.s.m ps).toNat / 8 + (x.s.m pl).toNat + k
@@ -1143,9 +1149,11 @@ theorem append_ok (P : Array I3) (b ps pl k t1 t2 te o : Nat)
   have y3sp : y3.sp = x.sp := by rw [hy3]; cases hcc : y2.c <;> simp [step3, hcc, s2sp, s1sp]
   have y3l : y3.s.lr = x.s.lr := by rw [hy3]; cases hcc : y2.c <;> simp [step3, hcc, s2l, s1l]
   have y3k : y3.s.stk = x.s.stk := by rw [hy3]; cases hcc : y2.c <;> simp [step3, hcc, s2k, s1k]
+  have y3m' : y3.s.m = y1.s.m := by rw [hy3]; cases hcc : y2.c <;> simp [step3, hcc, s2m]
   by_cases hov : (x.h (((x.s.m ps).toNat - 8) / 8)).toNat < (x.s.m pl).toNat + k
   · have hc : y2.c = true := by rw [s2c]; simp [hov]
-    refine ⟨y3, gS.trans (gG.trans g3), y3sp, y3l, y3k, Or.inl ⟨hov, ?_, ?_⟩⟩
+    refine ⟨y3, gS.trans (gG.trans g3), y3sp, y3l, y3k, ?_, Or.inl ⟨hov, ?_, ?_⟩⟩
+    · intro j a b c d; rw [y3m', s1m]; simp [a, b]
     · rw [hy3]; simp [step3, hc, pG]
     · rw [hy3]; simp [step3, hc, s2h, s1h]
   · have hc : y2.c = false := by rw [s2c]; simp; omega
@@ -1186,10 +1194,11 @@ theorem append_ok (P : Array I3) (b ps pl k t1 t2 te o : Nat)
     obtain ⟨s6p, s6m, s6h, s6sp, s6l, s6k⟩ := appMoves_facts ps pl t1 t2 y5 h1 h2 h3 h4 h5
     rw [← hy6] at s6p s6m s6h s6sp s6l s6k
     have y5m : y5.s.m = y1.s.m := by rw [cm, s4m, y3m]
-    refine ⟨y6, gS.trans (gG.trans (g3.trans (gP.trans (gC.trans gM)))), ?_, ?_, ?_, Or.inr ⟨by omega, ?_, ?_, ?_, ?_⟩⟩
+    refine ⟨y6, gS.trans (gG.trans (g3.trans (gP.trans (gC.trans gM)))), ?_, ?_, ?_, ?_, Or.inr ⟨by omega, ?_, ?_, ?_, ?_⟩⟩
     · rw [s6sp, csp, s4sp, y3sp]
     · rw [s6l, cl, s4l, y3l]
     · rw [s6k, ck, s4k, y3k]
+    · intro j a b c d; rw [s6m, y5m, s1m]; simp [a, b, c, d]
     · rw [s6p, cp, s4p, y3pc]; omega
     · intro w
       rw [s6h, chh w, hE, s4h, y3h]
@@ -1223,10 +1232,11 @@ theorem append_inv (P : Array I3) (b ps pl k t1 t2 te o : Nat)
     (hcap : L.length + k ≤ (x.h ((x.s.m ps).toNat / 8 - 1)).toNat) :
     ∃ y : HSt, Steps3 P x y ∧ y.s.pc = b + 19 + 2 * k ∧ AccInv y ps pl (L ++ vs) ∧
       y.s.m ps = x.s.m ps ∧ y.h ((x.s.m ps).toNat / 8 - 1) = x.h ((x.s.m ps).toNat / 8 - 1) ∧
-      y.sp = x.sp ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk := by
+      y.sp = x.sp ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk ∧
+      (∀ j, j ≠ t1 → j ≠ t2 → j ≠ ps → j ≠ pl → y.s.m j = x.s.m j) := by
   obtain ⟨hal, h8, hlenL, hcont⟩ := hacc
   have hc8 : ((x.s.m ps).toNat - 8) / 8 = (x.s.m ps).toNat / 8 - 1 := by omega
-  obtain ⟨y, g, ysp, yl, yk, hcase⟩ := append_ok P b ps pl k t1 t2 te o hP x hpc h1 h2 h3 h4 h5 h12 hte hal h8
+  obtain ⟨y, g, ysp, yl, yk, yfr, hcase⟩ := append_ok P b ps pl k t1 t2 te o hP x hpc h1 h2 h3 h4 h5 h12 hte hal h8
     (by omega) (by omega)
   rcases hcase with ⟨hov, _, _⟩ | ⟨_, ypc, yh, ymps, ympl⟩
   · exfalso; rw [hc8] at hov; omega
@@ -1234,7 +1244,7 @@ theorem append_inv (P : Array I3) (b ps pl k t1 t2 te o : Nat)
       rw [BitVec.toNat_add, BitVec.toNat_ofNat]
       rw [Nat.mod_eq_of_lt (by omega : k < 2 ^ 64)]
       exact Nat.mod_eq_of_lt (by omega)
-    refine ⟨y, g, ypc, ⟨?_, ?_, ?_, ?_⟩, ymps, ?_, ysp, yl, yk⟩
+    refine ⟨y, g, ypc, ⟨?_, ?_, ?_, ?_⟩, ymps, ?_, ysp, yl, yk, yfr⟩
     · rw [ymps]; exact hal
     · rw [ymps]; exact h8
     · rw [ympl, hkW]; simp [hlenL, hvs]
@@ -1291,7 +1301,7 @@ theorem append_rounds (P : Array I3) (b ps pl k t1 t2 te o : Nat)
   | succ r ih =>
       intro j0 x L hpc hacc hel hl hp hc
       have hkk : (r + 1) * k = r * k + k := by rw [Nat.succ_mul]
-      obtain ⟨y, g, ypc, yacc, ymps, ycap, ysp, yl, yk⟩ := append_inv P b ps pl k t1 t2 te o hP x hpc h1 h2 h3 h4 h5 h12 hte
+      obtain ⟨y, g, ypc, yacc, ymps, ycap, ysp, yl, yk, _⟩ := append_inv P b ps pl k t1 t2 te o hP x hpc h1 h2 h3 h4 h5 h12 hte
         L (vs j0) (hvs j0) hel hacc (by rw [hkk] at hl; omega) (by rw [hkk] at hp; omega) (by rw [hkk] at hc; omega)
       obtain ⟨rpc, rh, rsp, rl, rk, rps, rpl, rel⟩ := hrefill (j0 + 1) y (by rw [ypc])
       obtain ⟨hal', h8', hlen', hcont'⟩ := yacc
@@ -2436,6 +2446,371 @@ theorem commitS_ok (P : Array I3) (b sh w t1 t2 cur : Nat) (ds : List Nat) (hw :
   · rw [hy]; show u.s.lr = x.s.lr; rw [ulr, zl]
   · rw [hy]; show u.s.stk = x.s.stk; rw [ustk, zk]
 
+/-! ### ループの中の append を、自分への末尾呼びの本体(`loop_ok` の形)につないだもの -/
+
+theorem stuck_eq (Q : Array I2) : ∀ (s s' : St), Steps2 Q s s' → Q[s.pc]? = some (I2.jmp s.pc) → s' = s := by
+  intro s s' h
+  induction h with
+  | refl s => intro _; rfl
+  | step s s2 hlt hrest ih =>
+      intro hq
+      have hq' : Q[s.pc] = I2.jmp s.pc := by
+        simpa [Array.getElem?_eq_getElem hlt] using hq
+      have e : step2 Q[s.pc] s = s := by rw [hq']; simp [step2]
+      rw [e] at hrest ih
+      exact ih hq
+
+theorem lift2' (P : Array I3) (Q : Array I2) (g0 g1 : Nat)
+    (hfill : ∀ k, g0 ≤ k → k < g1 → Q[k]? = some (I2.jmp k))
+    (hQ : ∀ k x, Q[k]? = some x → (g0 ≤ k ∧ k < g1) ∨ P[k]? = some (I3.base x)) :
+    ∀ (s s' : St), Steps2 Q s s' → ∀ (h : Nat → W) (sp : W) (c : Bool) (hb : Nat → BitVec 8),
+      Steps3 P ⟨s, h, sp, c, hb⟩ ⟨s', h, sp, c, hb⟩ := by
+  intro s s' hs
+  induction hs with
+  | refl s => intro h sp c hb; exact Steps3.refl _
+  | step s s2 hlt hrest ih =>
+      intro h sp c hb
+      by_cases hin : g0 ≤ s.pc ∧ s.pc < g1
+      · have hq : Q[s.pc] = I2.jmp s.pc := by
+          simpa [Array.getElem?_eq_getElem hlt] using hfill s.pc hin.1 hin.2
+        have e : step2 Q[s.pc] s = s := by rw [hq]; simp [step2]
+        rw [e] at hrest
+        have := stuck_eq Q s s2 hrest (by simpa [Array.getElem?_eq_getElem hlt] using hq)
+        rw [this]; exact Steps3.refl _
+      · have hP := hQ s.pc Q[s.pc] (by simp [Array.getElem?_eq_getElem hlt])
+        have hP' : P[s.pc]? = some (I3.base Q[s.pc]) := by
+          rcases hP with hP | hP
+          · exact absurd hP hin
+          · exact hP
+        refine Steps3.go' (I3.base Q[s.pc]) s.pc rfl hP' ?_
+        exact ih h sp c hb
+
+theorem lift2x (P : Array I3) (Q : Array I2) (g0 g1 : Nat)
+    (hfill : ∀ k, g0 ≤ k → k < g1 → Q[k]? = some (I2.jmp k))
+    (hQ : ∀ k x, Q[k]? = some x → (g0 ≤ k ∧ k < g1) ∨ P[k]? = some (I3.base x))
+    (x : HSt) (s' : St) (h : Steps2 Q x.s s') : Steps3 P x ⟨s', x.h, x.sp, x.c, x.hb⟩ :=
+  lift2' P Q g0 g1 hfill hQ x.s s' h x.h x.sp x.c x.hb
+
+/-! ### ループの中の append をつないだ自分への末尾呼び -/
+
+def LOk (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop) (c : Cn) (as elems : List E) :
+    Nat → (Nat → Option Int) → Prop
+  | 0, _ => False
+  | k + 1, ρ => ctruth ρ c = true ∨ (ctruth ρ c = false ∧ (∀ x ∈ as, ∃ z, sem2 Φ ρ x = some z) ∧
+      (∀ x ∈ elems, ∃ z, sem2 Φ ρ x = some z) ∧ (∀ x ∈ elems, Term Φ Dom ρ x) ∧
+      LOk Φ Dom c as elems k (envOf (as.map (sem2 Φ ρ))))
+
+/-- 各回に足される語(`ctruth` が偽の回の `elems` の値) -/
+def appVals (Φ : Nat → List (Option Int) → Option Int) (c : Cn) (as elems : List E) : Nat → (Nat → Option Int) → List W
+  | 0, _ => []
+  | k + 1, ρ => if ctruth ρ c = true then [] else
+      (elems.map (fun e => encode (sem2 Φ ρ e))) ++ appVals Φ c as elems k (envOf (as.map (sem2 Φ ρ)))
+
+def AcH (nov : AOp → E → E → Bool) (tgt : Nat → Nat) (c : Cn) (v : E) (as : List E) (a0 : Nat) : Array I2 :=
+  argsCodeL nov as.length tgt (a0 + lpFo nov tgt c v as.length a0) 0 as
+
+def EcH (nov : AOp → E → E → Bool) (tgt : Nat → Nat) (c : Cn) (v : E) (as elems : List E) (a0 : Nat) : Array I2 :=
+  argsCodeL nov as.length tgt (a0 + lpFo nov tgt c v as.length a0 + (AcH nov tgt c v as a0).size) as.length elems
+
+def gposH (nov : AOp → E → E → Bool) (tgt : Nat → Nat) (c : Cn) (v : E) (as elems : List E) (a0 : Nat) : Nat :=
+  a0 + lpFo nov tgt c v as.length a0 + (AcH nov tgt c v as a0).size + (EcH nov tgt c v as elems a0).size
+
+def stH (nov : AOp → E → E → Bool) (tgt : Nat → Nat) (c : Cn) (v : E) (as elems : List E) (kk a0 : Nat) : Array I2 :=
+  stTail nov as.length 0 as (gposH nov tgt c v as elems a0 + (19 + 2 * kk)) a0
+
+def part1H (nov : AOp → E → E → Bool) (tgt : Nat → Nat) (c : Cn) (v : E) (as elems : List E) (kk a0 : Nat) : Array I2 :=
+  (compileC nov as.length 0 (lpFo nov tgt c v as.length a0) c).map I2.base ++ lpV nov tgt c v as.length a0 ++
+    #[I2.base (I.b ((AcH nov tgt c v as a0).size + (EcH nov tgt c v as elems a0).size + (19 + 2 * kk) + (stH nov tgt c v as elems kk a0).size + 1))] ++
+    AcH nov tgt c v as a0 ++ EcH nov tgt c v as elems a0
+
+
+theorem accInv_congr {x y : HSt} {ps pl : Nat} {L : List W} (h : y.h = x.h) (hp : y.s.m ps = x.s.m ps)
+    (hl : y.s.m pl = x.s.m pl) (hA : AccInv x ps pl L) : AccInv y ps pl L := by
+  unfold AccInv at *; rw [h, hp, hl]; exact hA
+
+theorem pl_next (Φ : Nat → List (Option Int) → Option Int) (ρ : Nat → Option Int) (pl kk len : Nat)
+    (hρ : ρ pl = some (len : Int)) (hl : len + kk < 2 ^ 50) :
+    sem2 Φ ρ (E.op AOp.add (E.var pl) (E.lit kk)) = some ((len + kk : Nat) : Int) := by
+  have hM : (2 : Int) ^ 50 < M := by unfold M; omega
+  have h1 : ((len : Int) + kk) < 2 ^ 50 := by exact_mod_cast hl
+  have e : clamp (kk : Int) = some (kk : Int) := by
+    simp only [clamp]; rw [if_pos]; omega
+  simp only [sem2]
+  rw [hρ, e]
+  simp only [arith, arithInt, clamp]
+  rw [if_pos]
+  · push_cast; rfl
+  · omega
+
+theorem enc_toNat (n : Nat) (h : n < 2 ^ 63) : (encode (some (n : Int))).toNat = n := by
+  simp only [encode]
+  have : BitVec.ofInt 64 (n : Int) = BitVec.ofNat 64 n := by simp
+  rw [this, BitVec.toNat_ofNat]
+  exact Nat.mod_eq_of_lt (by omega)
+
+
+theorem loopH_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
+    (hnov1 : ∀ o l r, nov o l r = true → ∀ ρ a b, sem ρ l = some a → sem ρ r = some b → ∃ z, arithInt o a b = some z)
+    (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
+    (tgt ar : Nat → Nat) (Q : Array I2)
+    (hcall : ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
+      (∀ k (h : k < vs.length), s.r k = encode vs[k]) → Dom f vs →
+      ∃ s', Steps2 Q s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode (Φ f vs) ∧ s'.m = s.m ∧ s'.lr = s.lr ∧ s'.stk = s.stk)
+    (c : Cn) (v : E) (as elems : List E)
+    (hc : c.lits) (hcv : c.maxVar ≤ as.length)
+    (hv : v.lits2 ∧ v.arOk ar ∧ v.maxVar ≤ as.length) (has : ∀ x ∈ as, x.lits2 ∧ x.arOk ar ∧ x.maxVar ≤ as.length)
+    (helems : ∀ e ∈ elems, e.lits2 ∧ e.arOk ar ∧ e.maxVar ≤ as.length ∧ lateN e = none)
+    (ps pl kk t1 o a0 : Nat) (P3 : Array I3)
+    (hkk : elems.length = kk) (hps : as[ps]? = some (E.var ps)) (hpl : as[pl]? = some (E.op AOp.add (E.var pl) (E.lit kk)))
+    (hpsn : ps < as.length) (hpln : pl < as.length) (h3 : ps ≠ pl) (ht1 : 2 * as.length + kk ≤ t1)
+    (hAP : ∀ i (hi : i < (appendCode ps pl kk t1 (t1 + 1) (2 * as.length) o).length),
+      P3[gposH nov tgt c v as elems a0 + i]? = some (appendCode ps pl kk t1 (t1 + 1) (2 * as.length) o)[i])
+    (hQ1 : ∀ k x, (part1H nov tgt c v as elems kk a0)[k]? = some x → Q[a0 + k]? = some x)
+    (hQ3 : ∀ k x, (stH nov tgt c v as elems kk a0)[k]? = some x → Q[gposH nov tgt c v as elems a0 + (19 + 2 * kk) + k]? = some x)
+    (hfill : ∀ k, gposH nov tgt c v as elems a0 ≤ k → k < gposH nov tgt c v as elems a0 + (19 + 2 * kk) → Q[k]? = some (I2.jmp k))
+    (hQP : ∀ k x, Q[k]? = some x → (gposH nov tgt c v as elems a0 ≤ k ∧ k < gposH nov tgt c v as elems a0 + (19 + 2 * kk)) ∨
+      P3[k]? = some (I3.base x)) :
+    ∀ k (ρ : Nat → Option Int), (∀ j, InR (ρ j)) → (∀ j, ∃ z, ρ j = some z) → ∀ (x : HSt) (L : List W),
+      LDom Φ Dom c v as k ρ → LOk Φ Dom c as elems k ρ → x.s.pc = a0 → (∀ j < as.length, x.s.m j = encode (ρ j)) →
+      AccInv x ps pl L → ρ ps = some ((x.s.m ps).toNat : Int) → ρ pl = some (L.length : Int) →
+      L.length + (appVals Φ c as elems k ρ).length ≤ (x.h ((x.s.m ps).toNat / 8 - 1)).toNat →
+      (x.s.m ps).toNat + 8 * (L.length + (appVals Φ c as elems k ρ).length) < 2 ^ 64 →
+      L.length + (appVals Φ c as elems k ρ).length < 2 ^ 50 →
+      ∃ y : HSt, Steps3 P3 x y ∧
+        y.s.pc = a0 + (part1H nov tgt c v as elems kk a0).size + (19 + 2 * kk) + (stH nov tgt c v as elems kk a0).size ∧
+        y.s.r 0 = encode (LΦ Φ c v as k ρ) ∧ y.s.stk = x.s.stk ∧ y.sp = x.sp ∧
+        AccInv y ps pl (L ++ appVals Φ c as elems k ρ) ∧ y.s.m ps = x.s.m ps ∧
+        y.h ((x.s.m ps).toNat / 8 - 1) = x.h ((x.s.m ps).toNat / 8 - 1) := by
+  intro k
+  induction k with
+  | zero => intro ρ _ _ x L hD; exact absurd hD (by simp [LDom])
+  | succ k ih =>
+      intro ρ hρ hvs x L hD hOk hs hm hacc hρps hρpl hcap hptr hlen
+      have hCs : (compileC nov as.length 0 (lpFo nov tgt c v as.length a0) c).size = (compileC nov as.length 0 0 c).size :=
+        compileC_size nov as.length c 0 _ 0
+      have hFo : lpFo nov tgt c v as.length a0 = (compileC nov as.length 0 0 c).size + (lpV nov tgt c v as.length a0).size + 1 := rfl
+      have hp1 : part1H nov tgt c v as elems kk a0 =
+          (((((compileC nov as.length 0 (lpFo nov tgt c v as.length a0) c).map I2.base ++ lpV nov tgt c v as.length a0) ++
+            #[I2.base (I.b ((AcH nov tgt c v as a0).size + (EcH nov tgt c v as elems a0).size + (19 + 2 * kk) +
+              (stH nov tgt c v as elems kk a0).size + 1))]) ++ AcH nov tgt c v as a0) ++ EcH nov tgt c v as elems a0) := rfl
+      have hQ1' := hQ1
+      rw [hp1] at hQ1'
+      have hGX := place_left hQ1'
+      have hGE := place_right hQ1'
+      have hGY := place_left hGX
+      have hGAc := place_right hGX
+      have hGZ := place_left hGY
+      have hGJ := place_right hGY
+      have hGC := place_left hGZ
+      have hGV := place_right hGZ
+      have hcCm : ((compileC nov as.length 0 (lpFo nov tgt c v as.length a0) c).map I2.base).size = (compileC nov as.length 0 0 c).size := by
+        simp [hCs]
+      -- 条件
+      obtain ⟨s1, hC, hct, hcf, hcm⟩ := compileC_ok nov hnov1 ρ hρ hvs as.length c 0 (lpFo nov tgt c v as.length a0)
+        { x.s with pc := 0 } hc hcv rfl (by intro j hj; exact hm j hj) (by rw [hCs, hFo]; omega)
+      have hCe := embed_at hC Q a0 hs hGC
+      have hCmm : ∀ j < as.length, s1.m j = x.s.m j := fun j hj => by simpa using hcm j (by omega)
+      have hCstk := Steps.ls_eq hC
+      have hg0 : gposH nov tgt c v as elems a0 = a0 + (part1H nov tgt c v as elems kk a0).size := by
+        have hpsz : (part1H nov tgt c v as elems kk a0).size = (compileC nov as.length 0 0 c).size +
+            (lpV nov tgt c v as.length a0).size + 1 + (AcH nov tgt c v as a0).size + (EcH nov tgt c v as elems a0).size := by
+          rw [hp1]; simp [hCs]; omega
+        unfold gposH; rw [hFo, hpsz]; omega
+      by_cases hct' : ctruth ρ c = true
+      · -- 条件が成り立つ: 値 `v`
+        have hpc1 : ({ s1 with pc := s1.pc + a0 } : St).pc = a0 + (compileC nov as.length 0 0 c).size := by
+          simp [hct hct', hCs]; omega
+        have hcomp := compileS2_ok nov Φ Dom hΦ hnov ρ hρ hvs as.length tgt ar Q hcall v hv.1 hv.2.1 hv.2.2
+          (a0 + (compileC nov as.length 0 0 c).size) 0
+        obtain ⟨s2, h2, p2, r2, m2, k2⟩ := hcomp { s1 with pc := s1.pc + a0 } hpc1
+          (by intro j hj; show s1.m j = _; rw [hCmm j hj]; exact hm j hj)
+          (by
+            intro k' x' hk
+            have := hGV k' x' hk
+            simpa [hCs, Nat.add_assoc] using this)
+          ((hD.1 hct'))
+        have hJpos : s2.pc = a0 + (((compileC nov as.length 0 (lpFo nov tgt c v as.length a0) c).map I2.base ++ lpV nov tgt c v as.length a0).size) := by
+          have hpV : (lpV nov tgt c v as.length a0).size = (compileS2 nov as.length tgt (a0 + (compileC nov as.length 0 0 c).size) 0 v).size := rfl
+          rw [p2]; simp only [Array.size_append, Array.size_map]; omega
+        have g3 : Steps2 Q s2 (step (I.b ((AcH nov tgt c v as a0).size + (EcH nov tgt c v as elems a0).size + (19 + 2 * kk) +
+              (stH nov tgt c v as elems kk a0).size + 1)) s2) :=
+          Steps2.go' (I2.base (I.b ((AcH nov tgt c v as a0).size + (EcH nov tgt c v as elems a0).size + (19 + 2 * kk) +
+              (stH nov tgt c v as elems kk a0).size + 1))) _ hJpos (by simpa using hGJ 0 _ (by simp)) (Steps2.refl _)
+        have gall := lift2x P3 Q _ _ hfill hQP x _ ((hCe.trans h2).trans g3)
+        have hav : appVals Φ c as elems (k + 1) ρ = [] := by simp [appVals, hct']
+        have hLΦ : LΦ Φ c v as (k + 1) ρ = sem2 Φ ρ v := by simp [LΦ, hct']
+        refine ⟨_, gall, ?_, ?_, ?_, rfl, ?_, ?_, ?_⟩
+        · have hpsz : (part1H nov tgt c v as elems kk a0).size = (compileC nov as.length 0 0 c).size +
+              (lpV nov tgt c v as.length a0).size + 1 + (AcH nov tgt c v as a0).size + (EcH nov tgt c v as elems a0).size := by
+            rw [hp1]; simp [hCs]; omega
+          show s2.pc + _ = _
+          rw [hJpos, hpsz]; simp only [Array.size_append, Array.size_map]; omega
+        · simp [step, r2, hLΦ]
+        · simp [step]; rw [k2]; simp [hCstk.2]
+        · have hym : ∀ j < as.length, s2.m j = x.s.m j := fun j hj => by
+            rw [m2 j (by omega)]; exact hCmm j hj
+          rw [hav]
+          exact accInv_congr (x := x) rfl (by show s2.m ps = _; exact hym ps hpsn) (by show s2.m pl = _; exact hym pl hpln) (by simpa using hacc)
+        · exact (by rw [m2 ps (by omega)]; exact hCmm ps hpsn : s2.m ps = x.s.m ps)
+        · rfl
+      · have hcf' : ctruth ρ c = false := by simpa using hct'
+        obtain ⟨hall, hallE, hTE, hOk'⟩ : (∀ x ∈ as, ∃ z, sem2 Φ ρ x = some z) ∧ (∀ x ∈ elems, ∃ z, sem2 Φ ρ x = some z) ∧
+            (∀ x ∈ elems, Term Φ Dom ρ x) ∧ LOk Φ Dom c as elems k (envOf (as.map (sem2 Φ ρ))) := by
+          rcases hOk with h | ⟨_, h1, h2, h3, h4⟩
+          · exact absurd h hct'
+          · exact ⟨h1, h2, h3, h4⟩
+        have hDt := hD.2 hcf'
+        have hpc1 : ({ s1 with pc := s1.pc + a0 } : St).pc = a0 + lpFo nov tgt c v as.length a0 := by
+          simp [hcf hcf']; omega
+        have hAcs : ((compileC nov as.length 0 (lpFo nov tgt c v as.length a0) c).map I2.base ++ lpV nov tgt c v as.length a0 ++
+          #[I2.base (I.b ((AcH nov tgt c v as a0).size + (EcH nov tgt c v as elems a0).size + (19 + 2 * kk) + (stH nov tgt c v as elems kk a0).size + 1))]).size = lpFo nov tgt c v as.length a0 := by
+          simp only [Array.size_append, Array.size_map, Array.size_singleton, hCs]; omega
+        have hAc : ∀ k x, (AcH nov tgt c v as a0)[k]? = some x → Q[(a0 + lpFo nov tgt c v as.length a0) + k]? = some x := by
+          intro k x hk; have := hGAc k x hk; rw [hAcs] at this; exact this
+        have hEc : ∀ k x, (EcH nov tgt c v as elems a0)[k]? = some x →
+            Q[(a0 + lpFo nov tgt c v as.length a0 + (AcH nov tgt c v as a0).size) + k]? = some x := by
+          intro k x hk; have := hGE k x hk
+          have e : a0 + (((compileC nov as.length 0 (lpFo nov tgt c v as.length a0) c).map I2.base ++ lpV nov tgt c v as.length a0 ++
+          #[I2.base (I.b ((AcH nov tgt c v as a0).size + (EcH nov tgt c v as elems a0).size + (19 + 2 * kk) + (stH nov tgt c v as elems kk a0).size + 1))]) ++ AcH nov tgt c v as a0).size =
+              a0 + lpFo nov tgt c v as.length a0 + (AcH nov tgt c v as a0).size := by
+            rw [Array.size_append, hAcs]; omega
+          rw [e] at this; exact this
+        have hcompA : ∀ x ∈ as, ∀ a d, CompOk nov Φ Dom ρ as.length tgt Q x a d := fun x hx =>
+          compileS2_ok nov Φ Dom hΦ hnov ρ hρ hvs as.length tgt ar Q hcall x (has x hx).1 (has x hx).2.1 (has x hx).2.2
+        have hcompE : ∀ x ∈ elems, ∀ a d, CompOk nov Φ Dom ρ as.length tgt Q x a d := fun x hx =>
+          compileS2_ok nov Φ Dom hΦ hnov ρ hρ hvs as.length tgt ar Q hcall x (helems x hx).1 (helems x hx).2.1 (helems x hx).2.2.1
+        obtain ⟨s3, hA3, p3, m3, n3, k3⟩ := args2L_ok nov Φ Dom ρ as.length tgt Q as hcompA hDt.1
+          (a0 + lpFo nov tgt c v as.length a0) 0 { s1 with pc := s1.pc + a0 } hpc1
+          (by intro j hj; show s1.m j = _; rw [hCmm j hj]; exact hm j hj) hAc
+        obtain ⟨s3e, hE3, p3e, m3e, n3e, k3e⟩ := args2L_ok nov Φ Dom ρ as.length tgt Q elems hcompE hTE
+          (a0 + lpFo nov tgt c v as.length a0 + (AcH nov tgt c v as a0).size) as.length s3 p3
+          (by intro j hj; rw [n3 j (by omega)]; show s1.m j = _; rw [hCmm j hj]; exact hm j hj) hEc
+        have g1 := lift2x P3 Q _ _ hfill hQP x _ ((hCe.trans hA3).trans hE3)
+        obtain ⟨x1, hx1⟩ : ∃ x1 : HSt, x1 = ⟨s3e, x.h, x.sp, x.c, x.hb⟩ := ⟨_, rfl⟩
+        rw [← hx1] at g1
+        have x1s : x1.s = s3e := by rw [hx1]
+        have x1h : x1.h = x.h := by rw [hx1]
+        have x1sp : x1.sp = x.sp := by rw [hx1]
+        have hx1m : ∀ j < as.length, x1.s.m j = x.s.m j := fun j hj => by
+          rw [x1s, n3e j (by omega), n3 j (by omega)]; show s1.m j = _; exact hCmm j hj
+        have hx1sl : ∀ j (h : j < as.length), lateN as[j] = none → x1.s.m (as.length + j) = encode (sem2 Φ ρ as[j]) :=
+          fun j hj hl => by
+            rw [x1s, n3e (as.length + j) (by omega)]
+            simpa using m3 j hj hl
+        have hx1el : ∀ i (h : i < elems.length), x1.s.m (2 * as.length + i) = encode (sem2 Φ ρ elems[i]) := fun i hi => by
+          have := m3e i hi ((helems _ (List.getElem_mem hi)).2.2.2)
+          rw [x1s, show 2 * as.length + i = as.length + as.length + i by omega]; exact this
+        have hx1stk : x1.s.stk = x.s.stk := by rw [x1s, k3e, k3]; exact hCstk.2
+        obtain ⟨vs, hvsd⟩ : ∃ vs : List W, vs = elems.map (fun e => encode (sem2 Φ ρ e)) := ⟨_, rfl⟩
+        have hvl : vs.length = kk := by rw [hvsd]; simp [hkk]
+        have hvsi : ∀ i (hi : i < vs.length), vs[i] = encode (sem2 Φ ρ (elems[i]'(by omega))) := by
+          intro i hi; subst hvsd; simp
+        have hav : appVals Φ c as elems (k + 1) ρ = vs ++ appVals Φ c as elems k (envOf (as.map (sem2 Φ ρ))) := by
+          rw [hvsd]; simp [appVals, hct']
+        have havl : (appVals Φ c as elems (k + 1) ρ).length = kk + (appVals Φ c as elems k (envOf (as.map (sem2 Φ ρ)))).length := by
+          rw [hav]; simp [hvl]
+        have hLv : (L ++ vs).length = L.length + kk := by simp [hvl]
+        have hxacc : AccInv x1 ps pl L := accInv_congr (x := x) x1h (hx1m ps hpsn) (hx1m pl hpln) hacc
+        obtain ⟨y1, g2, p2', hacc2, hm2ps, hh2, hsp2, hlr2, hstk2, hfr2⟩ :=
+          append_inv P3 (gposH nov tgt c v as elems a0) ps pl kk t1 (t1 + 1) (2 * as.length) o hAP x1 (by rw [x1s]; exact p3e)
+            (by omega) (by omega) h3 (by omega) (by omega) (by omega) (by intro i hi; omega) L vs hvl
+            (by intro i hi; rw [hvsi i hi]; exact hx1el i (by omega)) hxacc
+            (by omega) (by rw [hx1m ps hpsn]; omega) (by rw [x1h, hx1m ps hpsn]; omega)
+        obtain ⟨s4, h4, k4, hall4, _⟩ := stI_ok nov Φ hΦ hnov ρ hρ hvs as.length as (fun x hx => (has x hx).1) 0
+          { y1.s with pc := 0 } rfl (by
+            intro j hj hl
+            show y1.s.m (as.length + 0 + j) = _
+            rw [hfr2 _ (by omega) (by omega) (by omega) (by omega)]
+            simpa using hx1sl j hj hl)
+        obtain ⟨hp4, hm4⟩ := hall4 hall
+        have hGS' : ∀ k x, ((stI nov as.length 0 as).map I2.base ++ #[I2.bk (((gposH nov tgt c v as elems a0) + (19 + 2 * kk)) + (stI nov as.length 0 as).size - a0), I2.base (I.movz 0)])[k]? = some x →
+            Q[((gposH nov tgt c v as elems a0) + (19 + 2 * kk)) + k]? = some x := by
+          intro k x hk; exact hQ3 k x (by unfold stH stTail; exact hk)
+        have hGI := place_left hGS'
+        have hGB := place_right hGS'
+        have hpcI : y1.s.pc = ((gposH nov tgt c v as elems a0) + (19 + 2 * kk)) := by rw [p2']; omega
+        have h4e := embed_at h4 Q ((gposH nov tgt c v as elems a0) + (19 + 2 * kk)) hpcI hGI
+        have hbk : ({ s4 with pc := s4.pc + ((gposH nov tgt c v as elems a0) + (19 + 2 * kk)) } : St).pc = ((gposH nov tgt c v as elems a0) + (19 + 2 * kk)) + (stI nov as.length 0 as).size := by
+          simp [hp4]; omega
+        obtain ⟨s5, hs5⟩ : ∃ s5, s5 = step2 (I2.bk (((gposH nov tgt c v as elems a0) + (19 + 2 * kk)) + (stI nov as.length 0 as).size - a0))
+            { s4 with pc := s4.pc + ((gposH nov tgt c v as elems a0) + (19 + 2 * kk)) } := ⟨_, rfl⟩
+        have g5 : Steps2 Q { s4 with pc := s4.pc + ((gposH nov tgt c v as elems a0) + (19 + 2 * kk)) } s5 := by
+          rw [hs5]
+          exact Steps2.go' _ _ hbk (by simpa using hGB 0 (I2.bk (((gposH nov tgt c v as elems a0) + (19 + 2 * kk)) + (stI nov as.length 0 as).size - a0)) (by simp)) (Steps2.refl _)
+        have g4 := lift2x P3 Q _ _ hfill hQP y1 s5 (h4e.trans g5)
+        obtain ⟨x2, hx2⟩ : ∃ x2 : HSt, x2 = ⟨s5, y1.h, y1.sp, y1.c, y1.hb⟩ := ⟨_, rfl⟩
+        rw [← hx2] at g4
+        have x2s : x2.s = s5 := by rw [hx2]
+        have x2h : x2.h = y1.h := by rw [hx2]
+        have x2sp : x2.sp = y1.sp := by rw [hx2]
+        have hvsIn : ∀ v' ∈ as.map (sem2 Φ ρ), InR v' := by
+          intro v' hv'; obtain ⟨x, hx, rfl⟩ := List.mem_map.1 hv'
+          exact sem2_inR Φ hΦ ρ hρ x (has x hx).1
+        have hvsAll : ∀ v' ∈ as.map (sem2 Φ ρ), ∃ z, v' = some z := by
+          intro v' hv'; obtain ⟨x, hx, rfl⟩ := List.mem_map.1 hv'
+          exact hall x hx
+        have hvall : (as.map (sem2 Φ ρ)).all Option.isSome = true := (all_some_iff2 Φ ρ as).2 hall
+        have s5pc : s5.pc = a0 := by
+          rw [hs5]; simp [step2]; rw [hp4]; omega
+        have s5m : ∀ j < as.length, s5.m j = encode (envOf (as.map (sem2 Φ ρ)) j) := by
+          intro j hj
+          have hjl : j < (as.map (sem2 Φ ρ)).length := by simpa using hj
+          rw [envOf_eq _ hvsAll j hjl]
+          rw [hs5]; simp [step2]
+          simpa [List.getElem_map] using hm4 j hj
+        have s5stk : s5.stk = s4.stk := by rw [hs5]; simp [step2]
+        have hpsv : as[ps] = E.var ps := by simpa [List.getElem?_eq_getElem hpsn] using hps
+        have hplv : as[pl] = E.op AOp.add (E.var pl) (E.lit kk) := by simpa [List.getElem?_eq_getElem hpln] using hpl
+        have hρ'ps : envOf (as.map (sem2 Φ ρ)) ps = ρ ps := by
+          have hjl : ps < (as.map (sem2 Φ ρ)).length := by simpa using hpsn
+          rw [envOf_eq _ hvsAll ps hjl]; simp [hpsv, sem2]
+        have hLlen : L.length = (x.s.m pl).toNat := hacc.2.2.1.symm
+        have hρ'pl : envOf (as.map (sem2 Φ ρ)) pl = some (((L ++ vs).length : Nat) : Int) := by
+          have hjl : pl < (as.map (sem2 Φ ρ)).length := by simpa using hpln
+          rw [envOf_eq _ hvsAll pl hjl]
+          simp only [List.getElem_map, hplv]
+          rw [pl_next Φ ρ pl kk L.length hρpl (by omega), hLv]
+        have hm5ps : s5.m ps = x.s.m ps := by
+          have := s5m ps hpsn
+          rw [hρ'ps] at this
+          rw [this, hm ps hpsn]
+        have hm5pl : (s5.m pl).toNat = L.length + kk := by
+          have := s5m pl hpln
+          rw [hρ'pl, hLv] at this
+          rw [this]; exact enc_toNat _ (by omega)
+        have hhidx : y1.h ((x.s.m ps).toNat / 8 - 1) = x.h ((x.s.m ps).toNat / 8 - 1) := by
+          have := hh2; rw [hx1m ps hpsn, x1h] at this; exact this
+        have hy1ps : y1.s.m ps = x.s.m ps := by rw [hm2ps, hx1m ps hpsn]
+        have hacc' : AccInv x2 ps pl (L ++ vs) := by
+          obtain ⟨a1, a2, a3, a4⟩ := hacc2
+          refine ⟨?_, ?_, ?_, ?_⟩
+          · rw [x2s, hm5ps]; rw [hy1ps] at a1; exact a1
+          · rw [x2s, hm5ps]; rw [hy1ps] at a2; exact a2
+          · rw [x2s, hm5pl, hLv]
+          · intro i hi
+            have := a4 i hi
+            rw [hy1ps] at this
+            rw [x2h, x2s, hm5ps]; exact this
+        have hvall' : ∀ j, j < as.length → x2.s.m j = encode (envOf (as.map (sem2 Φ ρ)) j) := fun j hj => by
+          rw [x2s]; exact s5m j hj
+        obtain ⟨y, g6, p6, r6, k6, sp6, acc6, m6, h6⟩ := ih (envOf (as.map (sem2 Φ ρ))) (envOf_inR_gen _ hvsIn) (envOf_some _) x2 (L ++ vs)
+          ((hDt.2 hall)) hOk' (by rw [x2s]; exact s5pc) hvall' hacc'
+          (by rw [x2s, hm5ps, hρ'ps]; exact hρps) hρ'pl
+          (by rw [x2h, x2s, hm5ps, hhidx, hLv]; omega)
+          (by rw [x2s, hm5ps, hLv]; omega)
+          (by rw [hLv]; omega)
+        have hx2stk : x2.s.stk = x.s.stk := by
+          rw [x2s, s5stk, k4]; show y1.s.stk = _; rw [hstk2, hx1stk]
+        have hx2sp : x2.sp = x.sp := by rw [x2sp, hsp2, x1sp]
+        refine ⟨y, (((g1.trans g2).trans g4).trans g6), p6, ?_, ?_, ?_, ?_, ?_, ?_⟩
+        · rw [r6]; simp [LΦ, hcf', callSem, hvall]
+        · rw [k6, hx2stk]
+        · rw [sp6, hx2sp]
+        · rw [hav, ← List.append_assoc]; exact acc6
+        · rw [m6, x2s, hm5ps]
+        · rw [x2s, hm5ps] at h6; rw [h6, x2h, hhidx]
+
 #print axioms copyLoop_ok
 #print axioms growEntry_ok
 #print axioms lift2
@@ -2456,5 +2831,9 @@ theorem commitS_ok (P : Array I3) (b sh w t1 t2 cur : Nat) (ds : List Nat) (hw :
 #print axioms chars_ok
 #print axioms commitS_ok
 #print axioms selftailH_fn_ok
+#print axioms stuck_eq
+#print axioms lift2x
+#print axioms pl_next
+#print axioms loopH_ok
 
 end SirZH
