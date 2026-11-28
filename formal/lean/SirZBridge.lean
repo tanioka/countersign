@@ -7,6 +7,7 @@
   * `TermG`/`DomG`: `Term`/`DomF` に「呼びの実引数が部分適用(`pf`)にならない」(評価器は並びの中の `pf` を SIR の外とする)を足した止まる条件。`DomG_DomF`: `DomG` ⊆ `DomF`。
   * `limit_sound`: 燃料 `k` 段で止まる(`DomG`)呼びの本体は、規則 `Ev` でも同じ値に評価される。
   * `limit_complete`: 規則 `Ev` が本体を値に評価するなら、ある燃料で止まり同じ値(`Ev` の導出についての帰納法。燃料は部分木ごとに違うので、単調性 `termG_fuel_mono` で max に揃える)。
+  * `loop_sound`: 自分への末尾呼びのループ関数(`loopT` = 行 `c : v` + 既定の行 `self(as..)`)の燃料つき反復 `LΦ`(SirZAsm)は、評価器の規則 `Ev` でも同じ値。`tree_sound_fs` は `tree_sound` を任意の関数表に一般化したもの。
   * `limit_iff`: `(∃ k, DomG body k f l ∧ ΦF body k f l = x) ↔ ∃ rb, Ev … (tr (body f)) rb ∧ co rb = some x`(`ΦF` の極限 = 評価器の意味)。
 -/
 import SirZAsm
@@ -156,14 +157,14 @@ theorem neg_eq (x : Option Int) (hx : InR x) :
       simp [SirZC.clamp, SirZC.M]
       unfold M at this; omega
 
-theorem tree_sound (ar : Nat → Nat) (body : Nat → E)
+theorem tree_sound_fs (ar : Nat → Nat) (fs : SirZC.Fs) (bd : Nat → SirZC.T) (hfs : ∀ f, fs f = some (ar f, bd f))
     (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
     (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (HΦ : ∀ f vs, Dom f vs → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
-      ∃ rb, SirZC.Ev (fsOf ar body) SirZC.selLeft (fun i => vs.getD i none) (tr (body f)) rb ∧ SirZC.co rb = some (Φ f vs))
+      ∃ rb, SirZC.Ev fs SirZC.selLeft (fun i => vs.getD i none) (bd f) rb ∧ SirZC.co rb = some (Φ f vs))
     (ρT : SirZC.Env) (ρE : Nat → Option Int) (hρ : ∀ i, InR (ρE i)) :
     ∀ e : E, e.lits2 → e.arOk ar → (∀ i < e.maxVar, ρT i = ρE i) → TermG Φ Dom ρE e →
-      ∃ r, SirZC.Ev (fsOf ar body) SirZC.selLeft ρT (tr e) r ∧ SirZC.co r = some (sem2 Φ ρE e) ∧ (r = .pf → pfOf Φ ρE e) := by
+      ∃ r, SirZC.Ev fs SirZC.selLeft ρT (tr e) r ∧ SirZC.co r = some (sem2 Φ ρE e) ∧ (r = .pf → pfOf Φ ρE e) := by
   intro e
   induction e with
   | lit n =>
@@ -215,7 +216,7 @@ theorem tree_sound (ar : Nat → Nat) (body : Nat → E)
       have hra' : ra = .v (sem2 Φ ρE a) := co_v hca (fun h => ht.2.1 (hpa h))
       subst hra'
       have hin := sem2_inR Φ hΦ ρE hρ a hl
-      have hargs : SirZC.Ev (fsOf ar body) SirZC.selLeft ρT (.acons (tr a) .anil) (.args [sem2 Φ ρE a]) :=
+      have hargs : SirZC.Ev fs SirZC.selLeft ρT (.acons (tr a) .anil) (.args [sem2 Φ ρE a]) :=
         SirZC.Ev.acons hra SirZC.Ev.anil
       by_cases hall : ∃ z, sem2 Φ ρE a = some z
       · obtain ⟨z, hz⟩ := hall
@@ -223,14 +224,14 @@ theorem tree_sound (ar : Nat → Nat) (body : Nat → E)
           intro v hv'; simp at hv'; subst hv'; exact ⟨z, hz⟩
         obtain ⟨rb, hrb, hcb⟩ := HΦ f [sem2 Φ ρE a] (ht.2.2 hall') (by simp [har.1]) hall'
           (by intro v hv'; simp at hv'; subst hv'; exact hin)
-        refine ⟨_, SirZC.Ev.callRun hargs rfl (by simp [har.1]) (by simp [hz]) hrb, ?_, fun h => absurd h (dePF_ne_pf _)⟩
+        refine ⟨_, SirZC.Ev.callRun hargs (hfs f) (by simp [har.1]) (by simp [hz]) hrb, ?_, fun h => absurd h (dePF_ne_pf _)⟩
         rw [co_dePF, hcb]
         simp [sem2, callSem, hz]
       · have hn : sem2 Φ ρE a = none := by
           cases h : sem2 Φ ρE a with
           | none => rfl
           | some z => exact absurd ⟨z, h⟩ hall
-        refine ⟨_, SirZC.Ev.callPF hargs rfl (by simp [har.1]) (by simp [hn]), ?_, fun _ => hn⟩
+        refine ⟨_, SirZC.Ev.callPF hargs (hfs f) (by simp [har.1]) (by simp [hn]), ?_, fun _ => hn⟩
         simp [SirZC.co, sem2, callSem, hn]
   | call2 f a b iha ihb =>
       intro hl har hv ht
@@ -241,7 +242,7 @@ theorem tree_sound (ar : Nat → Nat) (body : Nat → E)
       subst hra'; subst hrb'
       have hina := sem2_inR Φ hΦ ρE hρ a hl.1
       have hinb := sem2_inR Φ hΦ ρE hρ b hl.2
-      have hargs : SirZC.Ev (fsOf ar body) SirZC.selLeft ρT (.acons (tr a) (.acons (tr b) .anil))
+      have hargs : SirZC.Ev fs SirZC.selLeft ρT (.acons (tr a) (.acons (tr b) .anil))
           (.args [sem2 Φ ρE a, sem2 Φ ρE b]) :=
         SirZC.Ev.acons hra (SirZC.Ev.acons hrb SirZC.Ev.anil)
       by_cases hall : (∃ z, sem2 Φ ρE a = some z) ∧ (∃ z, sem2 Φ ρE b = some z)
@@ -256,7 +257,7 @@ theorem tree_sound (ar : Nat → Nat) (body : Nat → E)
               cases hv' with
               | inl h => subst h; exact hina
               | inr h => subst h; exact hinb)
-        refine ⟨_, SirZC.Ev.callRun hargs rfl (by simp [har.1]) (by simp [hz1, hz2]) hrb', ?_, fun h => absurd h (dePF_ne_pf _)⟩
+        refine ⟨_, SirZC.Ev.callRun hargs (hfs f) (by simp [har.1]) (by simp [hz1, hz2]) hrb', ?_, fun h => absurd h (dePF_ne_pf _)⟩
         rw [co_dePF, hcb']
         simp [sem2, callSem, hz1, hz2]
       · have hn : sem2 Φ ρE a = none ∨ sem2 Φ ρE b = none := by
@@ -266,13 +267,23 @@ theorem tree_sound (ar : Nat → Nat) (body : Nat → E)
             cases h2 : sem2 Φ ρE b with
             | none => exact Or.inr rfl
             | some z2 => exact absurd ⟨⟨z1, h1⟩, ⟨z2, h2⟩⟩ hall
-        refine ⟨_, SirZC.Ev.callPF hargs rfl (by simp [har.1]) (by
+        refine ⟨_, SirZC.Ev.callPF hargs (hfs f) (by simp [har.1]) (by
           cases hn with
           | inl h => simp [h]
           | inr h => simp [h]), ?_, fun _ => hn⟩
         cases hn with
         | inl h => simp [SirZC.co, sem2, callSem, h]
         | inr h => simp [SirZC.co, sem2, callSem, h]
+
+theorem tree_sound (ar : Nat → Nat) (body : Nat → E)
+    (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
+    (HΦ : ∀ f vs, Dom f vs → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
+      ∃ rb, SirZC.Ev (fsOf ar body) SirZC.selLeft (fun i => vs.getD i none) (tr (body f)) rb ∧ SirZC.co rb = some (Φ f vs))
+    (ρT : SirZC.Env) (ρE : Nat → Option Int) (hρ : ∀ i, InR (ρE i)) :
+    ∀ e : E, e.lits2 → e.arOk ar → (∀ i < e.maxVar, ρT i = ρE i) → TermG Φ Dom ρE e →
+      ∃ r, SirZC.Ev (fsOf ar body) SirZC.selLeft ρT (tr e) r ∧ SirZC.co r = some (sem2 Φ ρE e) ∧ (r = .pf → pfOf Φ ρE e) :=
+  tree_sound_fs ar (fsOf ar body) (fun f => tr (body f)) (fun _ => rfl) Φ Dom hΦ HΦ ρT ρE hρ
 
 theorem getD_envOf (vs : List (Option Int)) (hall : ∀ v ∈ vs, ∃ z, v = some z) (i : Nat) (hi : i < vs.length) :
     vs.getD i none = envOf vs i := by
@@ -639,6 +650,247 @@ theorem DomG_DomF (body : Nat → E) : ∀ k f vs, DomG body k f vs → DomF bod
   induction k with
   | zero => intro f vs h; exact h
   | succ k ih => intro f vs h; exact termG_term _ _ _ ih _ (body f) h
+
+
+/-! ### ループ関数(自分への末尾呼び)の `LΦ` と評価器 -/
+
+/-- 条件の式の木の写し -/
+def trc : Cn → SirZC.T
+  | .val e => tr e
+  | .and a b => .and (trc a) (trc b)
+  | .or a b => .or (trc a) (trc b)
+
+/-- ループ関数の本体の項: `c : v` の行、既定の行 `self(as..)`、(全部外れたら)`!_` -/
+def loopT (self : Nat) (c : Cn) (v : E) (as : List E) : SirZC.T :=
+  .rowC (trc c) (tr v) (.rowD (.call self (trs as)) .void)
+
+theorem arOk_of_lits (ar : Nat → Nat) : ∀ e : E, e.lits → e.arOk ar
+  | .lit _, _ => trivial
+  | .var _, _ => trivial
+  | .op _ l r, h => ⟨arOk_of_lits ar l h.1, arOk_of_lits ar r h.2⟩
+  | .neg e, h => arOk_of_lits ar e h
+  | .cmp _ l r, h => ⟨arOk_of_lits ar l h.1, arOk_of_lits ar r h.2⟩
+  | .call1 _ _, h => h.elim
+  | .call2 _ _ _, h => h.elim
+
+theorem termG_of_lits (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop) (ρ : Nat → Option Int) :
+    ∀ e : E, e.lits → TermG Φ Dom ρ e
+  | .lit _, _ => trivial
+  | .var _, _ => trivial
+  | .op _ l r, h => ⟨termG_of_lits Φ Dom ρ l h.1, termG_of_lits Φ Dom ρ r h.2⟩
+  | .neg e, h => termG_of_lits Φ Dom ρ e h
+  | .cmp _ l r, h => ⟨termG_of_lits Φ Dom ρ l h.1, termG_of_lits Φ Dom ρ r h.2⟩
+  | .call1 _ _, h => h.elim
+  | .call2 _ _ _, h => h.elim
+
+theorem sem2_of_lits (Φ : Nat → List (Option Int) → Option Int) (ρ : Nat → Option Int) :
+    ∀ e : E, e.lits → sem2 Φ ρ e = sem ρ e
+  | .lit _, _ => rfl
+  | .var _, _ => rfl
+  | .op o l r, h => by simp [sem2, sem, sem2_of_lits Φ ρ l h.1, sem2_of_lits Φ ρ r h.2]
+  | .neg e, h => by simp [sem2, sem, sem2_of_lits Φ ρ e h]
+  | .cmp c l r, h => by simp [sem2, sem, sem2_of_lits Φ ρ l h.1, sem2_of_lits Φ ρ r h.2]
+  | .call1 _ _, h => h.elim
+  | .call2 _ _ _, h => h.elim
+
+theorem not_pfOf_lits (Φ : Nat → List (Option Int) → Option Int) (ρ : Nat → Option Int) :
+    ∀ e : E, e.lits → ¬ pfOf Φ ρ e
+  | .lit _, _ => by simp [pfOf]
+  | .var _, _ => by simp [pfOf]
+  | .op _ _ _, _ => by simp [pfOf]
+  | .neg _, _ => by simp [pfOf]
+  | .cmp _ _ _, _ => by simp [pfOf]
+  | .call1 _ _, h => h.elim
+  | .call2 _ _ _, h => h.elim
+
+/-- 条件の木は評価器で、成り立てば `some _`、成り立たなければ `none`(`pf` にはならない)になる -/
+theorem trc_ev (ar : Nat → Nat) (fs : SirZC.Fs) (bd : Nat → SirZC.T) (hfs : ∀ f, fs f = some (ar f, bd f))
+    (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
+    (HΦ : ∀ f vs, Dom f vs → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
+      ∃ rb, SirZC.Ev fs SirZC.selLeft (fun i => vs.getD i none) (bd f) rb ∧ SirZC.co rb = some (Φ f vs))
+    (ρT : SirZC.Env) (ρE : Nat → Option Int) (hρ : ∀ i, InR (ρE i)) :
+    ∀ c : Cn, c.lits → (∀ i < c.maxVar, ρT i = ρE i) →
+      ∃ r, SirZC.Ev fs SirZC.selLeft ρT (trc c) r ∧ (ctruth ρE c = true → ∃ x, r = .v (some x)) ∧
+        (ctruth ρE c = false → r = .v none) := by
+  intro c
+  induction c with
+  | val e =>
+      intro hl hv
+      obtain ⟨r, hr, hc, hp⟩ := tree_sound_fs ar fs bd hfs Φ Dom hΦ HΦ ρT ρE hρ e (lits_lits2 e hl) (arOk_of_lits ar e hl)
+        (by simpa [Cn.maxVar] using hv) (termG_of_lits Φ Dom ρE e hl)
+      have hnp : r ≠ .pf := fun h => not_pfOf_lits Φ ρE e hl (hp h)
+      have hr' : r = .v (sem2 Φ ρE e) := co_v hc hnp
+      refine ⟨r, hr, ?_, ?_⟩
+      · intro h
+        simp [ctruth, ← sem2_of_lits Φ ρE e hl] at h
+        cases hs : sem2 Φ ρE e with
+        | none => simp [hs] at h
+        | some x => exact ⟨x, by rw [hr', hs]⟩
+      · intro h
+        simp [ctruth, ← sem2_of_lits Φ ρE e hl] at h
+        rw [hr', h]
+  | and a b iha ihb =>
+      intro hl hv
+      obtain ⟨ra, hra, hta, hfa⟩ := iha hl.1 (fun i hi => hv i (by simp [Cn.maxVar]; omega))
+      obtain ⟨rb, hrb, htb, hfb⟩ := ihb hl.2 (fun i hi => hv i (by simp [Cn.maxVar]; omega))
+      by_cases hca : ctruth ρE a = true
+      · obtain ⟨x, hx⟩ := hta hca
+        subst hx
+        refine ⟨rb, SirZC.Ev.andV hra hrb, ?_, ?_⟩
+        · intro h; exact htb (by simpa [ctruth, hca] using h)
+        · intro h; exact hfb (by simpa [ctruth, hca] using h)
+      · have hca' : ctruth ρE a = false := by simpa using hca
+        have := hfa hca'
+        subst this
+        exact ⟨_, SirZC.Ev.andN hra, fun h => by simp [ctruth, hca'] at h, fun _ => rfl⟩
+  | or a b iha ihb =>
+      intro hl hv
+      obtain ⟨ra, hra, hta, hfa⟩ := iha hl.1 (fun i hi => hv i (by simp [Cn.maxVar]; omega))
+      obtain ⟨rb, hrb, htb, hfb⟩ := ihb hl.2 (fun i hi => hv i (by simp [Cn.maxVar]; omega))
+      by_cases hca : ctruth ρE a = true
+      · obtain ⟨x, hx⟩ := hta hca
+        subst hx
+        exact ⟨_, SirZC.Ev.orV hra, fun _ => ⟨x, rfl⟩, fun h => by simp [ctruth, hca] at h⟩
+      · have hca' : ctruth ρE a = false := by simpa using hca
+        have := hfa hca'
+        subst this
+        refine ⟨rb, SirZC.Ev.orN hra hrb, ?_, ?_⟩
+        · intro h; exact htb (by simpa [ctruth, hca'] using h)
+        · intro h; exact hfb (by simpa [ctruth, hca'] using h)
+
+/-- 実引数の並びの評価(引数が `pf` にならないとき) -/
+theorem args_ev (ar : Nat → Nat) (fs : SirZC.Fs) (bd : Nat → SirZC.T) (hfs : ∀ f, fs f = some (ar f, bd f))
+    (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
+    (HΦ : ∀ f vs, Dom f vs → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
+      ∃ rb, SirZC.Ev fs SirZC.selLeft (fun i => vs.getD i none) (bd f) rb ∧ SirZC.co rb = some (Φ f vs))
+    (ρT : SirZC.Env) (ρE : Nat → Option Int) (hρ : ∀ i, InR (ρE i)) (n : Nat) (hρn : ∀ i < n, ρT i = ρE i) :
+    ∀ xs : List E, (∀ x ∈ xs, x.lits2 ∧ x.arOk ar ∧ x.maxVar ≤ n ∧ TermG Φ Dom ρE x ∧ ¬ pfOf Φ ρE x) →
+      SirZC.Ev fs SirZC.selLeft ρT (trs xs) (.args (xs.map (sem2 Φ ρE))) := by
+  intro xs
+  induction xs with
+  | nil => intro _; exact SirZC.Ev.anil
+  | cons x xs ih =>
+      intro h
+      obtain ⟨h1, h2, h3, h4, h5⟩ := h x (by simp)
+      obtain ⟨r, hr, hc, hp⟩ := tree_sound_fs ar fs bd hfs Φ Dom hΦ HΦ ρT ρE hρ x h1 h2
+        (fun i hi => hρn i (by omega)) h4
+      have hr' : r = .v (sem2 Φ ρE x) := co_v hc (fun e => h5 (hp e))
+      subst hr'
+      exact SirZC.Ev.acons hr (ih (fun y hy => h y (by simp [hy])))
+
+/-- `rowD t void`: `t` の結果が値(`some`/`none`)か `pf` なら、行全体は同じ値 -/
+theorem rowD_void_ev (fs : SirZC.Fs) (sel : SirZC.Sel) (ρ : SirZC.Env) (t : SirZC.T) (r : SirZC.Res) (w : Option Int)
+    (h : SirZC.Ev fs sel ρ t r) (hc : SirZC.co r = some w) :
+    ∃ r2, SirZC.Ev fs sel ρ (.rowD t .void) r2 ∧ SirZC.co r2 = some w := by
+  cases r with
+  | v x =>
+      simp [SirZC.co] at hc; subst hc
+      cases x with
+      | none => exact ⟨_, SirZC.Ev.rowDFallV h SirZC.Ev.void, rfl⟩
+      | some y => exact ⟨_, SirZC.Ev.rowDHit h, rfl⟩
+  | pf =>
+      simp [SirZC.co] at hc; subst hc
+      exact ⟨_, SirZC.Ev.rowDFallP h SirZC.Ev.void, rfl⟩
+  | args l => simp [SirZC.co] at hc
+  | unsup => simp [SirZC.co] at hc
+  | fuel => simp [SirZC.co] at hc
+
+/-- `LΦ` が止まる条件(評価器と合わせる版): 条件が成り立つ行の値は `!_` でなく(評価器は `!_` の値で次の行へ落ちる)、
+実引数は `pf` にならない -/
+def LDomG (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop) (c : Cn) (v : E) (as : List E) :
+    Nat → (Nat → Option Int) → Prop
+  | 0, _ => False
+  | k + 1, ρ => (ctruth ρ c = true → TermG Φ Dom ρ v ∧ sem2 Φ ρ v ≠ none) ∧
+      (ctruth ρ c = false → (∀ x ∈ as, TermG Φ Dom ρ x ∧ ¬ pfOf Φ ρ x) ∧
+        ((∀ x ∈ as, ∃ z, sem2 Φ ρ x = some z) → LDomG Φ Dom c v as k (envOf (as.map (sem2 Φ ρ)))))
+
+/-- ループ関数の `LΦ` は評価器の規則 `Ev` でも同じ値(燃料 `k` の帰納法) -/
+theorem loop_sound (ar : Nat → Nat) (fs : SirZC.Fs) (bd : Nat → SirZC.T) (hfs : ∀ f, fs f = some (ar f, bd f))
+    (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
+    (HΦ : ∀ f vs, Dom f vs → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
+      ∃ rb, SirZC.Ev fs SirZC.selLeft (fun i => vs.getD i none) (bd f) rb ∧ SirZC.co rb = some (Φ f vs))
+    (self : Nat) (c : Cn) (v : E) (as : List E) (hself : bd self = loopT self c v as) (hlen : as.length = ar self)
+    (hc : c.lits) (hcv : c.maxVar ≤ as.length)
+    (hv : v.lits2 ∧ v.arOk ar ∧ v.maxVar ≤ as.length) (has : ∀ x ∈ as, x.lits2 ∧ x.arOk ar ∧ x.maxVar ≤ as.length) :
+    ∀ k (ρE : Nat → Option Int) (ρT : SirZC.Env), (∀ i, InR (ρE i)) → (∀ i < as.length, ρT i = ρE i) →
+      LDomG Φ Dom c v as k ρE →
+      ∃ r, SirZC.Ev fs SirZC.selLeft ρT (loopT self c v as) r ∧ SirZC.co r = some (LΦ Φ c v as k ρE) := by
+  intro k
+  induction k with
+  | zero => intro ρE ρT _ _ h; exact absurd h (by simp [LDomG])
+  | succ k ih =>
+      intro ρE ρT hρ hag hD
+      obtain ⟨hT, hF⟩ := hD
+      obtain ⟨rc, hrc, hct, hcf⟩ := trc_ev ar fs bd hfs Φ Dom hΦ HΦ ρT ρE hρ c hc (fun i hi => hag i (by omega))
+      by_cases hctr : ctruth ρE c = true
+      · obtain ⟨x, hx⟩ := hct hctr
+        subst hx
+        obtain ⟨hTv, hne⟩ := hT hctr
+        obtain ⟨rv, hrv, hcvv, _⟩ := tree_sound_fs ar fs bd hfs Φ Dom hΦ HΦ ρT ρE hρ v hv.1 hv.2.1
+          (fun i hi => hag i (by omega)) hTv
+        cases hs : sem2 Φ ρE v with
+        | none => exact absurd hs hne
+        | some y =>
+            have hrv' : rv = .v (some y) := co_v (by rw [hcvv, hs]) (by intro h; subst h; simp [SirZC.co, hs] at hcvv)
+            subst hrv'
+            refine ⟨_, SirZC.Ev.rowCHit hrc rfl hrv, ?_⟩
+            simp [LΦ, hctr, hs, SirZC.co]
+      · have hctf : ctruth ρE c = false := by simpa using hctr
+        have hrc' := hcf hctf
+        subst hrc'
+        obtain ⟨hA, hB⟩ := hF hctf
+        have hargs := args_ev ar fs bd hfs Φ Dom hΦ HΦ ρT ρE hρ as.length (fun i hi => hag i hi) as
+          (fun x hx => ⟨(has x hx).1, (has x hx).2.1, (has x hx).2.2, (hA x hx).1, (hA x hx).2⟩)
+        by_cases hall : ∀ x ∈ as, ∃ z, sem2 Φ ρE x = some z
+        · have hD' := hB hall
+          have hallv : ∀ w ∈ as.map (sem2 Φ ρE), ∃ z, w = some z := by
+            intro w hw; simp at hw; obtain ⟨x, hx, rfl⟩ := hw; exact hall x hx
+          have hinv : ∀ w ∈ as.map (sem2 Φ ρE), InR w := by
+            intro w hw; simp at hw; obtain ⟨x, hx, rfl⟩ := hw
+            exact sem2_inR Φ hΦ ρE hρ x (has x hx).1
+          have hlen' : (as.map (sem2 Φ ρE)).length = ar self := by simp [hlen]
+          obtain ⟨r', hr', hc'⟩ := ih (envOf (as.map (sem2 Φ ρE))) (fun i => (as.map (sem2 Φ ρE)).getD i none)
+            (envOf_inR_gen _ hinv)
+            (fun i hi => getD_envOf _ hallv i (by simpa using hi)) hD'
+          have hbody : SirZC.Ev fs SirZC.selLeft (fun i => (as.map (sem2 Φ ρE)).getD i none) (bd self) r' := by
+            rw [hself]; exact hr'
+          have hcall := SirZC.Ev.callRun hargs (hfs self) hlen' (by
+            simp only [List.any_eq_false]; intro w hw; obtain ⟨z, hz⟩ := hallv w hw; simp [hz]) hbody
+          have hcc : SirZC.co (SirZC.dePF r') = some (LΦ Φ c v as k (envOf (as.map (sem2 Φ ρE)))) := by
+            rw [co_dePF]; exact hc'
+          obtain ⟨r2, hr2, hc2⟩ := rowD_void_ev fs SirZC.selLeft ρT _ _ _ hcall hcc
+          refine ⟨r2, SirZC.Ev.rowCSkip hrc rfl hr2, ?_⟩
+          rw [hc2]
+          have hall' : (as.map (sem2 Φ ρE)).all Option.isSome = true := by
+            simp only [List.all_eq_true]; intro w hw; obtain ⟨z, hz⟩ := hallv w hw; simp [hz]
+          simp [LΦ, hctr, callSem, hall']
+        · have hany : (as.map (sem2 Φ ρE)).any Option.isNone = true := by
+            simp only [List.any_eq_true]
+            refine Classical.byContradiction fun hh => ?_
+            apply hall
+            intro x hx
+            cases hs : sem2 Φ ρE x with
+            | none => exact absurd ⟨none, List.mem_map.2 ⟨x, hx, hs⟩, rfl⟩ hh
+            | some z => exact ⟨z, rfl⟩
+          have hlen' : (as.map (sem2 Φ ρE)).length = ar self := by simp [hlen]
+          have hcall := SirZC.Ev.callPF hargs (hfs self) hlen' hany
+          obtain ⟨r2, hr2, hc2⟩ := rowD_void_ev fs SirZC.selLeft ρT _ _ none hcall rfl
+          refine ⟨r2, SirZC.Ev.rowCSkip hrc rfl hr2, ?_⟩
+          rw [hc2]
+          have hnall : (as.map (sem2 Φ ρE)).all Option.isSome = false := by
+            cases h : (as.map (sem2 Φ ρE)).all Option.isSome
+            · rfl
+            · exfalso; apply hall; intro x hx
+              have := List.all_eq_true.1 h (sem2 Φ ρE x) (List.mem_map.2 ⟨x, hx, rfl⟩)
+              cases hs : sem2 Φ ρE x with
+              | none => simp [hs] at this
+              | some z => exact ⟨z, rfl⟩
+          simp [LΦ, hctr, callSem, hnall]
+
+#print axioms loop_sound
 
 end SirZB
 
