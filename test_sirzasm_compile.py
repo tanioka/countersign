@@ -63,6 +63,9 @@ def sh : I → String
   | .mul d a b => s!"mul {d} {a} {b}" | .smulh d a b => s!"smulh {d} {a} {b}" | .sdiv d a b => s!"sdiv {d} {a} {b}"
   | .msub d a b c => s!"msub {d} {a} {b} {c}" | .csel d a b c => s!"csel {d} {a} {b} {shc c}"
   | .bc c t => s!"bc {shc c} {t}" | .b t => s!"b {t}" | .movi d n => s!"movi {d} {n}" | .str a k => s!"str {a} {k}" | .ldr d k => s!"ldr {d} {k}" | .neg d a => s!"neg {d} {a}"
+def sh2 : I2 → String
+  | .base i => sh i | .enter => "enter" | .leave => "leave" | .bl t => s!"bl {t}" | .ret => "ret"
+def out2 (p : Array I2) : IO Unit := IO.println (String.intercalate ";" (p.toList.map sh2))
 def out (p : Array I) : IO Unit := IO.println (String.intercalate ";" (p.toList.map sh))
 '''
 
@@ -78,7 +81,7 @@ def lean_rows(t):
     for c, v in reversed(t[1]): r = "(Rows.row %s %s %s)" % (lean_cn(c), lean_term(v), r)
     return r
 
-def asm_body(e, cond=None):
+def asm_body(e, cond=None, full=False):
     with tempfile.TemporaryDirectory() as d:
         p = os.path.join(d, "t.sn")
         if e is not None and e[0] == "rows": open(p, "w").write("f : x y z ?\n%sf 8 2 1\n" % src_rows(e))
@@ -89,10 +92,16 @@ def asm_body(e, cond=None):
             A.main([p, "--no-peephole", "--no-opt"])
     ls = [re.sub(r"//.*", "", l).strip() for l in buf.getvalue().split("\n")]
     ls = [l for l in ls if l]
-    a = ls.index("mov x29, sp")
-    body = ls[a + 1:]
-    body = body[3:]                         # 仮引数 3 つの str
-    body = body[:next(i for i, l in enumerate(body) if l.startswith("ldp x29, x30"))]
+    if full:                                # 関数 f の全体: `stp`(enter)・仮引数の str・本体・`ldp`(leave)・`ret`
+        a = ls.index("f:")
+        body = ls[a + 1:]
+        body = body[:next(i for i, l in enumerate(body) if l == "ret") + 1]
+        body = [l for l in body if l != "mov x29, sp"]
+    else:
+        a = ls.index("mov x29, sp")
+        body = ls[a + 1:]
+        body = body[3:]                         # 仮引数 3 つの str
+        body = body[:next(i for i, l in enumerate(body) if l.startswith("ldp x29, x30"))]
     labels, idx = {}, 0
     for l in body:
         if l.endswith(":"): labels[l[:-1]] = idx
@@ -104,7 +113,10 @@ def asm_body(e, cond=None):
         cur += 1
         op, _, rest = l.partition(" ")
         a = [x.strip() for x in rest.split(",")]
-        if op == "movz": out.append("movz %d" % r(a[0]))
+        if op == "stp": out.append("enter")
+        elif op == "ldp": out.append("leave")
+        elif op == "ret": out.append("ret")
+        elif op == "movz": out.append("movz %d" % r(a[0]))
         elif op == "neg": out.append("neg %d %d" % (r(a[0]), r(a[1])))
         elif op == "movn": out.append("movi %d %d" % (r(a[0]), -int(a[1][1:], 0) - 1))
         elif op == "mov" and a[1].startswith("#"): out.append("movi %d %d" % (r(a[0]), int(a[1][1:])))
@@ -132,19 +144,23 @@ def main(n=60, seed=1):
     trees = [gen(rnd, rnd.randrange(1, 4)) for _ in range(n)]
     conds = [gen_cn(rnd, rnd.randrange(1, 4)) for _ in range(n)]
     rowss = [gen_rows(rnd) for _ in range(n)]
+    funs = trees[:n // 2]                       # 関数全体(enter・仮引数・本体・leave・ret)
     items = []                                  # (見出し, 式の木か条件の木, asm の出力, 枠の底)
     skipped = 0
-    for t in trees + conds + rowss:
+    for t in trees + conds + rowss + [("fun", x) for x in funs]:
         isc = t[0] in ("val", "and", "or")
-        try: want, base = asm_body(None, t) if isc else asm_body(t)
+        try:
+            if t[0] == "fun": want, base = asm_body(t[1], None, True)
+            else: want, base = asm_body(None, t) if isc else asm_body(t)
         except AsmErrorLike: skipped += 1; continue
-        items.append((src_cn(t) if isc else (src_rows(t) if t[0] == "rows" else src(t)), t, isc, want, base))
+        items.append(("関数 " + src(t[1]) if t[0] == "fun" else src_cn(t) if isc else (src_rows(t) if t[0] == "rows" else src(t)), t, isc, want, base))
     with tempfile.TemporaryDirectory() as d:
         env = dict(os.environ, LEAN_PATH=d)
         subprocess.run([LEAN, "-o", os.path.join(d, "SirZAsm.olean"), os.path.join(HERE, "formal/lean/SirZAsm.lean")], check=True, capture_output=True, env=env)
         prog = HEAD + "".join(
             ("#eval let c := %s; out (compileC novR %d 0 ((compileC novR %d 0 0 c).size + 2) c)\n" % (lean_cn(t), b, b)) if isc
             else "#eval out (compileR novR %d 0 %s)\n" % (b, lean_rows(t)) if t[0] == "rows"
+            else "#eval out2 (fcode novR 3 %s)\n" % (lean_term(t[1])) if t[0] == "fun"
             else "#eval out (compileS novR %d 0 %s)\n" % (b, lean_term(t)) for _, t, isc, _, b in items)
         f = os.path.join(d, "T.lean"); open(f, "w").write(prog)
         res = subprocess.run([LEAN, f], capture_output=True, text=True, env=env)
