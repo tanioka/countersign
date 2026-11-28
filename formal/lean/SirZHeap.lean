@@ -13,6 +13,11 @@
     `growCode`・`b 本体`・`.rec` の入口・本体 `B`・`leave`・`ret`)の契約。本体 `B` は `I2` の機械の証明(`SirZAsm` の `*_ok`)をそのまま使う
     (`lift2`: `growCode` の領域を `jmp 自分` で埋めた `I2` の写し `Q`(`shadowQ`)での実行を `Steps3` へ持ち上げる)。結果・枠・`lr`・フレームは
     `fcodeA_ok_at` と同じで、`sp` が `((8n+15)/16)×16+16` 下がる。`leave` のあとの `mov sp, x29` はこの模型の外。
+  * `append_ok`・`append_inv`・`append_rounds`(ループの中の append、`commit_grow`): I3 に `ldr xd,[xa,#-n]`・`str xd,[xa,#n]`・`add xd,xa,xb`・
+    `cmp`(`b.hi` 用)・`b.hi` を足し、累積(リスト)の末尾へ `k` 個の要素を書く 1 回ぶん(`t1 = ptr`・`t2 = len + k` の setup、
+    入る個数の検査、末尾へ書き、仮引数 `ps`・`pl` の更新)を証明した。入らなければ溢れの行き先へ(`h`・`sp`・`lr`・フレームは元のまま)、
+    入れば語 `ptr/8 + len + i` に要素が書かれ `len` が `len + k` に(`AccInv`)。`append_rounds` は、各回の要素の評価(`refill`)を挟んだ `r` 回で、
+    器の内容が `L ++ (各回の要素)` になることを帰納法で示す。
   * 範囲: リスト(8 バイトの語)の累積 1 つ・食う器 1 つの形。文字列(1/4 バイト幅)・輪(食う器の和)・複数の累積、
     回るたびの末尾呼び出しの書き足し(append)、`gen_copy_result`(作業領域から置き場へ写す)は次。
 -/
@@ -1104,6 +1109,110 @@ theorem append_ok (P : Array I3) (b ps pl k t1 t2 te o : Nat)
     · rw [s6m, y5m, s1m]
       simp
 
+/-- 累積(語の並び `L`)の不変条件: 器の先頭 `ptr`(枠 `ps`、8 の倍数)の語 `ptr/8 + i` が `L[i]`、長さの枠 `pl` が `L.length` -/
+def AccInv (x : HSt) (ps pl : Nat) (L : List W) : Prop :=
+  (x.s.m ps).toNat % 8 = 0 ∧ 8 ≤ (x.s.m ps).toNat ∧ (x.s.m pl).toNat = L.length ∧
+    ∀ i (hi : i < L.length), x.h ((x.s.m ps).toNat / 8 + i) = L[i]
+
+/-- 1 回の append が不変条件を保つ: 入る(`len + k ≤ cap`)なら、器の内容は `L ++ vs`、入る個数の語・`ptr` はそのまま -/
+theorem append_inv (P : Array I3) (b ps pl k t1 t2 te o : Nat)
+    (hP : ∀ i (hi : i < (appendCode ps pl k t1 t2 te o).length), P[b + i]? = some (appendCode ps pl k t1 t2 te o)[i])
+    (x : HSt) (hpc : x.s.pc = b)
+    (h1 : t1 ≠ ps) (h2 : t2 ≠ pl) (h3 : ps ≠ pl) (h4 : t1 ≠ pl) (h5 : t2 ≠ ps) (h12 : t1 ≠ t2)
+    (hte : ∀ i, i < k → te + i ≠ t1 ∧ te + i ≠ t2)
+    (L vs : List W) (hvs : vs.length = k) (hel : ∀ i (hi : i < vs.length), x.s.m (te + i) = vs[i])
+    (hacc : AccInv x ps pl L)
+    (hlen : L.length + k < 2 ^ 50) (hptr : (x.s.m ps).toNat + 8 * (L.length + k) < 2 ^ 64)
+    (hcap : L.length + k ≤ (x.h ((x.s.m ps).toNat / 8 - 1)).toNat) :
+    ∃ y : HSt, Steps3 P x y ∧ y.s.pc = b + 19 + 2 * k ∧ AccInv y ps pl (L ++ vs) ∧
+      y.s.m ps = x.s.m ps ∧ y.h ((x.s.m ps).toNat / 8 - 1) = x.h ((x.s.m ps).toNat / 8 - 1) ∧
+      y.sp = x.sp ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk := by
+  obtain ⟨hal, h8, hlenL, hcont⟩ := hacc
+  have hc8 : ((x.s.m ps).toNat - 8) / 8 = (x.s.m ps).toNat / 8 - 1 := by omega
+  obtain ⟨y, g, ysp, yl, yk, hcase⟩ := append_ok P b ps pl k t1 t2 te o hP x hpc h1 h2 h3 h4 h5 h12 hte hal h8
+    (by omega) (by omega)
+  rcases hcase with ⟨hov, _, _⟩ | ⟨_, ypc, yh, ymps, ympl⟩
+  · exfalso; rw [hc8] at hov; omega
+  · have hkW : (x.s.m pl + BitVec.ofNat 64 k).toNat = (x.s.m pl).toNat + k := by
+      rw [BitVec.toNat_add, BitVec.toNat_ofNat]
+      rw [Nat.mod_eq_of_lt (by omega : k < 2 ^ 64)]
+      exact Nat.mod_eq_of_lt (by omega)
+    refine ⟨y, g, ypc, ⟨?_, ?_, ?_, ?_⟩, ymps, ?_, ysp, yl, yk⟩
+    · rw [ymps]; exact hal
+    · rw [ymps]; exact h8
+    · rw [ympl, hkW]; simp [hlenL, hvs]
+    · intro i hi
+      rw [ymps, yh]
+      by_cases hiL : i < L.length
+      · have hw : ¬ ((x.s.m ps).toNat / 8 + (x.s.m pl).toNat ≤ (x.s.m ps).toNat / 8 + i ∧
+            (x.s.m ps).toNat / 8 + i < (x.s.m ps).toNat / 8 + (x.s.m pl).toNat + k) := by omega
+        rw [if_neg hw, hcont i hiL]
+        simp [List.getElem_append_left, hiL]
+      · have hv : i - L.length < vs.length := by simp at hi; omega
+        have hw : ((x.s.m ps).toNat / 8 + (x.s.m pl).toNat ≤ (x.s.m ps).toNat / 8 + i ∧
+            (x.s.m ps).toNat / 8 + i < (x.s.m ps).toNat / 8 + (x.s.m pl).toNat + k) := by simp at hi; omega
+        rw [if_pos hw]
+        have e : (x.s.m ps).toNat / 8 + i - ((x.s.m ps).toNat / 8 + (x.s.m pl).toNat) = i - L.length := by omega
+        rw [e, hel _ hv]
+        rw [List.getElem_append_right (Nat.not_lt.mp hiL)]
+    · rw [yh]
+      have : ¬ ((x.s.m ps).toNat / 8 + (x.s.m pl).toNat ≤ (x.s.m ps).toNat / 8 - 1 ∧
+          (x.s.m ps).toNat / 8 - 1 < (x.s.m ps).toNat / 8 + (x.s.m pl).toNat + k) := by omega
+      rw [if_neg this]
+
+/-- 追加される要素の並び(第 `j0` 回から `r` 回ぶん) -/
+def accs (vs : Nat → List W) : Nat → Nat → List W
+  | _, 0 => []
+  | j0, r + 1 => vs j0 ++ accs vs (j0 + 1) r
+
+/-- `r` 回のループ: 各回で append のコードを走り(`Steps3 P`)、次の回の要素の評価(`refill`。要素の枠 `te+i` を書き換えるだけ。
+実引数の評価・条件・`b entry` は `SirZAsm` の `loop_ok` の側で示してあり、ここでは仮定)を挟む -/
+def iterR (P : Array I3) (refill : Nat → HSt → HSt) : Nat → Nat → HSt → HSt → Prop
+  | 0, _, x, w => w = x
+  | r + 1, j, x, w => ∃ z, Steps3 P x z ∧ iterR P refill r (j + 1) (refill (j + 1) z) w
+
+/-- ループの中の append: `r` 回のあと、器の内容は `L ++ (各回の要素)`。入る個数・桁あふれの余地があれば、どの回も入る -/
+theorem append_rounds (P : Array I3) (b ps pl k t1 t2 te o : Nat)
+    (hP : ∀ i (hi : i < (appendCode ps pl k t1 t2 te o).length), P[b + i]? = some (appendCode ps pl k t1 t2 te o)[i])
+    (h1 : t1 ≠ ps) (h2 : t2 ≠ pl) (h3 : ps ≠ pl) (h4 : t1 ≠ pl) (h5 : t2 ≠ ps) (h12 : t1 ≠ t2)
+    (hte : ∀ i, i < k → te + i ≠ t1 ∧ te + i ≠ t2)
+    (vs : Nat → List W) (hvs : ∀ j, (vs j).length = k) (refill : Nat → HSt → HSt)
+    (hrefill : ∀ j (z : HSt), z.s.pc = b + 19 + 2 * k →
+      (refill j z).s.pc = b ∧ (refill j z).h = z.h ∧ (refill j z).sp = z.sp ∧ (refill j z).s.lr = z.s.lr ∧
+      (refill j z).s.stk = z.s.stk ∧ (refill j z).s.m ps = z.s.m ps ∧ (refill j z).s.m pl = z.s.m pl ∧
+      ∀ i (hi : i < (vs j).length), (refill j z).s.m (te + i) = (vs j)[i]) :
+    ∀ (r j0 : Nat) (x : HSt) (L : List W), x.s.pc = b → AccInv x ps pl L →
+      (∀ i (hi : i < (vs j0).length), x.s.m (te + i) = (vs j0)[i]) →
+      L.length + r * k < 2 ^ 50 → (x.s.m ps).toNat + 8 * (L.length + r * k) < 2 ^ 64 →
+      L.length + r * k ≤ (x.h ((x.s.m ps).toNat / 8 - 1)).toNat →
+      ∃ w, iterR P refill r j0 x w ∧ w.s.pc = b ∧ AccInv w ps pl (L ++ accs vs j0 r) := by
+  intro r
+  induction r with
+  | zero =>
+      intro j0 x L hpc hacc _ _ _ _
+      exact ⟨x, rfl, hpc, by simpa [accs] using hacc⟩
+  | succ r ih =>
+      intro j0 x L hpc hacc hel hl hp hc
+      have hkk : (r + 1) * k = r * k + k := by rw [Nat.succ_mul]
+      obtain ⟨y, g, ypc, yacc, ymps, ycap, ysp, yl, yk⟩ := append_inv P b ps pl k t1 t2 te o hP x hpc h1 h2 h3 h4 h5 h12 hte
+        L (vs j0) (hvs j0) hel hacc (by rw [hkk] at hl; omega) (by rw [hkk] at hp; omega) (by rw [hkk] at hc; omega)
+      obtain ⟨rpc, rh, rsp, rl, rk, rps, rpl, rel⟩ := hrefill (j0 + 1) y (by rw [ypc])
+      obtain ⟨hal', h8', hlen', hcont'⟩ := yacc
+      have hacc' : AccInv (refill (j0 + 1) y) ps pl (L ++ vs j0) := by
+        refine ⟨?_, ?_, ?_, ?_⟩
+        · rw [rps, ymps]; exact hacc.1
+        · rw [rps, ymps]; exact hacc.2.1
+        · rw [rpl]; exact hlen'
+        · intro i hi; rw [rps, rh]; exact hcont' i hi
+      have hlen2 : (L ++ vs j0).length = L.length + k := by simp [hvs]
+      obtain ⟨w, hw, wpc, wacc⟩ := ih (j0 + 1) (refill (j0 + 1) y) (L ++ vs j0) rpc hacc' rel
+        (by rw [hlen2]; rw [hkk] at hl; omega) (by rw [hlen2, rps, ymps]; rw [hkk] at hp; omega)
+        (by
+          rw [hlen2, rps, rh, ymps, ycap]
+          rw [hkk] at hc; omega)
+      refine ⟨w, ⟨y, g, hw⟩, wpc, ?_⟩
+      simpa [accs, List.append_assoc] using wacc
+
 #print axioms copyLoop_ok
 #print axioms growEntry_ok
 #print axioms lift2
@@ -1111,5 +1220,7 @@ theorem append_ok (P : Array I3) (b ps pl k t1 t2 te o : Nat)
 #print axioms fcodeH_ok_at
 #print axioms commitL_facts
 #print axioms append_ok
+#print axioms append_inv
+#print axioms append_rounds
 
 end SirZH
