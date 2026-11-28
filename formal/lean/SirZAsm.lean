@@ -1053,11 +1053,27 @@ theorem Steps.append {p q : Array I} {a b c : St} (h1 : Steps p a b) (hb : b.pc 
 
 /-! ### 式木から命令列へ(整数の `+ - * / %`、字面、変数) -/
 
+inductive CmpOp | lt | le | gt | ge | eq
+  deriving DecidableEq
+
+def CmpOp.holds : CmpOp → Int → Int → Bool
+  | .lt, a, b => decide (a < b)
+  | .le, a, b => decide (a ≤ b)
+  | .gt, a, b => decide (a > b)
+  | .ge, a, b => decide (a ≥ b)
+  | .eq, a, b => decide (a = b)
+
+/-- 比べ(実装 V6 の読み): 両方が値で成り立てば左の値、そうでなければ `!_` -/
+def cmpSem (c : CmpOp) : Option Int → Option Int → Option Int
+  | some a, some b => if c.holds a b then some a else none
+  | _, _ => none
+
 inductive E
   | lit (n : Int)
   | var (k : Nat)
   | op (o : AOp) (l r : E)
   | neg (e : E)
+  | cmp (c : CmpOp) (l r : E)
 
 /-- 意味(`!_` を含む)。変数の値は環境 `ρ` -/
 def sem (ρ : Nat → Option Int) : E → Option Int
@@ -1065,18 +1081,21 @@ def sem (ρ : Nat → Option Int) : E → Option Int
   | .var k => ρ k
   | .op o l r => arith o (sem ρ l) (sem ρ r)
   | .neg e => (sem ρ e).map (fun a => -a)
+  | .cmp c l r => cmpSem c (sem ρ l) (sem ρ r)
 
 def E.lits : E → Prop
   | .lit n => -M ≤ n ∧ n ≤ M
   | .var _ => True
   | .op _ l r => l.lits ∧ r.lits
   | .neg e => e.lits
+  | .cmp _ l r => l.lits ∧ r.lits
 
 def E.maxVar : E → Nat
   | .lit _ => 0
   | .var k => k + 1
   | .op _ l r => max l.maxVar r.maxVar
   | .neg e => e.maxVar
+  | .cmp _ l r => max l.maxVar r.maxVar
 
 def InR (v : Option Int) : Prop := ∀ z, v = some z → -M ≤ z ∧ z ≤ M
 
@@ -1101,6 +1120,15 @@ theorem InR_neg (v : Option Int) (h : InR v) : InR (v.map (fun a => -a)) := by
       have := h a rfl
       simp only [Option.map_some, Option.some.injEq] at hz
       subst hz; unfold M at *; omega
+
+theorem InR_cmp (c : CmpOp) (u v : Option Int) (hu : InR u) : InR (cmpSem c u v) := by
+  cases u <;> cases v <;> simp only [cmpSem]
+  · intro z h; cases h
+  · intro z h; cases h
+  · intro z h; cases h
+  · split
+    · exact hu
+    · intro z h; cases h
 
 theorem decode_encode (v : Option Int) (h : InR v) : decode (encode v) = v := by
   cases v with
@@ -1188,6 +1216,7 @@ def mb (nov : AOp → E → E → Bool) : E → Bool
   | .lit _ => false
   | .var _ => false
   | .neg e => mb nov e
+  | .cmp _ _ _ => true
   | .op o l r =>
       match o with
       | .add | .sub | .mul => !nov o l r || (mb nov l && mb nov r)
@@ -1198,6 +1227,7 @@ theorem sem_inR (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) : ∀ e : E,
   | .var k, _ => hρ k
   | .op o l r, h => InR_arith o _ _ (sem_inR ρ hρ l h.1) (sem_inR ρ hρ r h.2)
   | .neg e, h => InR_neg _ (sem_inR ρ hρ e h)
+  | .cmp c l r, h => InR_cmp c _ _ (sem_inR ρ hρ l h.1)
 
 theorem arithInt_nz (o : AOp) (a n : Int) (ha : InR (some a)) (hn : n ≠ 0) (ho : o = .div ∨ o = .mod) :
     ∃ z, arithInt o a n = some z := by
@@ -1227,6 +1257,7 @@ theorem nz_sem (ρ : Nat → Option Int) (r : E) (hr : r.lits) (hf : nzlit r = t
       exact ⟨n, by simp [sem, clamp, h2], hn, h2⟩
   | var _ => simp [nzlit] at hf
   | op _ _ _ => simp [nzlit] at hf
+  | cmp _ _ _ => simp [nzlit] at hf
   | neg e =>
       cases e with
       | lit n =>
@@ -1235,6 +1266,7 @@ theorem nz_sem (ρ : Nat → Option Int) (r : E) (hr : r.lits) (hf : nzlit r = t
           exact ⟨-n, by simp [sem, clamp, h2], by omega, by unfold M at *; omega, by unfold M at *; omega⟩
       | var _ => simp [nzlit] at hf
       | op _ _ _ => simp [nzlit] at hf
+      | cmp _ _ _ => simp [nzlit] at hf
       | neg _ => simp [nzlit] at hf
 
 /-- `mb` が偽なら、`!_` ではない(変数は `!_` ではないとき) -/
@@ -1370,13 +1402,57 @@ def simpleR : E → Bool
   | .neg (.lit _) => true
   | .neg _ => false
   | .op _ _ _ => false
+  | .cmp _ _ _ => false
 
-def rld : E → I
-  | .lit n => I.movi 10 n
-  | .var k => I.ldr 10 k
-  | .neg (.lit n) => I.movi 10 (-n)
-  | .neg _ => I.movi 10 0
-  | .op _ _ _ => I.movi 10 0
+/-- 字面・変数を、レジスタ `d` に置く命令(`sign_asm.py` の `load`) -/
+def rldD (d : Nat) : E → I
+  | .lit n => I.movi d n
+  | .var k => I.ldr d k
+  | .neg (.lit n) => I.movi d (-n)
+  | .neg _ => I.movi d 0
+  | .op _ _ _ => I.movi d 0
+  | .cmp _ _ _ => I.movi d 0
+
+def rld (e : E) : I := rldD 10 e
+
+/-! ### 比べ -/
+
+def invCond : CmpOp → Cond
+  | .lt => .ge | .le => .gt | .gt => .le | .ge => .lt | .eq => .ne
+
+/-- 比べの尾(`sign_asm.py` の `gen_cmp` の値の形): `x9`・`x10` に項を置いた後、`!_` の印を見て外れへ、`cmp` で外れへ、
+    成り立てば `vi`(左の値を `x0` へ)、外れは `!_` -/
+def cmpTail (c : CmpOp) (ml mr : Bool) (vi : I) : Array I :=
+  let n0 := if ml || mr then 1 else 0
+  let gl := if ml then 2 else 0
+  let gr := if mr then 2 else 0
+  let T := n0 + gl + gr + 5
+  (if ml || mr then #[I.movz 13] else #[])
+    ++ (if ml then #[I.cmpR 9 13, I.bc Cond.eq (T - 1 - (n0 + 1))] else #[])
+    ++ (if mr then #[I.cmpR 10 13, I.bc Cond.eq (T - 1 - (n0 + gl + 1))] else #[])
+    ++ #[I.cmpR 9 10, I.bc (invCond c) (T - 1 - (n0 + gl + gr + 1)), vi, I.b 2, I.movz 0]
+
+theorem enc_toInt (x : W) (hx : x ≠ NICHE) : encode (some x.toInt) = x := by
+  simp only [encode]
+  exact BitVec.ofInt_toInt
+
+theorem inv_holds (c : CmpOp) (s : St) (a b : W) :
+    (invCond c).holds (s.flagsSub a b) = !(c.holds a.toInt b.toInt) := by
+  cases c <;> simp only [invCond, CmpOp.holds, hold_lt, hold_ge, hold_gt, hold_le, hold_ne] <;>
+    (rw [Bool.eq_iff_iff]; simp)
+
+set_option maxHeartbeats 2000000 in
+theorem cmpTail_ok (c : CmpOp) (ml mr : Bool) (vi : I) (s : St) (hs : s.pc = 0) (x y : W)
+    (h9 : s.r 9 = x) (h10 : s.r 10 = y) (hx : ml = false → x ≠ NICHE) (hy : mr = false → y ≠ NICHE)
+    (hvi : ∀ st : St, st.m = s.m → step vi st = ({ st with pc := st.pc + 1 } : St).set 0 x) :
+    (run (cmpTail c ml mr vi) 30 s).r 0 = encode (cmpSem c (decode x) (decode y)) ∧
+      (run (cmpTail c ml mr vi) 30 s).pc = (cmpTail c ml mr vi).size ∧
+      (run (cmpTail c ml mr vi) 30 s).m = s.m := by
+  have hvi' : ∀ st : St, st.m = s.m → step vi st = ({ st with pc := st.pc + 1 } : St).set 0 x := hvi
+  cases ml <;> cases mr <;> by_cases hx0 : x = NICHE <;> by_cases hy0 : y = NICHE <;>
+    simp [run, cmpTail, step, St.set, St.flagsSub, hs, h9, h10, Cond.holds, hx0, hy0, inv_holds, hvi']
+  all_goals sorry
+
 
 /-- `sign_asm.py` に近づけた骨組み: 右が字面・変数なら枠に預けず、左を `x9`、右を `x10` に置く -/
 def compileS (nov : AOp → E → E → Bool) (base : Nat) : Nat → E → Array I
@@ -1384,6 +1460,13 @@ def compileS (nov : AOp → E → E → Bool) (base : Nat) : Nat → E → Array
   | _, .var k => #[I.ldr 0 k]
   | _, .neg (.lit n) => #[I.movi 0 (-n)]
   | d, .neg e => compileS nov base d e ++ negTail (mb nov e)
+  | d, .cmp c l r =>
+      let d1 := if simpleR l = true then d else d + 1
+      (if simpleR l = true then #[] else compileS nov base d l ++ #[I.str 0 (base + d)])
+        ++ (if simpleR r = true then #[] else compileS nov base d1 r ++ #[I.str 0 (base + d1)])
+        ++ #[(if simpleR l = true then rldD 9 l else I.ldr 9 (base + d)),
+             (if simpleR r = true then rldD 10 r else I.ldr 10 (base + d1))]
+        ++ cmpTail c (mb nov l) (mb nov r) (if simpleR l = true then rldD 0 l else I.ldr 0 (base + d))
   | d, .op o l r =>
       if simpleR r = true then
         compileS nov base d l ++ #[I.mov 9 0] ++ #[rld r] ++ tplW o (mb nov l) (mb nov r) (nzlit r)
@@ -1391,32 +1474,40 @@ def compileS (nov : AOp → E → E → Bool) (base : Nat) : Nat → E → Array
         compileS nov base d l ++ #[I.str 0 (base + d)] ++ compileS nov base (d + 1) r
           ++ #[I.mov 10 0, I.ldr 9 (base + d)] ++ tplW o (mb nov l) (mb nov r) (nzlit r)
 
-theorem rld_ok (ρ : Nat → Option Int) (base : Nat) (r : E) (hsr : simpleR r = true) (hlr : r.lits) (hv : r.maxVar ≤ base)
+theorem rldD_ok (ρ : Nat → Option Int) (base : Nat) (d : Nat) (r : E) (hsr : simpleR r = true) (hlr : r.lits) (hv : r.maxVar ≤ base)
     (t : St) (hm : ∀ k < base, t.m k = encode (ρ k)) :
-    (step (rld r) t).r 10 = encode (sem ρ r) ∧ (step (rld r) t).pc = t.pc + 1 ∧
-      (∀ i, i ≠ 10 → (step (rld r) t).r i = t.r i) ∧ (step (rld r) t).m = t.m := by
+    (step (rldD d r) t).r d = encode (sem ρ r) ∧ (step (rldD d r) t).pc = t.pc + 1 ∧
+      (∀ i, i ≠ d → (step (rldD d r) t).r i = t.r i) ∧ (step (rldD d r) t).m = t.m := by
   cases r with
   | lit n =>
       have h2 : -M ≤ n ∧ n ≤ M := hlr
       have hc : clamp n = some n := by simp [clamp, h2]
-      simp [rld, step, St.set, sem, hc, encode]
+      simp [rldD, step, St.set, sem, hc, encode]
       intro i hi; simp [hi]
   | var k =>
       have hk : k < base := by simp [E.maxVar] at hv; omega
-      simp [rld, step, St.set, sem, hm k hk]
+      simp [rldD, step, St.set, sem, hm k hk]
       intro i hi; simp [hi]
   | op _ _ _ => simp [simpleR] at hsr
+  | cmp _ _ _ => simp [simpleR] at hsr
   | neg e =>
       cases e with
       | lit n =>
           have h2 : -M ≤ n ∧ n ≤ M := hlr
           have hc : clamp n = some n := by simp [clamp, h2]
-          simp [rld, step, St.set, sem, hc, encode]
+          simp [rldD, step, St.set, sem, hc, encode]
           intro i hi; simp [hi]
       | var _ => simp [simpleR] at hsr
       | op _ _ _ => simp [simpleR] at hsr
+      | cmp _ _ _ => simp [simpleR] at hsr
       | neg _ => simp [simpleR] at hsr
 
+
+theorem rld_ok (ρ : Nat → Option Int) (base : Nat) (r : E) (hsr : simpleR r = true) (hlr : r.lits) (hv : r.maxVar ≤ base)
+    (t : St) (hm : ∀ k < base, t.m k = encode (ρ k)) :
+    (step (rld r) t).r 10 = encode (sem ρ r) ∧ (step (rld r) t).pc = t.pc + 1 ∧
+      (∀ i, i ≠ 10 → (step (rld r) t).r i = t.r i) ∧ (step (rld r) t).m = t.m :=
+  rldD_ok ρ base 10 r hsr hlr hv t hm
 
 theorem compileS_ok (nov : AOp → E → E → Bool)
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem ρ l = some a → sem ρ r = some b → ∃ z, arithInt o a b = some z)
@@ -1581,6 +1672,7 @@ theorem compileS_ok (nov : AOp → E → E → Bool)
 def cst : E → Option Int
   | .lit n => clamp n
   | .var _ => none
+  | .cmp _ _ _ => none
   | .neg e => (cst e).map (fun a => -a)
   | .op o l r =>
       match o with
@@ -1599,6 +1691,7 @@ def novR (o : AOp) (l r : E) : Bool :=
 theorem cst_sound (ρ : Nat → Option Int) : ∀ (e : E) (v : Int), cst e = some v → sem ρ e = some v
   | .lit n, v, h => by simpa [cst, sem] using h
   | .var _, v, h => by simp [cst] at h
+  | .cmp _ _ _, v, h => by simp [cst] at h
   | .neg e, v, h => by
       simp only [cst] at h
       cases hc : cst e with
