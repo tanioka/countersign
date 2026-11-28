@@ -3416,20 +3416,23 @@ theorem lits_lits2 : ∀ e : E, e.lits → e.lits2
   | .call1 _ _, h => h.elim
   | .call2 _ _ _, h => h.elim
 
-theorem sem2_inR (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, InR (Φ f vs))
+theorem sem2_inR (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) : ∀ e : E, e.lits2 → InR (sem2 Φ ρ e)
   | .lit n, _ => InR_clamp n
   | .var k, _ => hρ k
   | .op o l r, h => InR_arith o _ _ (sem2_inR Φ hΦ ρ hρ l h.1) (sem2_inR Φ hΦ ρ hρ r h.2)
   | .neg e, h => InR_neg _ (sem2_inR Φ hΦ ρ hρ e h)
   | .cmp c l r, h => InR_cmp c _ _ (sem2_inR Φ hΦ ρ hρ l h.1)
-  | .call1 f a, _ => by
+  | .call1 f a, h => by
+      have hin := sem2_inR Φ hΦ ρ hρ a h
       unfold sem2 callSem; split
-      · exact hΦ _ _
+      · exact hΦ _ _ (by intro v hv; simp at hv; subst hv; exact hin)
       · intro z hz; cases hz
-  | .call2 f a b, _ => by
+  | .call2 f a b, h => by
+      have hin := sem2_inR Φ hΦ ρ hρ a h.1
+      have hin' := sem2_inR Φ hΦ ρ hρ b h.2
       unfold sem2 callSem; split
-      · exact hΦ _ _
+      · exact hΦ _ _ (by intro v hv; simp at hv; cases hv with | inl h => subst h; exact hin | inr h => subst h; exact hin')
       · intro z hz; cases hz
 
 theorem cst_sound2 (Φ : Nat → List (Option Int) → Option Int) (ρ : Nat → Option Int) : ∀ (e : E) (v : Int), cst e = some v → sem2 Φ ρ e = some v
@@ -3498,7 +3501,7 @@ theorem nzlit_lits : ∀ r : E, nzlit r = true → r.lits2 → r.lits
   | .neg (.call2 _ _ _), h, _ => by simp [nzlit] at h
 
 theorem mb_sound2 (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int)
-    (hΦ : ∀ f vs, InR (Φ f vs))
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hv : ∀ k, ∃ z, ρ k = some z) :
     ∀ e : E, e.lits2 → mb nov e = false → ∃ z, sem2 Φ ρ e = some z
@@ -3721,7 +3724,7 @@ theorem compileS2_neg (nov : AOp → E → E → Bool) (base : Nat) (tgt : Nat �
   | lit n => exact absurd rfl (hne n)
   | _ => simp [compileS2]
 
-theorem neg2_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, InR (Φ f vs))
+theorem neg2_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z)
     (base : Nat) (tgt : Nat → Nat) (P : Array I2) (e : E) (a d : Nat) (he : e.lits2) (hne : ∀ n, e ≠ .lit n)
@@ -3774,7 +3777,7 @@ theorem nzlit_simple : ∀ r : E, nzlit r = true → simpleR r = true
   | .neg (.call1 _ _), h => by simp [nzlit] at h
   | .neg (.call2 _ _ _), h => by simp [nzlit] at h
 
-theorem op2_simple_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, InR (Φ f vs))
+theorem op2_simple_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z)
     (base : Nat) (tgt : Nat → Nat) (P : Array I2) (o : AOp) (l r : E) (a d : Nat) (hl : l.lits2) (hr : r.lits2)
@@ -3803,7 +3806,7 @@ theorem op2_simple_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Optio
   · simp only []; rw [hls.2]; exact k1
 
 
-theorem op2_gen_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, InR (Φ f vs))
+theorem op2_gen_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z)
     (base : Nat) (tgt : Nat → Nat) (P : Array I2) (o : AOp) (l r : E) (a d : Nat) (hl : l.lits2) (hr : r.lits2)
@@ -3952,7 +3955,7 @@ theorem prep2_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int
     · intro _; rw [s2m, if_pos rfl, r1]
     · rw [hs2, (step_ls _ _).2]; exact k1
 
-theorem cmp2_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, InR (Φ f vs))
+theorem cmp2_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z)
     (base : Nat) (tgt : Nat → Nat) (P : Array I2) (c : CmpOp) (l r : E) (a d : Nat) (hl : l.lits2) (hr : r.lits2)
@@ -4001,7 +4004,7 @@ theorem cmp2_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int)
   · have hls := Steps.ls_eq hC
     simp only []; rw [hls.2]; show sB.stk = _; rw [kB, kA]
 
-theorem guard_ok2 (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, InR (Φ f vs))
+theorem guard_ok2 (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z) (base : Nat) :
     ∀ (as : List E) (i fo : Nat) (s : St), (∀ a ∈ as, a.lits2) →
@@ -4128,7 +4131,7 @@ theorem loads_okD (base d : Nat) (v : Nat → Option Int) :
       · show t2.stk = _; rw [ht2]; exact t2ls.2.trans k1
 
 
-theorem tail_ok2 (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, InR (Φ f vs))
+theorem tail_ok2 (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z) (base : Nat)
     (as : List E) (hl : ∀ a ∈ as, a.lits2) (d : Nat) (s : St) (hs : s.pc = 0)
@@ -4243,11 +4246,11 @@ theorem all_some_iff2 (Φ : Nat → List (Option Int) → Option Int) (ρ : Nat 
     (as.map (sem2 Φ ρ)).all Option.isSome = true ↔ ∀ a ∈ as, ∃ z, sem2 Φ ρ a = some z := by
   simp [List.all_eq_true, Option.isSome_iff_exists]
 
-theorem callEnd_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, InR (Φ f vs))
+theorem callEnd_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z) (base : Nat)
     (tgt : Nat → Nat) (ar : Nat → Nat) (P : Array I2)
-    (hcall : ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) →
+    (hcall : ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
       (∀ k (h : k < vs.length), s.r k = encode vs[k]) →
       ∃ s', Steps2 P s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode (Φ f vs) ∧ s'.m = s.m ∧ s'.lr = s.lr ∧ s'.stk = s.stk)
     (as : List E) (hl : ∀ a ∈ as, a.lits2) (d f a' : Nat) (har : ar f = as.length)
@@ -4286,6 +4289,9 @@ theorem callEnd_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option I
       intro v hv
       obtain ⟨a, ha, rfl⟩ := List.mem_map.1 hv
       exact hall a ha) (by
+      intro v hv
+      obtain ⟨a, ha, rfl⟩ := List.mem_map.1 hv
+      exact sem2_inR Φ hΦ ρ hρ a (hl a ha)) (by
       intro k hk
       have hk' : k < as.length := by simpa using hk
       simp [hu1, step2, hu0, List.getElem_map]; exact hr1 k hk')
@@ -4337,11 +4343,11 @@ theorem callEnd_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option I
     · simp [hu3, step2, step, St.set, hu0, k1]
 
 
-theorem call1_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, InR (Φ f vs))
+theorem call1_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z) (base : Nat)
     (tgt : Nat → Nat) (ar : Nat → Nat) (P : Array I2)
-    (hcall : ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) →
+    (hcall : ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
       (∀ k (h : k < vs.length), s.r k = encode vs[k]) →
       ∃ s', Steps2 P s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode (Φ f vs) ∧ s'.m = s.m ∧ s'.lr = s.lr ∧ s'.stk = s.stk)
     (f : Nat) (x : E) (a d : Nat) (har : ar f = 1) (hx : x.lits2) (ih : CompOk nov Φ ρ base tgt P x a d) :
@@ -4368,11 +4374,11 @@ theorem call1_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int
   · intro j hj; rw [m3, s2m, if_neg (by omega)]; exact m1 j hj
   · rw [k3, hs2, (step_ls _ _).2]; exact k1
 
-theorem call2_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, InR (Φ f vs))
+theorem call2_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z) (base : Nat)
     (tgt : Nat → Nat) (ar : Nat → Nat) (P : Array I2)
-    (hcall : ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) →
+    (hcall : ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
       (∀ k (h : k < vs.length), s.r k = encode vs[k]) →
       ∃ s', Steps2 P s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode (Φ f vs) ∧ s'.m = s.m ∧ s'.lr = s.lr ∧ s'.stk = s.stk)
     (f : Nat) (x y : E) (a d : Nat) (har : ar f = 2) (hx : x.lits2) (hy : y.lits2)
@@ -4441,11 +4447,11 @@ def E.arOk (ar : Nat → Nat) : E → Prop
   | .call1 f a => ar f = 1 ∧ a.arOk ar
   | .call2 f a b => ar f = 2 ∧ a.arOk ar ∧ b.arOk ar
 
-theorem compileS2_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, InR (Φ f vs))
+theorem compileS2_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z) (base : Nat)
     (tgt : Nat → Nat) (ar : Nat → Nat) (P : Array I2)
-    (hcall : ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) →
+    (hcall : ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
       (∀ k (h : k < vs.length), s.r k = encode vs[k]) →
       ∃ s', Steps2 P s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode (Φ f vs) ∧ s'.m = s.m ∧ s'.lr = s.lr ∧ s'.stk = s.stk) :
     ∀ (e : E), e.lits2 → e.arOk ar → e.maxVar ≤ base → ∀ a d, CompOk nov Φ ρ base tgt P e a d := by
@@ -4508,6 +4514,49 @@ theorem compileS2_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option
         (ihx hl.1 har.2.1 (by simp only [E.maxVar] at hv; omega) a d)
         (fun a' => ihy hl.2 har.2.2 (by simp only [E.maxVar] at hv; omega) a' (d + 1))
 
+
+theorem envOf_inR_gen (vs : List (Option Int)) (hv : ∀ v ∈ vs, InR v) (k : Nat) : InR (envOf vs k) := by
+  unfold envOf
+  cases h : vs[k]? with
+  | none => intro z hz; simp at hz; subst hz; unfold M; omega
+  | some v =>
+      cases v with
+      | none => intro z hz; simp at hz; subst hz; unfold M; omega
+      | some z0 => exact hv _ (List.mem_of_getElem? h)
+
+/-- 呼びの無い本体 `body f`(仮引数 `ar f` 個)の関数の表の意味: 引数の値の並び `vs` を環境にして本体を評価する -/
+def leafΦ (body : Nat → E) (f : Nat) (vs : List (Option Int)) : Option Int := sem (envOf vs) (body f)
+
+theorem leafΦ_inR (body : Nat → E) (hb : ∀ f, (body f).lits) :
+    ∀ f vs, (∀ v ∈ vs, InR v) → InR (leafΦ body f vs) := by
+  intro f vs hv
+  exact sem_inR (envOf vs) (envOf_inR_gen vs hv) (body f) (hb f)
+
+/-- 呼び先が `fcode`(呼びの無い本体)で、関数ごとに `P` の `tgt f` 番目に置かれていれば、呼び先の契約 `hcall` が成り立つ -/
+theorem hcall_leaf (nov : AOp → E → E → Bool)
+    (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem ρ l = some a → sem ρ r = some b → ∃ z, arithInt o a b = some z)
+    (body : Nat → E) (ar tgt : Nat → Nat) (P : Array I2)
+    (hb : ∀ f, (body f).lits ∧ (body f).maxVar ≤ ar f)
+    (hP : ∀ f k x, (fcode nov (ar f) (body f))[k]? = some x → P[tgt f + k]? = some x) :
+    ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) →
+      (∀ v ∈ vs, InR v) → (∀ k (h : k < vs.length), s.r k = encode vs[k]) →
+      ∃ s', Steps2 P s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode (leafΦ body f vs) ∧ s'.m = s.m ∧
+        s'.lr = s.lr ∧ s'.stk = s.stk := by
+  intro f vs s hpc hlen hall hin hreg
+  have hvs' : ∀ k, ∃ z, envOf vs k = some z := by
+    intro k; unfold envOf
+    cases h : vs[k]? with
+    | none => exact ⟨0, rfl⟩
+    | some v => cases v with
+      | none => exact ⟨0, rfl⟩
+      | some z => exact ⟨z, rfl⟩
+  exact fcode_ok_at nov hnov (envOf vs) (envOf_inR_gen vs hin) hvs' (ar f) (body f) (hb f).1 (hb f).2 P (tgt f) (hP f) s hpc (by
+    intro k hk
+    have hk' : k < vs.length := by omega
+    obtain ⟨z, hz⟩ := hall vs[k] (List.getElem_mem hk')
+    have : envOf vs k = vs[k] := by simp [envOf, List.getElem?_eq_getElem hk', hz]
+    rw [this]; exact hreg k hk')
+
 end SirZAsm
 
 #print axioms SirZAsm.compileS_ok
@@ -4522,3 +4571,4 @@ end SirZAsm
 #print axioms SirZAsm.site_ok
 #print axioms SirZAsm.call_fcode_ok
 #print axioms SirZAsm.compileS2_ok
+#print axioms SirZAsm.hcall_leaf
