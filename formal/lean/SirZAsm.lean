@@ -4734,6 +4734,85 @@ theorem compileS2_fuel_ok (nov : AOp → E → E → Bool)
   compileS2_ok nov (ΦF body k) (DomF body k) (ΦF_inR body (fun f => (hb f).1) k) (hnov (ΦF body k)) ρ hρ hvs base tgt ar P
     (hcall_fuel nov hnov body ar tgt P hb hP k) e he har hv a d
 
+
+/-- 関数表 `Φ`,`Φ'` が「`Dom` で止まる呼びでは `Φ'` も止まり同じ値」なら、式の木でも同じ(止まる条件 `Term` と意味 `sem2`) -/
+theorem term_mono (Φ Φ' : Nat → List (Option Int) → Option Int) (Dom Dom' : Nat → List (Option Int) → Prop)
+    (H : ∀ f vs, Dom f vs → Dom' f vs ∧ Φ' f vs = Φ f vs) (ρ : Nat → Option Int) :
+    ∀ e : E, Term Φ Dom ρ e → Term Φ' Dom' ρ e ∧ sem2 Φ' ρ e = sem2 Φ ρ e := by
+  intro e
+  induction e with
+  | lit n => intro _; exact ⟨trivial, rfl⟩
+  | var k => intro _; exact ⟨trivial, rfl⟩
+  | neg e ih =>
+      intro h; obtain ⟨h1, h2⟩ := ih h
+      exact ⟨h1, by simp [sem2, h2]⟩
+  | op o l r ihl ihr =>
+      intro h; obtain ⟨hl1, hl2⟩ := ihl h.1; obtain ⟨hr1, hr2⟩ := ihr h.2
+      exact ⟨⟨hl1, hr1⟩, by simp [sem2, hl2, hr2]⟩
+  | cmp c l r ihl ihr =>
+      intro h; obtain ⟨hl1, hl2⟩ := ihl h.1; obtain ⟨hr1, hr2⟩ := ihr h.2
+      exact ⟨⟨hl1, hr1⟩, by simp [sem2, hl2, hr2]⟩
+  | call1 f a ih =>
+      intro h; obtain ⟨ha1, ha2⟩ := ih h.1
+      have hD : (∀ v ∈ [sem2 Φ' ρ a], ∃ z, v = some z) → Dom' f [sem2 Φ' ρ a] := by
+        rw [ha2]; intro hs; exact (H _ _ (h.2 hs)).1
+      refine ⟨⟨ha1, hD⟩, ?_⟩
+      simp only [sem2, ha2, callSem]
+      by_cases hv : [sem2 Φ ρ a].all Option.isSome = true
+      · have hs : ∀ v ∈ [sem2 Φ ρ a], ∃ z, v = some z := by
+          intro v hv'; simp at hv'; subst hv'; simpa [Option.isSome_iff_exists] using hv
+        rw [if_pos hv, if_pos hv]; exact (H _ _ (h.2 hs)).2
+      · rw [if_neg hv, if_neg hv]
+  | call2 f a b iha ihb =>
+      intro h; obtain ⟨ha1, ha2⟩ := iha h.1; obtain ⟨hb1, hb2⟩ := ihb h.2.1
+      have hD : (∀ v ∈ [sem2 Φ' ρ a, sem2 Φ' ρ b], ∃ z, v = some z) → Dom' f [sem2 Φ' ρ a, sem2 Φ' ρ b] := by
+        rw [ha2, hb2]; intro hs; exact (H _ _ (h.2.2 hs)).1
+      refine ⟨⟨ha1, hb1, hD⟩, ?_⟩
+      simp only [sem2, ha2, hb2, callSem]
+      by_cases hv : [sem2 Φ ρ a, sem2 Φ ρ b].all Option.isSome = true
+      · have hs : ∀ v ∈ [sem2 Φ ρ a, sem2 Φ ρ b], ∃ z, v = some z := by
+          intro v hv'; simp at hv'
+          simp [Option.isSome_iff_exists] at hv
+          cases hv' with
+          | inl h1 => subst h1; exact hv.1
+          | inr h1 => subst h1; exact hv.2
+        rw [if_pos hv, if_pos hv]; exact (H _ _ (h.2.2 hs)).2
+      · rw [if_neg hv, if_neg hv]
+
+/-- 燃料を 1 段増やしても、止まる呼びは止まったまま・値も同じ -/
+theorem ΦF_step (body : Nat → E) :
+    ∀ k f vs, DomF body k f vs → DomF body (k + 1) f vs ∧ ΦF body (k + 1) f vs = ΦF body k f vs := by
+  intro k
+  induction k with
+  | zero => intro f vs h; exact absurd h (by simp [DomF])
+  | succ k ih =>
+      intro f vs h
+      have := term_mono (ΦF body k) (ΦF body (k + 1)) (DomF body k) (DomF body (k + 1)) ih (envOf vs) (body f) h
+      exact this
+
+/-- 燃料の単調性: 燃料 `k` で止まる呼びは、燃料 `k' ≥ k` でも止まり、値は同じ -/
+theorem ΦF_mono (body : Nat → E) (k : Nat) :
+    ∀ n f vs, DomF body k f vs → DomF body (k + n) f vs ∧ ΦF body (k + n) f vs = ΦF body k f vs := by
+  intro n
+  induction n with
+  | zero => intro f vs h; exact ⟨h, rfl⟩
+  | succ n ih =>
+      intro f vs h
+      obtain ⟨h1, h2⟩ := ih f vs h
+      obtain ⟨h3, h4⟩ := ΦF_step body (k + n) f vs h1
+      exact ⟨h3, by show ΦF body (k + n + 1) f vs = _; rw [h4, h2]⟩
+
+theorem ΦF_mono_le (body : Nat → E) {k k' : Nat} (hk : k ≤ k') (f : Nat) (vs : List (Option Int))
+    (h : DomF body k f vs) : DomF body k' f vs ∧ ΦF body k' f vs = ΦF body k f vs := by
+  obtain ⟨n, rfl⟩ := Nat.exists_eq_add_of_le hk
+  exact ΦF_mono body k n f vs h
+
+/-- 呼ぶ側の式でも: 燃料 `k` で止まるなら、燃料 `k' ≥ k` でも止まり、`sem2` は同じ -/
+theorem sem2_fuel_mono (body : Nat → E) {k k' : Nat} (hk : k ≤ k') (ρ : Nat → Option Int) (e : E)
+    (h : Term (ΦF body k) (DomF body k) ρ e) :
+    Term (ΦF body k') (DomF body k') ρ e ∧ sem2 (ΦF body k') ρ e = sem2 (ΦF body k) ρ e :=
+  term_mono _ _ _ _ (fun f vs hd => ΦF_mono_le body hk f vs hd) ρ e h
+
 end SirZAsm
 
 #print axioms SirZAsm.compileS_ok
@@ -4752,3 +4831,5 @@ end SirZAsm
 #print axioms SirZAsm.fcodeG_ok_at
 #print axioms SirZAsm.hcall_fuel
 #print axioms SirZAsm.compileS2_fuel_ok
+#print axioms SirZAsm.ΦF_mono_le
+#print axioms SirZAsm.sem2_fuel_mono
