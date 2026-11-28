@@ -60,6 +60,9 @@ inductive I3
   | bhi (t : Nat)                      -- b.hi(旗なら今の命令から t 先へ。前向き)
   | ldrS (sh d a i : Nat)              -- ascii(sh=0): ldrb wd,[xa,xi] / utf32(sh=2): ldr wd,[xa,xi,lsl #2]
   | strS (sh d a i : Nat)              -- ascii: strb wd,[xa,xi] / utf32: str wd,[xa,xi,lsl #2]
+  | strC (sh d a : Nat)                -- ascii: strb wd,[xa] / utf32: str wd,[xa]
+  | addL (d a b sh : Nat)              -- add xd, xa, xb, lsl #sh
+  | cbzI (a t : Nat)                   -- cbz xa, 今の命令から t 先(前向き)
 
 /-- 番地 `a + 8 i` の語の添字 -/
 def widx (a i : W) : Nat := (a + (i <<< 3)).toNat / 8
@@ -93,6 +96,9 @@ def step3 (i : I3) (x : HSt) : HSt :=
   | .bhi t => if x.c then { x with s := { s with pc := s.pc + t } } else { x with s := { s with pc := s.pc + 1 } }
   | .ldrS sh d a i => { x with s := { (s.set d (BitVec.ofNat 64 (rdb x.hb (s.r a + (s.r i <<< sh)).toNat (2 ^ sh)))) with pc := s.pc + 1 } }
   | .strS sh d a i => { x with hb := wrb x.hb (s.r a + (s.r i <<< sh)).toNat (2 ^ sh) (s.r d).toNat, s := { s with pc := s.pc + 1 } }
+  | .strC sh d a => { x with hb := wrb x.hb (s.r a).toNat (2 ^ sh) (s.r d).toNat, s := { s with pc := s.pc + 1 } }
+  | .addL d a b sh => { x with s := { (s.set d (s.r a + (s.r b <<< sh))) with pc := s.pc + 1 } }
+  | .cbzI a t => if s.r a = 0 then { x with s := { s with pc := s.pc + t } } else { x with s := { s with pc := s.pc + 1 } }
   | .bhs t => if x.c then { x with s := { s with pc := s.pc + t } } else { x with s := { s with pc := s.pc + 1 } }
 
 inductive Steps3 (p : Array I3) : HSt → HSt → Prop
@@ -302,6 +308,7 @@ def runL (l : List I3) (x : HSt) : HSt := l.foldl (fun y i => step3 i y) x
 def nobr : I3 → Prop
   | .bhs _ => False
   | .bhi _ => False
+  | .cbzI _ _ => False
   | .base (I2.base (I.b _)) => False
   | .base (I2.base (I.bc _ _)) => False
   | .base .enter => False
@@ -321,6 +328,7 @@ theorem step3_pc (i : I3) (hi : nobr i) (x : HSt) : (step3 i x).s.pc = x.s.pc + 
       | _ => simp [nobr] at hi
   | bhs t => simp [nobr] at hi
   | bhi t => simp [nobr] at hi
+  | cbzI a t => simp [nobr] at hi
   | _ => simp [step3, St.set]
 
 theorem runL_ok (P : Array I3) (b : Nat) :
@@ -1988,6 +1996,376 @@ theorem ringEntryS_ok (P : Array I3) (b : Nat) (cp cl d : Nat) (els : List Nat) 
   · rw [ylr, zl]
   · rw [ystk, zk]
 
+/-! ### 文字列の `commit_grow`(U+0000 を飛ばして末尾へ書く)
+
+`strC`(`strb/str w, [x9]`)・`addL`(`add xd, xa, xb, lsl #sh`)・`cbzI`(`cbz`)を足した I3 での写し。 -/
+
+theorem rdb_congr (h1 h2 : Nat → BitVec 8) : ∀ (w p : Nat), (∀ j, j < w → h1 (p + j) = h2 (p + j)) → rdb h1 p w = rdb h2 p w := by
+  intro w
+  induction w with
+  | zero => intro p _; rfl
+  | succ w ih =>
+      intro p h
+      simp only [rdb]
+      have a := h 0 (by omega)
+      have b := ih (p + 1) (fun j hj => by have := h (j + 1) (by omega); rw [show p + 1 + j = p + (j + 1) by omega]; exact this)
+      simp only [Nat.add_zero] at a
+      rw [a, b]
+
+theorem rdb_wrb (hb : Nat → BitVec 8) : ∀ (w q v : Nat), v < 256 ^ w → rdb (wrb hb q w v) q w = v := by
+  intro w
+  induction w generalizing hb with
+  | zero => intro q v hv; simp at hv; simp [rdb]; omega
+  | succ w ih =>
+      intro q v hv
+      have h3 : 256 ^ (w + 1) = 256 ^ w * 256 := Nat.pow_succ ..
+      simp only [rdb]
+      have e0 : (wrb hb q (w + 1) v q).toNat = v % 256 := by
+        unfold wrb; rw [if_pos (by omega)]; simp [BitVec.toNat_ofNat]
+      have e1 : rdb (wrb hb q (w + 1) v) (q + 1) w = rdb (wrb hb (q + 1) w (v / 256)) (q + 1) w := by
+        apply rdb_congr
+        intro j hj
+        unfold wrb
+        rw [if_pos (by omega), if_pos (by omega)]
+        have e5 : q + 1 + j - q = j + 1 := by omega
+        have e6 : q + 1 + j - (q + 1) = j := by omega
+        have e7 : v / 256 ^ (j + 1) = v / 256 / 256 ^ j := by
+          rw [Nat.pow_succ, Nat.mul_comm, ← Nat.div_div_eq_div_mul]
+        rw [e5, e6, e7]
+      rw [e0, e1, ih hb (q + 1) (v / 256) (by omega)]
+      omega
+
+
+def blockS (sh cur d : Nat) : List I3 :=
+  [bb (I.ldr 0 d), I3.cbzI 0 5, bb (I.ldr 9 cur), I3.strC sh 0 9, I3.addI 9 9 (2 ^ sh), bb (I.str 9 cur)]
+
+def blockT (sh cur : Nat) : List I3 :=
+  [bb (I.ldr 9 cur), I3.strC sh 0 9, I3.addI 9 9 (2 ^ sh), bb (I.str 9 cur)]
+
+theorem blockT_nobr (sh cur : Nat) : ∀ i ∈ blockT sh cur, nobr i := by
+  intro i hi
+  simp [blockT] at hi
+  rcases hi with rfl | rfl | rfl | rfl <;> simp [nobr, bb]
+
+/-- 文字 1 つの書き(`ldr x0,[d]; cbz x0,sk; ldr x9,[cur]; strb/str w0,[x9]; add x9,x9,#CW; str x9,[cur]; sk:`):
+0 なら何もせず、0 でなければ `cur` の位置へ書いて `cur` を `w` 進める -/
+theorem blk_ok (P : Array I3) (b sh w cur d : Nat) (hw : 2 ^ sh = w)
+    (hP : ∀ k (hk : k < 6), P[b + k]? = some (blockS sh cur d)[k])
+    (x : HSt) (hpc : x.s.pc = b) (hdc : d ≠ cur) (hq : (x.s.m cur).toNat + w < 2 ^ 64) :
+    ∃ y, Steps3 P x y ∧ y.s.pc = b + 6 ∧ y.h = x.h ∧ y.sp = x.sp ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk ∧
+      (∀ i, i ≠ cur → y.s.m i = x.s.m i) ∧
+      ((x.s.m d).toNat = 0 → y.hb = x.hb ∧ y.s.m cur = x.s.m cur) ∧
+      ((x.s.m d).toNat ≠ 0 → y.hb = wrb x.hb (x.s.m cur).toNat w (x.s.m d).toNat ∧ (y.s.m cur).toNat = (x.s.m cur).toNat + w) := by
+  obtain ⟨x1, hx1⟩ : ∃ x1, x1 = step3 (bb (I.ldr 0 d)) x := ⟨_, rfl⟩
+  have g1 : Steps3 P x x1 := by
+    rw [hx1]; exact Steps3.go' _ b hpc (by have := hP 0 (by omega); simpa [blockS] using this) (Steps3.refl _)
+  have p1 : x1.s.pc = b + 1 := by rw [hx1]; simp [step3, step2, step, bb, hpc]
+  have r0 : x1.s.r 0 = x.s.m d := by rw [hx1]; rfl
+  have f1m : x1.s.m = x.s.m := by rw [hx1]; rfl
+  have f1h : x1.h = x.h := by rw [hx1]; rfl
+  have f1b : x1.hb = x.hb := by rw [hx1]; rfl
+  have f1s : x1.sp = x.sp := by rw [hx1]; rfl
+  have f1l : x1.s.lr = x.s.lr := by rw [hx1]; rfl
+  have f1k : x1.s.stk = x.s.stk := by rw [hx1]; rfl
+  obtain ⟨x2, hx2⟩ : ∃ x2, x2 = step3 (I3.cbzI 0 5) x1 := ⟨_, rfl⟩
+  have g2 : Steps3 P x1 x2 := by
+    rw [hx2]; exact Steps3.go' _ (b + 1) p1 (by have := hP 1 (by omega); simpa [blockS] using this) (Steps3.refl _)
+  by_cases hz : (x.s.m d).toNat = 0
+  · have hz' : x.s.m d = 0 := BitVec.eq_of_toNat_eq (by simpa using hz)
+    have e2 : x2 = { x1 with s := { x1.s with pc := x1.s.pc + 5 } } := by rw [hx2]; simp [step3, r0, hz']
+    refine ⟨x2, g1.trans g2, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · rw [e2]; simp [p1]
+    · rw [e2]; simp [f1h]
+    · rw [e2]; simp [f1s]
+    · rw [e2]; simp [f1l]
+    · rw [e2]; simp [f1k]
+    · intro i _; rw [e2]; simp [f1m]
+    · intro _; refine ⟨?_, ?_⟩
+      · rw [e2]; simp [f1b]
+      · rw [e2]; simp [f1m]
+    · intro h; exact absurd hz h
+  · have hnz : x.s.m d ≠ 0 := fun h => hz (by rw [h]; rfl)
+    have e2 : x2 = { x1 with s := { x1.s with pc := x1.s.pc + 1 } } := by rw [hx2]; simp [step3, r0]; exact hnz
+    have p2 : x2.s.pc = b + 2 := by rw [e2]; simp [p1]
+    obtain ⟨g3, p3⟩ := runL_ok P b (blockT sh cur) x2 2 (by simpa using p2) (blockT_nobr sh cur)
+      (fun k hk => by
+        have hk' : k < 4 := by simpa [blockT] using hk
+        have := hP (2 + k) (by omega)
+        have e : b + 2 + k = b + (2 + k) := by omega
+        rw [e, this]
+        have : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 := by omega
+        rcases this with rfl | rfl | rfl | rfl <;> rfl)
+    obtain ⟨y, hy⟩ : ∃ y, y = runL (blockT sh cur) x2 := ⟨_, rfl⟩
+    rw [← hy] at g3 p3
+    have ym : ∀ i, y.s.m i = if i = cur then x.s.m cur + BitVec.ofNat 64 w else x.s.m i := by
+      intro i; rw [hy, e2]
+      have : (runL (blockT sh cur) { x1 with s := { x1.s with pc := x1.s.pc + 1 } }).s.m i
+          = if i = cur then x1.s.m cur + BitVec.ofNat 64 (2 ^ sh) else x1.s.m i := rfl
+      rw [this, f1m, hw]
+    have yb : y.hb = wrb x.hb (x.s.m cur).toNat w (x.s.m d).toNat := by
+      rw [hy, e2]
+      have : (runL (blockT sh cur) { x1 with s := { x1.s with pc := x1.s.pc + 1 } }).hb
+          = wrb x1.hb (x1.s.m cur).toNat (2 ^ sh) (x1.s.r 0).toNat := rfl
+      rw [this, f1b, f1m, hw, r0]
+    refine ⟨y, g1.trans (g2.trans g3), by simp [blockT] at p3; omega, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · rw [hy, e2]; exact f1h
+    · rw [hy, e2]; exact f1s
+    · rw [hy, e2]; exact f1l
+    · rw [hy, e2]; exact f1k
+    · intro i hi; rw [ym, if_neg hi]
+    · intro h; exact absurd h hz
+    · intro _
+      refine ⟨yb, ?_⟩
+      rw [ym, if_pos rfl, BitVec.toNat_add]
+      simp
+      omega
+
+
+def charsS (sh cur : Nat) (ds : List Nat) : List I3 := ds.flatMap (blockS sh cur)
+
+def csOf (m : Nat → W) (ds : List Nat) : List Nat := (ds.map fun d => (m d).toNat).filter (· ≠ 0)
+
+theorem csOf_cons (m : Nat → W) (d : Nat) (ds : List Nat) :
+    csOf m (d :: ds) = (if (m d).toNat = 0 then [] else [(m d).toNat]) ++ csOf m ds := by
+  unfold csOf
+  simp only [List.map_cons, List.filter_cons]
+  by_cases h : (m d).toNat = 0 <;> simp [h]
+
+theorem csOf_congr (m1 m2 : Nat → W) (ds : List Nat) (h : ∀ d ∈ ds, m1 d = m2 d) : csOf m1 ds = csOf m2 ds := by
+  have : ds.map (fun d => (m1 d).toNat) = ds.map (fun d => (m2 d).toNat) :=
+    List.map_congr_left (fun d hd => by rw [h d hd])
+  unfold csOf
+  rw [this]
+
+theorem csOf_len (m : Nat → W) (ds : List Nat) : (csOf m ds).length ≤ ds.length := by
+  unfold csOf
+  have := List.length_filter_le (fun x => decide (x ≠ 0)) (ds.map fun d => (m d).toNat)
+  simpa using this
+
+theorem chars_ok (P : Array I3) (sh w cur : Nat) (hw : 2 ^ sh = w) :
+    ∀ (ds : List Nat) (b : Nat) (x : HSt),
+      (∀ k z, (charsS sh cur ds)[k]? = some z → P[b + k]? = some z) →
+      x.s.pc = b → (∀ d ∈ ds, d ≠ cur) →
+      (x.s.m cur).toNat + (ds.length + 1) * w < 2 ^ 64 →
+      (∀ d ∈ ds, (x.s.m d).toNat < 256 ^ w) →
+      ∃ y, Steps3 P x y ∧ y.s.pc = b + 6 * ds.length ∧
+        (y.s.m cur).toNat = (x.s.m cur).toNat + (csOf x.s.m ds).length * w ∧
+        (∀ i (hi : i < (csOf x.s.m ds).length), rdb y.hb ((x.s.m cur).toNat + i * w) w = (csOf x.s.m ds)[i]) ∧
+        (∀ pos, (pos < (x.s.m cur).toNat ∨ (x.s.m cur).toNat + (csOf x.s.m ds).length * w ≤ pos) → y.hb pos = x.hb pos) ∧
+        (∀ i, i ≠ cur → y.s.m i = x.s.m i) ∧ y.h = x.h ∧ y.sp = x.sp ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk := by
+  intro ds
+  induction ds with
+  | nil =>
+      intro b x _ hpc _ _ _
+      refine ⟨x, Steps3.refl _, by simp [hpc], by simp [csOf], ?_, ?_, fun _ _ => rfl, rfl, rfl, rfl, rfl⟩
+      · intro i hi; simp [csOf] at hi
+      · intro _ _; rfl
+  | cons d ds ih =>
+      intro b x hP hpc hdc hq hv
+      have hdc1 : d ≠ cur := hdc d (by simp)
+      have hlen : (d :: ds).length = ds.length + 1 := rfl
+      have hq0 : (x.s.m cur).toNat + w < 2 ^ 64 := by
+        have : w ≤ (ds.length + 1 + 1) * w := by
+          rw [Nat.succ_mul]; omega
+        rw [hlen] at hq; omega
+      obtain ⟨y, gy, ypc, yh, ysp, ylr, ystk, ym, hz, hnz⟩ := blk_ok P b sh w cur d hw
+        (fun k hk => by
+          apply hP k
+          unfold charsS
+          rw [List.flatMap_cons, List.getElem?_append_left (by simp [blockS]; omega)]
+          exact List.getElem?_eq_getElem (by simp [blockS]; omega))
+        x hpc hdc1 hq0
+      have hrest : ∀ d' ∈ ds, y.s.m d' = x.s.m d' := fun d' hd' => ym d' (hdc d' (by simp [hd']))
+      have hcs : csOf y.s.m ds = csOf x.s.m ds := csOf_congr _ _ _ hrest
+      have hPs : ∀ k z, (charsS sh cur ds)[k]? = some z → P[(b + 6) + k]? = some z := by
+        intro k z hk
+        have := hP (6 + k) z (by
+          unfold charsS at hk ⊢
+          rw [List.flatMap_cons, List.getElem?_append_right (by simp [blockS])]
+          simpa [blockS] using hk)
+        rw [← Nat.add_assoc] at this; exact this
+      have hq1 : (y.s.m cur).toNat + (ds.length + 1) * w < 2 ^ 64 := by
+        have e : (ds.length + 1 + 1) * w = (ds.length + 1) * w + w := Nat.succ_mul _ _
+        rw [hlen] at hq
+        by_cases h0 : (x.s.m d).toNat = 0
+        · rw [(hz h0).2]; omega
+        · rw [(hnz h0).2]; omega
+      obtain ⟨u, gu, upc, ucur, urd, uoth, uym, uh, usp, ulr, ustk⟩ := ih (b + 6) y hPs ypc (fun d' hd' => hdc d' (by simp [hd']))
+        hq1 (fun d' hd' => by rw [hrest d' hd']; exact hv d' (by simp [hd']))
+      rw [hcs] at ucur urd uoth
+      refine ⟨u, gy.trans gu, by rw [upc, hlen]; omega, ?_, ?_, ?_, ?_, by rw [uh, yh], by rw [usp, ysp], by rw [ulr, ylr], by rw [ustk, ystk]⟩
+      · by_cases h0 : (x.s.m d).toNat = 0
+        · rw [ucur, (hz h0).2, csOf_cons, if_pos h0]; simp
+        · rw [ucur, (hnz h0).2, csOf_cons, if_neg h0]; simp [Nat.succ_mul]; omega
+      · intro i hi
+        by_cases h0 : (x.s.m d).toNat = 0
+        · have hc : csOf x.s.m (d :: ds) = csOf x.s.m ds := by rw [csOf_cons, if_pos h0]; simp
+          simp only [hc] at hi ⊢
+          have := urd i hi
+          rw [(hz h0).2] at this; exact this
+        · have hc : csOf x.s.m (d :: ds) = (x.s.m d).toNat :: csOf x.s.m ds := by rw [csOf_cons, if_neg h0]; simp
+          simp only [hc]
+          cases i with
+          | zero =>
+              simp
+              have hb0 : ∀ j, j < w → u.hb ((x.s.m cur).toNat + j) = y.hb ((x.s.m cur).toNat + j) := by
+                intro j hj
+                have := uoth ((x.s.m cur).toNat + j) (Or.inl (by rw [(hnz h0).2]; omega))
+                exact this
+              have hv0 := hv d (by simp)
+              rw [rdb_congr u.hb y.hb w _ hb0, (hnz h0).1]
+              exact rdb_wrb x.hb w _ _ hv0
+          | succ i =>
+              simp only [List.getElem_cons_succ]
+              have := urd i (by simp [hc] at hi; omega)
+              rw [(hnz h0).2] at this
+              rw [← this]; congr 1
+              rw [Nat.succ_mul]; omega
+      · intro pos hpos
+        by_cases h0 : (x.s.m d).toNat = 0
+        · have hc : csOf x.s.m (d :: ds) = csOf x.s.m ds := by rw [csOf_cons, if_pos h0]; simp
+          rw [hc] at hpos
+          have := uoth pos (by rw [(hz h0).2]; exact hpos)
+          rw [this, (hz h0).1]
+        · have hc : csOf x.s.m (d :: ds) = (x.s.m d).toNat :: csOf x.s.m ds := by rw [csOf_cons, if_neg h0]; simp
+          rw [hc] at hpos
+          simp only [List.length_cons, Nat.succ_mul] at hpos
+          have := uoth pos (by rw [(hnz h0).2]; omega)
+          rw [this, (hnz h0).1]
+          unfold wrb
+          rw [if_neg (by omega)]
+      · intro i hi
+        rw [uym i hi, ym i hi]
+
+
+def commitPro (sh t1 t2 cur : Nat) : List I3 :=
+  [bb (I.ldr 10 t1), bb (I.ldr 11 t2), I3.addL 10 10 11 sh, bb (I.str 10 cur)]
+
+def commitEpi (sh t1 t2 cur : Nat) : List I3 :=
+  [bb (I.ldr 9 cur), bb (I.ldr 10 t1), bb (I.subs 9 9 10), I3.lsrI 9 9 sh, bb (I.str 9 t2)]
+
+/-- 文字列の `commit_grow`: 末尾の位置 `cur` を決め、文字(U+0000 は飛ばす)を順に書き、長さ `t2` を決める -/
+def commitS (sh t1 t2 cur : Nat) (ds : List Nat) : List I3 :=
+  commitPro sh t1 t2 cur ++ charsS sh cur ds ++ commitEpi sh t1 t2 cur
+
+theorem commitPro_nobr (sh t1 t2 cur : Nat) : ∀ i ∈ commitPro sh t1 t2 cur, nobr i := by
+  intro i hi
+  simp [commitPro] at hi
+  rcases hi with rfl | rfl | rfl | rfl <;> simp [nobr, bb]
+
+theorem commitEpi_nobr (sh t1 t2 cur : Nat) : ∀ i ∈ commitEpi sh t1 t2 cur, nobr i := by
+  intro i hi
+  simp [commitEpi] at hi
+  rcases hi with rfl | rfl | rfl | rfl | rfl <;> simp [nobr, bb]
+
+theorem charsS_len (sh cur : Nat) (ds : List Nat) : (charsS sh cur ds).length = 6 * ds.length := by
+  unfold charsS
+  induction ds with
+  | nil => simp
+  | cons d ds ih => simp [List.flatMap_cons, blockS] at *; omega
+
+theorem commitS_ok (P : Array I3) (b sh w t1 t2 cur : Nat) (ds : List Nat) (hw : 2 ^ sh = w) (hw0 : 0 < w)
+    (hP : ∀ k z, (commitS sh t1 t2 cur ds)[k]? = some z → P[b + k]? = some z)
+    (x : HSt) (hpc : x.s.pc = b) (hc1 : cur ≠ t1) (hc2 : cur ≠ t2) (hdc : ∀ d ∈ ds, d ≠ cur)
+    (hq : (x.s.m t1).toNat + ((x.s.m t2).toNat + ds.length + 1) * w < 2 ^ 64)
+    (hv : ∀ d ∈ ds, (x.s.m d).toNat < 256 ^ w) :
+    ∃ y, Steps3 P x y ∧ y.s.pc = b + 9 + 6 * ds.length ∧
+      (y.s.m t2).toNat = (x.s.m t2).toNat + (csOf x.s.m ds).length ∧
+      (∀ i (hi : i < (csOf x.s.m ds).length),
+        rdb y.hb ((x.s.m t1).toNat + ((x.s.m t2).toNat + i) * w) w = (csOf x.s.m ds)[i]) ∧
+      (∀ pos, (pos < (x.s.m t1).toNat + (x.s.m t2).toNat * w ∨
+        (x.s.m t1).toNat + ((x.s.m t2).toNat + (csOf x.s.m ds).length) * w ≤ pos) → y.hb pos = x.hb pos) ∧
+      (∀ i, i ≠ cur → i ≠ t2 → y.s.m i = x.s.m i) ∧ y.h = x.h ∧ y.sp = x.sp ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk := by
+  have hcl := csOf_len x.s.m ds
+  have hL : (x.s.m t2).toNat * w ≤ ((x.s.m t2).toNat + ds.length + 1) * w := Nat.mul_le_mul_right w (by omega)
+  have hd : ((x.s.m t2).toNat + ds.length + 1) * w = (x.s.m t2).toNat * w + (ds.length + 1) * w := by
+    rw [Nat.add_assoc, Nat.add_mul]
+  have hlenc := charsS_len sh cur ds
+  -- 前半
+  obtain ⟨g1, p1⟩ := runL_ok P b (commitPro sh t1 t2 cur) x 0 (by simpa using hpc) (commitPro_nobr sh t1 t2 cur)
+    (fun k hk => by
+      have hk' : k < 4 := by simpa [commitPro] using hk
+      have := hP k ((commitPro sh t1 t2 cur)[k]) (by
+        unfold commitS
+        rw [List.append_assoc, List.getElem?_append_left (by simp [commitPro]; omega)]
+        exact List.getElem?_eq_getElem hk)
+      rw [Nat.add_zero]; exact this)
+  obtain ⟨z, hz⟩ : ∃ z, z = runL (commitPro sh t1 t2 cur) x := ⟨_, rfl⟩
+  rw [← hz] at g1 p1
+  simp [commitPro] at p1
+  have hadr : (x.s.m t1 + (x.s.m t2 <<< sh)).toNat = (x.s.m t1).toNat + (x.s.m t2).toNat * w := by
+    have := addr_nat (x.s.m t1) (x.s.m t2) sh (x.s.m t2).toNat rfl (by rw [hw]; omega)
+    rw [this, hw]
+  have zm : ∀ i, z.s.m i = if i = cur then x.s.m t1 + (x.s.m t2 <<< sh) else x.s.m i := by
+    intro i; rw [hz]; rfl
+  have zh : z.h = x.h := by rw [hz]; rfl
+  have zb : z.hb = x.hb := by rw [hz]; rfl
+  have zs : z.sp = x.sp := by rw [hz]; rfl
+  have zl : z.s.lr = x.s.lr := by rw [hz]; rfl
+  have zk : z.s.stk = x.s.stk := by rw [hz]; rfl
+  have zcur : (z.s.m cur).toNat = (x.s.m t1).toNat + (x.s.m t2).toNat * w := by rw [zm, if_pos rfl, hadr]
+  have zd : ∀ d ∈ ds, z.s.m d = x.s.m d := fun d hd => by rw [zm, if_neg (hdc d hd)]
+  have hcs : csOf z.s.m ds = csOf x.s.m ds := csOf_congr _ _ _ zd
+  -- 文字
+  obtain ⟨u, gu, upc, ucur, urd, uoth, uym, uh, usp, ulr, ustk⟩ := chars_ok P sh w cur hw ds (b + 4) z
+    (fun k y hk => by
+      have hkl := (List.getElem?_eq_some_iff.mp hk).1
+      have := hP (4 + k) y (by
+        unfold commitS
+        rw [List.getElem?_append_left (by simp [commitPro, hlenc] at hkl ⊢; omega),
+          List.getElem?_append_right (by simp [commitPro])]
+        simpa [commitPro] using hk)
+      rw [← Nat.add_assoc] at this; exact this)
+    (by simpa using p1) hdc (by rw [zcur]; omega) (fun d hd => by rw [zd d hd]; exact hv d hd)
+  rw [hcs] at ucur urd uoth
+  rw [zcur] at ucur urd uoth
+  -- 後半
+  obtain ⟨g3, p3⟩ := runL_ok P b (commitEpi sh t1 t2 cur) u (4 + 6 * ds.length) (by
+      have : b + (4 + 6 * ds.length) = b + 4 + 6 * ds.length := by omega
+      rw [this]; exact upc) (commitEpi_nobr sh t1 t2 cur)
+    (fun k hk => by
+      have hk' : k < 5 := by simpa [commitEpi] using hk
+      have hL : (commitPro sh t1 t2 cur ++ charsS sh cur ds).length = 4 + 6 * ds.length := by
+        simp [commitPro, hlenc]; omega
+      have := hP (4 + 6 * ds.length + k) ((commitEpi sh t1 t2 cur)[k]) (by
+        unfold commitS
+        rw [List.getElem?_append_right (by omega), hL, show 4 + 6 * ds.length + k - (4 + 6 * ds.length) = k by omega]
+        exact List.getElem?_eq_getElem hk)
+      rw [Nat.add_assoc]; exact this)
+  obtain ⟨y, hy⟩ : ∃ y, y = runL (commitEpi sh t1 t2 cur) u := ⟨_, rfl⟩
+  rw [← hy] at g3 p3
+  have ym : ∀ i, y.s.m i = if i = t2 then (u.s.m cur - u.s.m t1) >>> sh else u.s.m i := by
+    intro i; rw [hy]; rfl
+  have u1 : u.s.m t1 = x.s.m t1 := by rw [uym t1 (Ne.symm hc1), zm, if_neg (Ne.symm hc1)]
+  have hge : (x.s.m t1).toNat ≤ (u.s.m cur).toNat := by rw [ucur]; omega
+  have hsub : (u.s.m cur - u.s.m t1).toNat = (u.s.m cur).toNat - (x.s.m t1).toNat := by
+    rw [BitVec.toNat_sub, u1]
+    have := (x.s.m t1).isLt
+    omega
+  have hfin : (y.s.m t2).toNat = (x.s.m t2).toNat + (csOf x.s.m ds).length := by
+    rw [ym, if_pos rfl, BitVec.toNat_ushiftRight, hsub, ucur, Nat.shiftRight_eq_div_pow, hw]
+    have : (x.s.m t1).toNat + (x.s.m t2).toNat * w + (csOf x.s.m ds).length * w - (x.s.m t1).toNat
+        = ((x.s.m t2).toNat + (csOf x.s.m ds).length) * w := by rw [Nat.add_mul]; omega
+    rw [this]
+    exact Nat.mul_div_cancel _ hw0
+  refine ⟨y, g1.trans (gu.trans g3), by simp [commitEpi] at p3; omega, hfin, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro i hi
+    have := urd i hi
+    have e : (x.s.m t1).toNat + ((x.s.m t2).toNat + i) * w = (x.s.m t1).toNat + (x.s.m t2).toNat * w + i * w := by
+      rw [Nat.add_mul]; omega
+    rw [e]
+    have hyb : y.hb = u.hb := by rw [hy]; rfl
+    rw [hyb]; exact this
+  · intro pos hpos
+    have hyb : y.hb = u.hb := by rw [hy]; rfl
+    rw [hyb, uoth pos (by rw [Nat.add_mul] at hpos; omega), zb]
+  · intro i hi1 hi2
+    rw [ym, if_neg hi2, uym i hi1, zm, if_neg hi1]
+  · rw [hy]; show u.h = x.h; rw [uh, zh]
+  · rw [hy]; show u.sp = x.sp; rw [usp, zs]
+  · rw [hy]; show u.s.lr = x.s.lr; rw [ulr, zl]
+  · rw [hy]; show u.s.stk = x.s.stk; rw [ustk, zk]
+
 #print axioms copyLoop_ok
 #print axioms growEntry_ok
 #print axioms lift2
@@ -2003,5 +2381,9 @@ theorem ringEntryS_ok (P : Array I3) (b : Nat) (cp cl d : Nat) (els : List Nat) 
 #print axioms sumPre_ok
 #print axioms ringEntryL_ok
 #print axioms ringEntryS_ok
+#print axioms rdb_wrb
+#print axioms blk_ok
+#print axioms chars_ok
+#print axioms commitS_ok
 
 end SirZH
