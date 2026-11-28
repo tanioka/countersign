@@ -1901,9 +1901,217 @@ theorem tailg_complete (ar : Nat → Nat) (fs : SirZC.Fs) (bd : Nat → SirZC.T)
 #print axioms tailg_sound
 #print axioms tailg_complete
 
+/-! ### `--strict` の行(値が `!_` なら次の行へ落ちる)と評価器 -/
+
+/-- `--strict` の行の並びの項の仮定(評価する行まで。値が `!_`(部分適用も同じ)なら次の行も要る) -/
+def TermRowsG (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop) (ρ : Nat → Option Int) :
+    List (Cn × E) → Prop
+  | [] => True
+  | (c, v) :: rs => (ctruth ρ c = true → TermG Φ Dom ρ v ∧ (sem2 Φ ρ v = none → TermRowsG Φ Dom ρ rs)) ∧
+      (ctruth ρ c = false → TermRowsG Φ Dom ρ rs)
+
+theorem rowsS_sound (ar : Nat → Nat) (fs : SirZC.Fs) (bd : Nat → SirZC.T) (hfs : ∀ f, fs f = some (ar f, bd f))
+    (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
+    (HΦ : ∀ f vs, Dom f vs → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
+      ∃ rb, SirZC.Ev fs SirZC.selLeft (fun i => vs.getD i none) (bd f) rb ∧ SirZC.co rb = some (Φ f vs))
+    (n : Nat) (ρT : SirZC.Env) (ρE : Nat → Option Int) (hρ : ∀ i, InR (ρE i)) (hag : ∀ i < n, ρT i = ρE i) (tail : SirZC.T) :
+    ∀ rs : List (Cn × E), (∀ p ∈ rs, p.1.lits ∧ p.1.maxVar ≤ n ∧ p.2.lits2 ∧ p.2.arOk ar ∧ p.2.maxVar ≤ n) →
+      TermRowsG Φ Dom ρE rs →
+      (∀ v, rowHitS Φ ρE rs = some v → ∃ r, SirZC.Ev fs SirZC.selLeft ρT (rowsT rs tail) r ∧ SirZC.co r = some (sem2 Φ ρE v)) ∧
+      (rowHitS Φ ρE rs = none → ∀ r, SirZC.Ev fs SirZC.selLeft ρT tail r → SirZC.Ev fs SirZC.selLeft ρT (rowsT rs tail) r) := by
+  intro rs
+  induction rs with
+  | nil =>
+      intro _ _
+      exact ⟨fun v h => by simp [rowHitS] at h, fun _ r h => h⟩
+  | cons p rs ih =>
+      obtain ⟨c, v⟩ := p
+      intro hrs hT
+      obtain ⟨hc, hcv, hv1, hv2, hv3⟩ : c.lits ∧ c.maxVar ≤ n ∧ v.lits2 ∧ v.arOk ar ∧ v.maxVar ≤ n := hrs (c, v) (by simp)
+      have hrs' : ∀ p ∈ rs, p.1.lits ∧ p.1.maxVar ≤ n ∧ p.2.lits2 ∧ p.2.arOk ar ∧ p.2.maxVar ≤ n :=
+        fun p hp => hrs p (by simp [hp])
+      obtain ⟨rc, hrc, hct, hcf⟩ := trc_ev ar fs bd hfs Φ Dom hΦ HΦ ρT ρE hρ c hc (fun i hi => hag i (by omega))
+      by_cases hctr : ctruth ρE c = true
+      · obtain ⟨x, hx⟩ := hct hctr
+        subst hx
+        obtain ⟨hTv, hTr⟩ := hT.1 hctr
+        obtain ⟨rv, hrv, hcvv, hpf⟩ := tree_sound_fs ar fs bd hfs Φ Dom hΦ HΦ ρT ρE hρ v hv1 hv2
+          (fun i hi => hag i (by omega)) hTv
+        cases hrvc : rv with
+        | v y =>
+            rw [hrvc] at hcvv hrv
+            simp [SirZC.co] at hcvv
+            cases hy : y with
+            | some y' =>
+                have hs : sem2 Φ ρE v = some y' := by rw [← hcvv, hy]
+                have hh : rowHitS Φ ρE ((c, v) :: rs) = some v := by simp [rowHitS, hctr, hs]
+                refine ⟨fun v' hv' => ?_, fun h => by rw [hh] at h; cases h⟩
+                rw [hh] at hv'; cases hv'
+                rw [hy] at hrv
+                exact ⟨_, SirZC.Ev.rowCHit hrc rfl hrv, by simp [SirZC.co, hs]⟩
+            | none =>
+                have hs : sem2 Φ ρE v = none := by rw [← hcvv, hy]
+                have hrh : rowHitS Φ ρE ((c, v) :: rs) = rowHitS Φ ρE rs := by simp [rowHitS, hctr, hs]
+                obtain ⟨ih1, ih2⟩ := ih hrs' (hTr hs)
+                rw [hy] at hrv
+                refine ⟨fun v' hv' => ?_, fun hn r hr => ?_⟩
+                · rw [hrh] at hv'
+                  obtain ⟨r, hr, hc'⟩ := ih1 v' hv'
+                  exact ⟨r, SirZC.Ev.rowCFallV hrc rfl hrv hr, hc'⟩
+                · rw [hrh] at hn
+                  exact SirZC.Ev.rowCFallV hrc rfl hrv (ih2 hn r hr)
+        | pf =>
+            rw [hrvc] at hcvv hrv
+            simp [SirZC.co] at hcvv
+            have hs : sem2 Φ ρE v = none := hcvv.symm
+            have hrh : rowHitS Φ ρE ((c, v) :: rs) = rowHitS Φ ρE rs := by simp [rowHitS, hctr, hs]
+            obtain ⟨ih1, ih2⟩ := ih hrs' (hTr hs)
+            refine ⟨fun v' hv' => ?_, fun hn r hr => ?_⟩
+            · rw [hrh] at hv'
+              obtain ⟨r, hr, hc'⟩ := ih1 v' hv'
+              exact ⟨r, SirZC.Ev.rowCFallP hrc rfl hrv hr, hc'⟩
+            · rw [hrh] at hn
+              exact SirZC.Ev.rowCFallP hrc rfl hrv (ih2 hn r hr)
+        | _ => rw [hrvc] at hcvv; simp [SirZC.co] at hcvv
+      · have hctf : ctruth ρE c = false := by simpa using hctr
+        have hrc' := hcf hctf
+        subst hrc'
+        have hrh : rowHitS Φ ρE ((c, v) :: rs) = rowHitS Φ ρE rs := by simp [rowHitS, hctr]
+        obtain ⟨ih1, ih2⟩ := ih hrs' (hT.2 hctf)
+        refine ⟨fun v' hv' => ?_, fun hn => fun r hr => ?_⟩
+        · rw [hrh] at hv'
+          obtain ⟨r, hr, hc'⟩ := ih1 v' hv'
+          exact ⟨r, SirZC.Ev.rowCSkip hrc rfl hr, hc'⟩
+        · rw [hrh] at hn
+          exact SirZC.Ev.rowCSkip hrc rfl (ih2 hn r hr)
+
+
+/-- `--strict` の行の並び + 既定の行 `dv` を持つ関数の本体の項 -/
+def strictT (rs : List (Cn × E)) (dv : E) : SirZC.T := rowsT rs (.rowD (tr dv) .void)
+
+theorem strict_sound (ar : Nat → Nat) (fs : SirZC.Fs) (bd : Nat → SirZC.T) (hfs : ∀ f, fs f = some (ar f, bd f))
+    (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
+    (HΦ : ∀ f vs, Dom f vs → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
+      ∃ rb, SirZC.Ev fs SirZC.selLeft (fun i => vs.getD i none) (bd f) rb ∧ SirZC.co rb = some (Φ f vs))
+    (n : Nat) (rs : List (Cn × E)) (dv : E)
+    (hrs : ∀ p ∈ rs, p.1.lits ∧ p.1.maxVar ≤ n ∧ p.2.lits2 ∧ p.2.arOk ar ∧ p.2.maxVar ≤ n)
+    (hd : dv.lits2 ∧ dv.arOk ar ∧ dv.maxVar ≤ n)
+    (ρE : Nat → Option Int) (ρT : SirZC.Env) (hρ : ∀ i, InR (ρE i)) (hag : ∀ i < n, ρT i = ρE i)
+    (hT : TermRowsG Φ Dom ρE rs) (hTd : TermG Φ Dom ρE dv) :
+    ∃ r, SirZC.Ev fs SirZC.selLeft ρT (strictT rs dv) r ∧ SirZC.co r = some (LS Φ rs dv ρE) := by
+  obtain ⟨hhit, hmiss⟩ := rowsS_sound ar fs bd hfs Φ Dom hΦ HΦ n ρT ρE hρ hag (.rowD (tr dv) .void) rs hrs hT
+  cases hh : rowHitS Φ ρE rs with
+  | some v =>
+      obtain ⟨r, hr, hc⟩ := hhit v hh
+      exact ⟨r, hr, by rw [hc]; simp [LS, hh]⟩
+  | none =>
+      obtain ⟨rv, hrv, hcv, _⟩ := tree_sound_fs ar fs bd hfs Φ Dom hΦ HΦ ρT ρE hρ dv hd.1 hd.2.1
+        (fun i hi => hag i (by omega)) hTd
+      obtain ⟨r2, hr2, hc2⟩ := rowD_void_ev fs SirZC.selLeft ρT _ _ _ hrv hcv
+      exact ⟨r2, hmiss hh r2 hr2, by rw [hc2]; simp [LS, hh]⟩
+
+theorem rowsS_complete (ar : Nat → Nat) (fs : SirZC.Fs) (bd : Nat → SirZC.T) (hfs : ∀ f, fs f = some (ar f, bd f))
+    (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs)) (HP : HΦ' ar fs bd Φ Dom)
+    (n : Nat) (rs : List (Cn × E)) (hrs : ∀ p ∈ rs, p.1.lits ∧ p.1.maxVar ≤ n ∧ p.2.lits2 ∧ p.2.arOk ar ∧ p.2.maxVar ≤ n)
+    (tail : SirZC.T) (ρE : Nat → Option Int) (ρT : SirZC.Env) (hρ : ∀ i, InR (ρE i)) (hag : ∀ i < n, ρT i = ρE i) :
+    ∀ rs' : List (Cn × E), (∀ p ∈ rs', p ∈ rs) → ∀ (r : SirZC.Res) (x : Option Int),
+      SirZC.Ev fs SirZC.selLeft ρT (rowsT rs' tail) r → SirZC.co r = some x →
+      TermRowsG Φ Dom ρE rs' ∧
+      ((∃ v, rowHitS Φ ρE rs' = some v ∧ sem2 Φ ρE v = x) ∨
+      (rowHitS Φ ρE rs' = none ∧ SirZC.Ev fs SirZC.selLeft ρT tail r)) := by
+  have hdet : ∀ (c : Cn), c.lits → c.maxVar ≤ n → ∀ (rc : SirZC.Res), SirZC.Ev fs SirZC.selLeft ρT (trc c) rc →
+      (ctruth ρE c = true → ∃ x, rc = .v (some x)) ∧ (ctruth ρE c = false → rc = .v none) := by
+    intro c hc hcv rc hrc
+    obtain ⟨r0, hr0, h1, h2⟩ := trc_ev ar fs bd hfs Φ (fun _ _ => False) hΦ (fun _ _ h => absurd h id) ρT ρE hρ c hc
+      (fun i hi => hag i (by omega))
+    have := SirZC.Ev_det fs SirZC.selLeft hr0 hrc
+    subst this
+    exact ⟨h1, h2⟩
+  intro rs'
+  induction rs' with
+  | nil => intro _ r x h _; exact ⟨trivial, Or.inr ⟨by simp [rowHitS], h⟩⟩
+  | cons p rs'' ih =>
+      obtain ⟨c, v⟩ := p
+      intro hsub r x h hx
+      obtain ⟨hc, hcv, hv1, hv2, hv3⟩ : c.lits ∧ c.maxVar ≤ n ∧ v.lits2 ∧ v.arOk ar ∧ v.maxVar ≤ n :=
+        hrs (c, v) (hsub _ (by simp))
+      have hsub' : ∀ q ∈ rs'', q ∈ rs := fun q hq => hsub q (by simp [hq])
+      simp only [rowsT] at h
+      cases h with
+      | rowCSkip hrc hco hrest =>
+          have hctf : ctruth ρE c = false := by
+            cases hb : ctruth ρE c with
+            | false => rfl
+            | true => obtain ⟨y, hy⟩ := (hdet c hc hcv _ hrc).1 hb; subst hy; simp [SirZC.co] at hco
+          have hrh : rowHitS Φ ρE ((c, v) :: rs'') = rowHitS Φ ρE rs'' := by simp [rowHitS, hctf]
+          obtain ⟨hT, hres⟩ := ih hsub' r x hrest hx
+          rw [hrh]
+          exact ⟨⟨fun h => by simp [hctf] at h, fun _ => hT⟩, hres⟩
+      | rowCHit hrc hco hv' =>
+          have hctr : ctruth ρE c = true := by
+            cases hb : ctruth ρE c with
+            | true => rfl
+            | false => have := (hdet c hc hcv _ hrc).2 hb; subst this; simp [SirZC.co] at hco
+          obtain ⟨ht, hcoe, _⟩ := tree_complete_fs ar fs bd hfs Φ Dom hΦ HP ρE hρ v hv1 hv2 ρT _
+            (fun i hi => hag i (by omega)) hv'
+          simp [SirZC.co] at hcoe hx
+          refine ⟨⟨fun _ => ⟨ht, fun h => by rw [← hcoe] at h; simp at h⟩, fun h => by simp [hctr] at h⟩, Or.inl ⟨v, ?_, by rw [← hcoe, hx]⟩⟩
+          simp [rowHitS, hctr, ← hcoe]
+      | rowCFallV hrc hco hv' hrest =>
+          have hctr : ctruth ρE c = true := by
+            cases hb : ctruth ρE c with
+            | true => rfl
+            | false => have := (hdet c hc hcv _ hrc).2 hb; subst this; simp [SirZC.co] at hco
+          obtain ⟨ht, hcoe, _⟩ := tree_complete_fs ar fs bd hfs Φ Dom hΦ HP ρE hρ v hv1 hv2 ρT _
+            (fun i hi => hag i (by omega)) hv'
+          have hs : sem2 Φ ρE v = none := by simp [SirZC.co] at hcoe; exact hcoe.symm
+          obtain ⟨hT, hres⟩ := ih hsub' r x hrest hx
+          have hrh : rowHitS Φ ρE ((c, v) :: rs'') = rowHitS Φ ρE rs'' := by simp [rowHitS, hctr, hs]
+          rw [hrh]
+          exact ⟨⟨fun _ => ⟨ht, fun _ => hT⟩, fun h => by simp [hctr] at h⟩, hres⟩
+      | rowCFallP hrc hco hv' hrest =>
+          have hctr : ctruth ρE c = true := by
+            cases hb : ctruth ρE c with
+            | true => rfl
+            | false => have := (hdet c hc hcv _ hrc).2 hb; subst this; simp [SirZC.co] at hco
+          obtain ⟨ht, hcoe, _⟩ := tree_complete_fs ar fs bd hfs Φ Dom hΦ HP ρE hρ v hv1 hv2 ρT _
+            (fun i hi => hag i (by omega)) hv'
+          have hs : sem2 Φ ρE v = none := by simp [SirZC.co] at hcoe; exact hcoe.symm
+          obtain ⟨hT, hres⟩ := ih hsub' r x hrest hx
+          have hrh : rowHitS Φ ρE ((c, v) :: rs'') = rowHitS Φ ρE rs'' := by simp [rowHitS, hctr, hs]
+          rw [hrh]
+          exact ⟨⟨fun _ => ⟨ht, fun _ => hT⟩, fun h => by simp [hctr] at h⟩, hres⟩
+
+theorem strict_complete (ar : Nat → Nat) (fs : SirZC.Fs) (bd : Nat → SirZC.T) (hfs : ∀ f, fs f = some (ar f, bd f))
+    (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs)) (HP : HΦ' ar fs bd Φ Dom)
+    (n : Nat) (rs : List (Cn × E)) (dv : E)
+    (hrs : ∀ p ∈ rs, p.1.lits ∧ p.1.maxVar ≤ n ∧ p.2.lits2 ∧ p.2.arOk ar ∧ p.2.maxVar ≤ n)
+    (hd : dv.lits2 ∧ dv.arOk ar ∧ dv.maxVar ≤ n)
+    (ρE : Nat → Option Int) (ρT : SirZC.Env) (hρ : ∀ i, InR (ρE i)) (hag : ∀ i < n, ρT i = ρE i)
+    (r : SirZC.Res) (h : SirZC.Ev fs SirZC.selLeft ρT (strictT rs dv) r) (x : Option Int) (hx : SirZC.co r = some x) :
+    TermRowsG Φ Dom ρE rs ∧ (rowHitS Φ ρE rs = none → TermG Φ Dom ρE dv) ∧ LS Φ rs dv ρE = x := by
+  obtain ⟨hT, hres⟩ := rowsS_complete ar fs bd hfs Φ Dom hΦ HP n rs hrs _ ρE ρT hρ hag rs (fun _ h => h) r x h hx
+  rcases hres with ⟨v, hh, hv⟩ | ⟨hh, htail⟩
+  · exact ⟨hT, (fun h' => by rw [hh] at h'; cases h'), by simp [LS, hh, hv]⟩
+  · have hcall : ∃ rv, SirZC.Ev fs SirZC.selLeft ρT (tr dv) rv ∧ SirZC.co rv = some x := by
+      cases htail with
+      | rowDHit hv => exact ⟨_, hv, hx⟩
+      | rowDFallV hv hrest => cases hrest; simp [SirZC.co] at hx; subst hx; exact ⟨_, hv, rfl⟩
+      | rowDFallP hv hrest => cases hrest; simp [SirZC.co] at hx; subst hx; exact ⟨_, hv, rfl⟩
+    obtain ⟨rv, hrv, hcv⟩ := hcall
+    obtain ⟨ht, hcoe, _⟩ := tree_complete_fs ar fs bd hfs Φ Dom hΦ HP ρE hρ dv hd.1 hd.2.1 ρT rv
+      (fun i hi => hag i (by omega)) hrv
+    exact ⟨hT, fun _ => ht, by simp [LS, hh]; rw [hcoe] at hcv; exact Option.some.inj hcv⟩
+
 end SirZB
 
 #print axioms SirZB.limit_sound
 #print axioms SirZB.limit_complete
 #print axioms SirZB.limit_iff
 #print axioms SirZB.DomG_DomF
+#print axioms SirZB.strict_sound
+#print axioms SirZB.strict_complete
