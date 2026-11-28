@@ -2629,6 +2629,7 @@ inductive I2
   | ret                                -- ret(x30 へ)
   | bk (t : Nat)                       -- b(今の命令から t 戻る。自分への末尾呼びの `b entry`)
   | jmp (t : Nat)                      -- b(絶対位置 t へ。兄弟への末尾呼びの `b g`)
+  | alloca                             -- sub sp(作業領域を取る。Int だけを運ぶこの模型では、見える状態は変わらない)
 
 def step2 (i : I2) (s : St) : St :=
   match i with
@@ -2641,6 +2642,7 @@ def step2 (i : I2) (s : St) : St :=
   | .ret => { s with pc := s.lr }
   | .bk t => { s with pc := s.pc - t }
   | .jmp t => { s with pc := t }
+  | .alloca => { s with pc := s.pc + 1 }
 
 inductive Steps2 (p : Array I2) : St → St → Prop
   | refl (s) : Steps2 p s s
@@ -5301,6 +5303,154 @@ theorem selftail_fn_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Opti
     rw [this]; exact hreg j hj'
 
 
+/-! ### 作業領域を取る関数(`pre_alloca`) -/
+
+/-- `sign_asm.py` の `pre_alloca` の関数: 外から呼ばれる入口 `enter; str..; alloca; b E` の後ろに、再帰から入る
+`.rec` の入口 `enter; str..` があり、両方が本体 `B`(入口 `E`)に合流する。`a` は関数の先頭の絶対位置。
+作業領域の中身(器)は Int だけのこの模型の外なので、`alloca` は見える状態を変えない。 -/
+def recEntry (n : Nat) : Array I2 := #[I2.enter] ++ (pstore n).map I2.base
+
+def fcodeA (a n : Nat) (B : Array I2) : Array I2 :=
+  fcodeG n (#[I2.alloca, I2.jmp (a + 2 * n + 4)] ++ recEntry n ++ B)
+
+theorem recEntry_size (n : Nat) : (recEntry n).size = 1 + n := by
+  simp [recEntry, pstore_size] <;> omega
+
+/-- 外から入る: 作業領域を取って本体 `B`(位置 `a + 2n + 4`)へ。`fcodeG_ok_at` と同じ契約 -/
+theorem fcodeA_ok_at (n : Nat) (B : Array I2) (P : Array I2) (a : Nat)
+    (hG : ∀ k x, (fcodeA a n B)[k]? = some x → P[a + k]? = some x)
+    (R : Nat → Option Int) (res : Option Int)
+    (hbody : ∀ s : St, s.pc = a + 2 * n + 4 → (∀ k < n, s.m k = encode (R k)) →
+      (∀ k x, B[k]? = some x → P[a + 2 * n + 4 + k]? = some x) →
+      ∃ s', Steps2 P s s' ∧ s'.pc = a + 2 * n + 4 + B.size ∧ s'.r 0 = encode res ∧ s'.stk = s.stk)
+    (s : St) (hs : s.pc = a) (hr : ∀ k < n, s.r k = encode (R k)) :
+    ∃ s', Steps2 P s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode res ∧ s'.m = s.m ∧
+      s'.lr = s.lr ∧ s'.stk = s.stk := by
+  refine fcodeG_ok_at n (#[I2.alloca, I2.jmp (a + 2 * n + 4)] ++ recEntry n ++ B) P a hG R res ?_ s hs hr
+  intro t ht hm hGB
+  have hsz := recEntry_size n
+  have h0 : (#[I2.alloca, I2.jmp (a + 2 * n + 4)] ++ recEntry n ++ B)[0]? = some I2.alloca := by
+    simp [Array.getElem?_append]
+  have h1 : (#[I2.alloca, I2.jmp (a + 2 * n + 4)] ++ recEntry n ++ B)[1]? = some (I2.jmp (a + 2 * n + 4)) := by
+    simp [Array.getElem?_append]
+  have g1 : Steps2 P t (step2 I2.alloca t) :=
+    Steps2.go' I2.alloca (a + 1 + n) (by simpa using ht) (by simpa [ht] using hGB 0 _ h0) (Steps2.refl _)
+  have p1 : (step2 I2.alloca t).pc = a + 1 + n + 1 := by simp [step2, ht]
+  have g2 : Steps2 P (step2 I2.alloca t) (step2 (I2.jmp (a + 2 * n + 4)) (step2 I2.alloca t)) :=
+    Steps2.go' _ (a + 1 + n + 1) p1 (by simpa [p1, Nat.add_assoc] using hGB 1 _ h1) (Steps2.refl _)
+  obtain ⟨u, hu, pu, ru, ku⟩ := hbody (step2 (I2.jmp (a + 2 * n + 4)) (step2 I2.alloca t)) (by simp [step2]) (by
+      intro k hk; simpa [step2] using hm k hk)
+    (fun k x hk => by
+      have hlt : k < B.size := by
+        cases Nat.lt_or_ge k B.size with
+        | inl h => exact h
+        | inr h => simp [Array.getElem?_eq_none h] at hk
+      have := hGB (2 + (1 + n) + k) x (by
+        have e3 : 2 + (1 + n) + k - 2 - (1 + n) = k := by omega
+        simp [Array.getElem?_append, hsz]
+        split
+        · exfalso; omega
+        · split
+          · exfalso; omega
+          · rw [e3]; exact hk)
+      have e : a + 1 + n + (2 + (1 + n) + k) = a + 2 * n + 4 + k := by omega
+      rw [e] at this; exact this)
+  refine ⟨u, g1.trans (g2.trans hu), ?_, ru, ?_⟩
+  all_goals first | (simp [Array.size_append, hsz] at pu ⊢; omega) | (simp [step2] at ku ⊢; exact ku)
+
+/-- `.rec` から入る: 関数全体の `fcodeG n B`(位置 `a + n + 3`、本体は `a + 2n + 4`)と同じ契約 -/
+theorem fcodeA_rec_ok (n : Nat) (B : Array I2) (P : Array I2) (a : Nat)
+    (hG : ∀ k x, (fcodeA a n B)[k]? = some x → P[a + k]? = some x)
+    (R : Nat → Option Int) (res : Option Int)
+    (hbody : ∀ s : St, s.pc = a + 2 * n + 4 → (∀ k < n, s.m k = encode (R k)) →
+      (∀ k x, B[k]? = some x → P[a + 2 * n + 4 + k]? = some x) →
+      ∃ s', Steps2 P s s' ∧ s'.pc = a + 2 * n + 4 + B.size ∧ s'.r 0 = encode res ∧ s'.stk = s.stk)
+    (s : St) (hs : s.pc = a + n + 3) (hr : ∀ k < n, s.r k = encode (R k)) :
+    ∃ s', Steps2 P s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode res ∧ s'.m = s.m ∧
+      s'.lr = s.lr ∧ s'.stk = s.stk := by
+  refine fcodeG_ok_at n B P (a + n + 3) ?_ R res ?_ s hs hr
+  · intro k x hk
+    have hsz := recEntry_size n
+    have heq : fcodeA a n B = (recEntry n ++ #[I2.alloca, I2.jmp (a + 2 * n + 4)]) ++ fcodeG n B := by
+      simp [fcodeA, fcodeG, recEntry, Array.append_assoc]
+    have hix : (fcodeA a n B)[(n + 3) + k]? = (fcodeG n B)[k]? := by
+      rw [heq]; simp [Array.getElem?_append, hsz]
+      have e1 : ¬ (n + 3 + k < 1 + n) := by omega
+      have e2 : ¬ (n + 3 + k - (1 + n) < 2) := by omega
+      have e3 : n + 3 + k - (1 + n) - 2 = k := by omega
+      rw [if_neg e1, if_neg e2, e3]
+    have := hG ((n + 3) + k) x (by rw [hix]; exact hk)
+    have e : a + ((n + 3) + k) = a + n + 3 + k := by omega
+    rw [e] at this; exact this
+  · intro t ht hm hGB
+    have e : a + n + 3 + 1 + n = a + 2 * n + 4 := by omega
+    rw [e] at ht hGB
+    obtain ⟨u, hu, pu, ru, ku⟩ := hbody t ht hm hGB
+    exact ⟨u, hu, by omega, ru, ku⟩
+
+/-- 作業領域を取る(`pre_alloca`)自分への末尾呼びの関数: 外から呼ばれる入口(先頭 `a`)の契約。`selftail_fn_ok` と同じ -/
+theorem selftailA_fn_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
+    (hnov1 : ∀ o l r, nov o l r = true → ∀ ρ a b, sem ρ l = some a → sem ρ r = some b → ∃ z, arithInt o a b = some z)
+    (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
+    (tgt ar : Nat → Nat) (P : Array I2)
+    (hcall : ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
+      (∀ k (h : k < vs.length), s.r k = encode vs[k]) → Dom f vs →
+      ∃ s', Steps2 P s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode (Φ f vs) ∧ s'.m = s.m ∧ s'.lr = s.lr ∧ s'.stk = s.stk)
+    (c : Cn) (v : E) (as : List E)
+    (hc : c.lits) (hcv : c.maxVar ≤ as.length)
+    (hv : v.lits2 ∧ v.arOk ar ∧ v.maxVar ≤ as.length) (has : ∀ x ∈ as, x.lits2 ∧ x.arOk ar ∧ x.maxVar ≤ as.length)
+    (a : Nat)
+    (hP : ∀ k x, (fcodeA a as.length (loopCode nov tgt c v as (a + 2 * as.length + 4)))[k]? = some x → P[a + k]? = some x) :
+    ∀ k (vs : List (Option Int)) (s : St), s.pc = a → vs.length = as.length → (∀ w ∈ vs, ∃ z, w = some z) →
+      (∀ w ∈ vs, InR w) → (∀ j (h : j < vs.length), s.r j = encode vs[j]) →
+      LDom Φ Dom c v as k (envOf vs) →
+      ∃ s', Steps2 P s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode (LΦ Φ c v as k (envOf vs)) ∧ s'.m = s.m ∧
+        s'.lr = s.lr ∧ s'.stk = s.stk := by
+  intro k vs s hs hlen hall hin hreg hD
+  refine fcodeA_ok_at as.length _ P a hP (envOf vs) (LΦ Φ c v as k (envOf vs)) ?_ s hs ?_
+  · intro s' hs' hm hGB
+    obtain ⟨u, hu, pu, ru, ku⟩ := loop_ok nov Φ Dom hΦ hnov1 hnov tgt ar P hcall c v as hc hcv hv has (a + 2 * as.length + 4) hGB
+      k (envOf vs) (envOf_inR_gen vs hin) (envOf_some vs) s' hD hs' hm
+    exact ⟨u, hu, pu, ru, ku⟩
+  · intro j hj
+    have hj' : j < vs.length := by omega
+    obtain ⟨z, hz⟩ := hall vs[j] (List.getElem_mem hj')
+    have : envOf vs j = vs[j] := by simp [envOf, List.getElem?_eq_getElem hj', hz]
+    rw [this]; exact hreg j hj'
+
+/-- 同じ関数の `.rec` の入口(位置 `a + n + 3`。自分から呼ぶ再帰が入る。作業領域は呼ぶ側のものを使う)も同じ契約 -/
+theorem selftailA_rec_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
+    (hnov1 : ∀ o l r, nov o l r = true → ∀ ρ a b, sem ρ l = some a → sem ρ r = some b → ∃ z, arithInt o a b = some z)
+    (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
+    (tgt ar : Nat → Nat) (P : Array I2)
+    (hcall : ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
+      (∀ k (h : k < vs.length), s.r k = encode vs[k]) → Dom f vs →
+      ∃ s', Steps2 P s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode (Φ f vs) ∧ s'.m = s.m ∧ s'.lr = s.lr ∧ s'.stk = s.stk)
+    (c : Cn) (v : E) (as : List E)
+    (hc : c.lits) (hcv : c.maxVar ≤ as.length)
+    (hv : v.lits2 ∧ v.arOk ar ∧ v.maxVar ≤ as.length) (has : ∀ x ∈ as, x.lits2 ∧ x.arOk ar ∧ x.maxVar ≤ as.length)
+    (a : Nat)
+    (hP : ∀ k x, (fcodeA a as.length (loopCode nov tgt c v as (a + 2 * as.length + 4)))[k]? = some x → P[a + k]? = some x) :
+    ∀ k (vs : List (Option Int)) (s : St), s.pc = a + as.length + 3 → vs.length = as.length → (∀ w ∈ vs, ∃ z, w = some z) →
+      (∀ w ∈ vs, InR w) → (∀ j (h : j < vs.length), s.r j = encode vs[j]) →
+      LDom Φ Dom c v as k (envOf vs) →
+      ∃ s', Steps2 P s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode (LΦ Φ c v as k (envOf vs)) ∧ s'.m = s.m ∧
+        s'.lr = s.lr ∧ s'.stk = s.stk := by
+  intro k vs s hs hlen hall hin hreg hD
+  refine fcodeA_rec_ok as.length _ P a hP (envOf vs) (LΦ Φ c v as k (envOf vs)) ?_ s hs ?_
+  · intro s' hs' hm hGB
+    obtain ⟨u, hu, pu, ru, ku⟩ := loop_ok nov Φ Dom hΦ hnov1 hnov tgt ar P hcall c v as hc hcv hv has (a + 2 * as.length + 4) hGB
+      k (envOf vs) (envOf_inR_gen vs hin) (envOf_some vs) s' hD hs' hm
+    exact ⟨u, hu, pu, ru, ku⟩
+  · intro j hj
+    have hj' : j < vs.length := by omega
+    obtain ⟨z, hz⟩ := hall vs[j] (List.getElem_mem hj')
+    have : envOf vs j = vs[j] := by simp [envOf, List.getElem?_eq_getElem hj', hz]
+    rw [this]; exact hreg j hj'
+
+
 /-! ### 複数行の条件 + 自分への末尾呼び -/
 
 /-- 行の並び `c₁ : v₁, c₂ : v₂, …` で最初に成り立つ行の値(無ければ `none` = 次へ落ちる) -/
@@ -5912,3 +6062,7 @@ end SirZAsm
 #print axioms SirZAsm.tgTail_ok
 #print axioms SirZAsm.tailBody_ok
 #print axioms SirZAsm.tailg_fn_ok
+#print axioms SirZAsm.fcodeA_ok_at
+#print axioms SirZAsm.fcodeA_rec_ok
+#print axioms SirZAsm.selftailA_fn_ok
+#print axioms SirZAsm.selftailA_rec_ok
