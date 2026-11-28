@@ -5106,48 +5106,124 @@ theorem moves_ok (base d : Nat) :
       · simp [step, St.set]; exact l1
       · simp [step, St.set]; exact k1
 
+/-- 遅い字面の書き戻し: 遅ければ `movi x9, c; str x9`、さもなくば枠から `ldr x9; str x9` -/
+def moveI (base d : Nat) (lt : Nat → Option Int) (n : Nat) : Array I :=
+  match lt n with
+  | some c => #[I.movi 9 c, I.str 9 n]
+  | none => #[I.ldr 9 (base + d + n), I.str 9 n]
+
+def moveCodeL (base d : Nat) (lt : Nat → Option Int) : Nat → Array I
+  | 0 => #[]
+  | n + 1 => moveCodeL base d lt n ++ moveI base d lt n
+
+theorem moveI_size (base d : Nat) (lt : Nat → Option Int) (n : Nat) : (moveI base d lt n).size = 2 := by
+  unfold moveI; split <;> rfl
+
+theorem moveCodeL_size (base d : Nat) (lt : Nat → Option Int) (n : Nat) : (moveCodeL base d lt n).size = 2 * n := by
+  induction n with
+  | zero => rfl
+  | succ n ih => simp [moveCodeL, ih, moveI_size]; omega
+
+theorem pairM_steps (c : Int) (b : Nat) (s : St) (hs : s.pc = 0) :
+    Steps #[I.movi 9 c, I.str 9 b] s (step (I.str 9 b) (step (I.movi 9 c) s)) := by
+  apply Steps.go (I.movi 9 c) (by simp [hs]) (by simp [hs])
+  apply Steps.go (I.str 9 b) (by simp [step, St.set, hs]) (by simp [step, St.set, hs])
+  exact Steps.refl _
+
+theorem moveI_ok (base d : Nat) (lt : Nat → Option Int) (n : Nat) (t : St) (ht : t.pc = 0) :
+    ∃ X : St, Steps (moveI base d lt n) t X ∧ X.pc = 2 ∧
+      (∀ j, X.m j = if j = n then (match lt n with | some c => BitVec.ofInt 64 c | none => t.m (base + d + n)) else t.m j) ∧
+      X.lr = t.lr ∧ X.stk = t.stk := by
+  cases hln : lt n with
+  | none =>
+      have h := pair_steps (base + d + n) n t ht
+      have e : moveI base d lt n = #[I.ldr 9 (base + d + n), I.str 9 n] := by simp [moveI, hln]
+      rw [e]
+      exact ⟨_, h, by simp [step, St.set, ht], by intro j; simp [step, St.set, hln], by simp [step, St.set], by simp [step, St.set]⟩
+  | some c =>
+      have h := pairM_steps c n t ht
+      have e : moveI base d lt n = #[I.movi 9 c, I.str 9 n] := by simp [moveI, hln]
+      rw [e]
+      exact ⟨_, h, by simp [step, St.set, ht], by intro j; simp [step, St.set, hln], by simp [step, St.set], by simp [step, St.set]⟩
+
+theorem moves_okL (base d : Nat) (lt : Nat → Option Int) :
+    ∀ (n : Nat) (s : St), s.pc = 0 →
+      ∃ s', Steps (moveCodeL base d lt n) s s' ∧ s'.pc = 2 * n ∧
+        (∀ j < n, s'.m j = (match lt j with | some c => BitVec.ofInt 64 c | none => s.m (base + d + j))) ∧
+        (∀ j, n ≤ j → s'.m j = s.m j) ∧ s'.lr = s.lr ∧ s'.stk = s.stk := by
+  intro n
+  induction n with
+  | zero => intro s hs; exact ⟨s, by simpa [moveCodeL] using Steps.refl s, by simp [hs], by simp, by simp, rfl, rfl⟩
+  | succ n ih =>
+      intro s hs
+      obtain ⟨t1, h1, p1, m1, m2, l1, k1⟩ := ih s hs
+      obtain ⟨X, hX, xp, xm, xl, xk⟩ := moveI_ok base d lt n { t1 with pc := 0 } rfl
+      have hc := Steps.append' h1 (by rw [p1, moveCodeL_size]) hX (by rw [xp, moveI_size])
+      have hv : t1.m (base + d + n) = s.m (base + d + n) := m2 _ (by omega)
+      refine ⟨_, by simpa [moveCodeL] using hc, ?_, ?_, ?_, ?_, ?_⟩
+      · simp [moveCodeL_size, moveI_size, xp]; omega
+      · intro j hj
+        by_cases hjn : j = n
+        · subst hjn; rw [xm]; simp [hv]
+        · rw [xm, if_neg hjn]; exact m1 j (by omega)
+      · intro j hj
+        have : j ≠ n := by omega
+        rw [xm, if_neg this]; exact m2 j (by omega)
+      · simpa using xl.trans l1
+      · simpa using xk.trans k1
+
+theorem moveVal (Φ : Nat → List (Option Int) → Option Int) (ρ : Nat → Option Int) (as : List E) (base d : Nat) (m : Nat → W)
+    (hslot : ∀ j (h : j < as.length), lateN as[j] = none → m (base + d + j) = encode (sem2 Φ ρ as[j])) :
+    ∀ k (hk : k < as.length), (match lateAt as k with | some c => BitVec.ofInt 64 c | none => m (base + d + k)) = encode (sem2 Φ ρ as[k]) := by
+  intro k hk
+  cases hl : lateAt as k with
+  | none => exact hslot k hk (by rw [← lateAt_get as k hk]; exact hl)
+  | some c =>
+      have := lateN_sem Φ ρ _ c (by rw [← lateAt_get as k hk]; exact hl)
+      simp [this, encode]
+
 /-- 自分への末尾呼びの I の部分: `movz x13`(見張りがあれば)・`__` の見張り(行き先 = 書き戻しと `b entry` の次の `movz x0`)・書き戻し -/
 def stI (nov : AOp → E → E → Bool) (base d : Nat) (as : List E) : Array I :=
   (if as.any (mb nov) then #[I.movz 13] else #[]) ++
-    guardCode nov base as d ((guardCode nov base as d 0).size + 2 * as.length + 1) ++ moveCode base d as.length
+    guardCode nov base as d ((guardCode nov base as d 0).size + 2 * as.length + 1) ++ moveCodeL base d (lateAt as) as.length
 
 theorem stI_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
     (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
     (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z) (base : Nat)
     (as : List E) (hl : ∀ a ∈ as, a.lits2) (d : Nat) (s : St) (hs : s.pc = 0)
-    (hslot : ∀ j (h : j < as.length), s.m (base + d + j) = encode (sem2 Φ ρ as[j])) :
+    (hslot : ∀ j (h : j < as.length), lateN as[j] = none → s.m (base + d + j) = encode (sem2 Φ ρ as[j])) :
     ∃ s', Steps (stI nov base d as) s s' ∧ s'.stk = s.stk ∧
       ((∀ a ∈ as, ∃ z, sem2 Φ ρ a = some z) →
         s'.pc = (stI nov base d as).size ∧ (∀ k (h : k < as.length), s'.m k = encode (sem2 Φ ρ as[k]))) ∧
       ((∃ a ∈ as, sem2 Φ ρ a = none) → s'.pc = (stI nov base d as).size + 1) := by
   by_cases hany : as.any (mb nov) = true
   · have hsite : stI nov base d as =
-        (#[I.movz 13] ++ guardCode nov base as d ((guardCode nov base as d 0).size + 2 * as.length + 1)) ++ moveCode base d as.length := by
+        (#[I.movz 13] ++ guardCode nov base as d ((guardCode nov base as d 0).size + 2 * as.length + 1)) ++ moveCodeL base d (lateAt as) as.length := by
       simp [stI, hany]
     obtain ⟨u1, hu1, up, ur13, ur, um⟩ := L_movz13 #[I.movz 13] (by simp) (by simp) s hs
     have hu1ls := Steps.ls_eq hu1
     obtain ⟨s2, hg, gm, gl, gk, gr13, gall, gnone⟩ := guard_ok2 nov Φ hΦ hnov ρ hρ hvs base as d
       ((guardCode nov base as d 0).size + 2 * as.length + 1) { u1 with pc := 0 } hl
       (by rw [guardCode_size]; omega) rfl ur13 (by
-        intro j hj _; show u1.m _ = _; rw [um]; exact hslot j hj)
+        intro j hj hmj; show u1.m _ = _; rw [um]; exact hslot j hj (by cases hh : lateN as[j] with | none => rfl | some c => exact absurd (lateN_mb nov _ c hh) (by simpa using hmj)))
     have hMG := Steps.append hu1 (by simp [up]) hg
     have hGs : (guardCode nov base as d ((guardCode nov base as d 0).size + 2 * as.length + 1)).size
         = (guardCode nov base as d 0).size := guardCode_size nov base as d _
     by_cases hall : ∀ a ∈ as, ∃ z, sem2 Φ ρ a = some z
     · have gp := gall hall
-      obtain ⟨sL, hL, lp, lm1, lm2, ll, lk⟩ := moves_ok base d as.length { s2 with pc := 0 } rfl
+      obtain ⟨sL, hL, lp, lm1, lm2, ll, lk⟩ := moves_okL base d (lateAt as) as.length { s2 with pc := 0 } rfl
       have hTL := Steps.append hMG (by simp [gp, hGs]; omega) hL
       refine ⟨_, by rw [hsite]; exact hTL, ?_, ?_, ?_⟩
       · show sL.stk = _; rw [lk]; show s2.stk = _; rw [gk]; show u1.stk = _; rw [hu1ls.2]
       · intro _
         refine ⟨?_, ?_⟩
         · show sL.pc + _ = _
-          rw [lp, hsite]; simp [hGs, moveCode_size]; omega
+          rw [lp, hsite]; simp [hGs, moveCodeL_size]; omega
         · intro k hk
           show sL.m k = _
-          rw [lm1 k hk]; show s2.m _ = _; rw [gm]; show u1.m _ = _; rw [um]
-          have := hslot k hk
-          exact this
+          rw [lm1 k hk]
+          exact moveVal Φ ρ as base d s2.m (fun j hj hn => by
+            show s2.m _ = _; rw [gm]; show u1.m _ = _; rw [um]; exact hslot j hj hn) k hk
       · intro hex
         obtain ⟨a, ha, hn⟩ := hex
         obtain ⟨z, hz⟩ := hall a ha
@@ -5157,13 +5233,13 @@ theorem stI_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) 
         | none => exact absurd ⟨a, ha, h⟩ hn
         | some z => exact ⟨z, rfl⟩))
       have gp := gnone hex
-      have hTL := (hMG.left (moveCode base d as.length))
+      have hTL := (hMG.left (moveCodeL base d (lateAt as) as.length))
       refine ⟨_, by rw [hsite]; exact hTL, ?_, ?_, ?_⟩
       · show s2.stk = _; rw [gk]; show u1.stk = _; rw [hu1ls.2]
       · intro hall'; exact absurd hall' hall
       · intro _
         show s2.pc + 1 = _
-        rw [gp, hsite]; simp [hGs, moveCode_size]; omega
+        rw [gp, hsite]; simp [hGs, moveCodeL_size]; omega
   · have hn : ∀ a ∈ as, mb nov a = false := by
       intro a ha
       cases h : mb nov a with
@@ -5171,17 +5247,17 @@ theorem stI_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) 
       | true => exact absurd (by simp [List.any_eq_true]; exact ⟨a, ha, h⟩) hany
     have hG : guardCode nov base as d ((guardCode nov base as d 0).size + 2 * as.length + 1) = #[] :=
       guardCode_nil nov base as d _ hn
-    have hsite : stI nov base d as = moveCode base d as.length := by
+    have hsite : stI nov base d as = moveCodeL base d (lateAt as) as.length := by
       simp [stI, hany, hG]
     have hall : ∀ a ∈ as, ∃ z, sem2 Φ ρ a = some z := fun a ha =>
       mb_sound2 nov Φ hΦ hnov ρ hρ hvs a (hl a ha) (hn a ha)
-    obtain ⟨sL, hL, lp, lm1, lm2, ll, lk⟩ := moves_ok base d as.length s hs
+    obtain ⟨sL, hL, lp, lm1, lm2, ll, lk⟩ := moves_okL base d (lateAt as) as.length s hs
     refine ⟨sL, by rw [hsite]; exact hL, lk, ?_, ?_⟩
     · intro _
       refine ⟨?_, ?_⟩
-      · rw [lp, hsite]; simp [moveCode_size]
+      · rw [lp, hsite]; simp [moveCodeL_size]
       · intro k hk
-        rw [lm1 k hk]; exact hslot k hk
+        rw [lm1 k hk]; exact moveVal Φ ρ as base d s.m hslot k hk
     · intro hex
       obtain ⟨a, ha, hn'⟩ := hex
       obtain ⟨z, hz⟩ := hall a ha
@@ -5250,8 +5326,52 @@ theorem stTail_size (nov : AOp → E → E → Bool) (base d : Nat) (as : List E
     (stTail nov base d as a' entry).size = (stI nov base d as).size + 2 := by
   simp [stTail]
 
+/-- `b g` の実引数の前置き: 遅い字面の引数は何もしない(`argCode`) -/
+def argsCodeL (nov : AOp → E → E → Bool) (base : Nat) (tgt : Nat → Nat) : Nat → Nat → List E → Array I2
+  | _, _, [] => #[]
+  | a, d, x :: xs => argCode nov base tgt a d x ++
+      argsCodeL nov base tgt (a + (argCode nov base tgt a d x).size) (d + 1) xs
+
+theorem args2L_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (ρ : Nat → Option Int) (base : Nat) (tgt : Nat → Nat) (P : Array I2) :
+    ∀ (as : List E), (∀ x ∈ as, ∀ a d, CompOk nov Φ Dom ρ base tgt P x a d) → (∀ x ∈ as, Term Φ Dom ρ x) →
+    ∀ (a d : Nat) (s : St), s.pc = a → (∀ k < base, s.m k = encode (ρ k)) →
+      (∀ k x, (argsCodeL nov base tgt a d as)[k]? = some x → P[a + k]? = some x) →
+      ∃ s', Steps2 P s s' ∧ s'.pc = a + (argsCodeL nov base tgt a d as).size ∧
+        (∀ i (h : i < as.length), lateN as[i] = none → s'.m (base + d + i) = encode (sem2 Φ ρ as[i])) ∧
+        (∀ j < base + d, s'.m j = s.m j) ∧ s'.stk = s.stk := by
+  intro as
+  induction as with
+  | nil =>
+      intro _ _ a d s hs _ _
+      exact ⟨s, Steps2.refl _, by simp [argsCodeL, hs], by simp, by simp, rfl⟩
+  | cons x xs ih =>
+      intro hc ht a d s hs hm hG
+      have hG0 : ∀ k y, (argCode nov base tgt a d x ++
+          argsCodeL nov base tgt (a + (argCode nov base tgt a d x).size) (d + 1) xs)[k]? = some y → P[a + k]? = some y := by
+        simpa [argsCodeL] using hG
+      obtain ⟨s1, h1, p1, hs1, m1, k1⟩ := argPh_ok nov Φ Dom ρ base tgt P x a d (hc x (by simp) a d) s hs hm
+        (place_left hG0) (ht x (by simp))
+      obtain ⟨s3, h3, p3, n3, m3, k3⟩ := ih (fun y hy => hc y (by simp [hy])) (fun y hy => ht y (by simp [hy]))
+        (a + (argCode nov base tgt a d x).size) (d + 1) s1 p1 (by
+          intro k hk; rw [m1 k (by omega)]; exact hm k hk)
+        (by simpa [Nat.add_assoc] using place_right hG0)
+      refine ⟨s3, h1.trans h3, ?_, ?_, ?_, ?_⟩
+      · rw [p3]; simp [argsCodeL]; omega
+      · intro i hi hn
+        cases i with
+        | zero =>
+            simp only [Nat.add_zero]
+            rw [m3 (base + d) (by omega)]; exact hs1 (by simpa using hn)
+        | succ i =>
+            have := n3 i (by simpa using hi) (by simpa using hn)
+            have e : base + d + (i + 1) = base + (d + 1) + i := by omega
+            rw [e, this]; simp
+      · intro j hj; rw [m3 j (by omega)]; exact m1 j hj
+      · rw [k3]; exact k1
+
 def loopT (nov : AOp → E → E → Bool) (base : Nat) (tgt : Nat → Nat) (as : List E) (T0 entry : Nat) : Array I2 :=
-  argsCode2 nov base tgt T0 0 as ++ stTail nov base 0 as (T0 + (argsCode2 nov base tgt T0 0 as).size) entry
+  argsCodeL nov base tgt T0 0 as ++ stTail nov base 0 as (T0 + (argsCodeL nov base tgt T0 0 as).size) entry
 
 /-- 条件つきの値の行 + 自分への末尾呼びの本体の命令列。入口は `a0`(仮引数の `str` の直後)、仮引数は枠の `0..n-1`
 (`n = as.length`)。`c` が成り立てば `v`、外れれば `f(as)` の末尾呼び(`sign_asm.py` の `b entry`) -/
@@ -5316,7 +5436,7 @@ theorem loop_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int)
   | succ k ih =>
       intro ρ hρ hvs s hD hs hm
       obtain ⟨V, hV⟩ : ∃ V, V = lpV nov tgt c v as.length a0 := ⟨_, rfl⟩
-      obtain ⟨A, hA⟩ : ∃ A, A = argsCode2 nov as.length tgt (a0 + lpFo nov tgt c v as.length a0) 0 as := ⟨_, rfl⟩
+      obtain ⟨A, hA⟩ : ∃ A, A = argsCodeL nov as.length tgt (a0 + lpFo nov tgt c v as.length a0) 0 as := ⟨_, rfl⟩
       obtain ⟨St', hSt⟩ : ∃ St', St' = stTail nov as.length 0 as (a0 + lpFo nov tgt c v as.length a0 + A.size) a0 := ⟨_, rfl⟩
       have hCs : (compileC nov as.length 0 (lpFo nov tgt c v as.length a0) c).size = (compileC nov as.length 0 0 c).size :=
         compileC_size nov as.length c 0 _ 0
@@ -5382,13 +5502,13 @@ theorem loop_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int)
         have hcompA : ∀ x ∈ as, ∀ a d, CompOk nov Φ Dom ρ as.length tgt P x a d := fun x hx =>
           compileS2_ok nov Φ Dom hΦ hnov ρ hρ hvs as.length tgt ar P hcall x (has x hx).1 (has x hx).2.1 (has x hx).2.2
         have hDt := hD.2 hcf'
-        obtain ⟨s3, h3, p3, m3, n3, k3⟩ := args2_ok nov Φ Dom ρ as.length tgt P as hcompA hDt.1
+        obtain ⟨s3, h3, p3, m3, n3, k3⟩ := args2L_ok nov Φ Dom ρ as.length tgt P as hcompA hDt.1
           (a0 + lpFo nov tgt c v as.length a0) 0 { s1 with pc := s1.pc + a0 } hpc1
           (by intro j hj; show s1.m j = _; rw [hCmm j hj]; exact hm j hj)
           (by rw [← hA]; exact hGA)
         rw [← hA] at p3
         obtain ⟨s4, h4, k4, hall4, hnone4⟩ := stI_ok nov Φ hΦ hnov ρ hρ hvs as.length as (fun x hx => (has x hx).1) 0
-          { s3 with pc := 0 } rfl (by intro j hj; exact m3 j hj)
+          { s3 with pc := 0 } rfl (by intro j hj hn; exact m3 j hj hn)
         have h4e := embed_at h4 P (a0 + lpFo nov tgt c v as.length a0 + A.size) p3 hGI
         have hs3stk : s3.stk = s.stk := by rw [k3]; exact hCstk.2
         have hs4stk : s4.stk = s3.stk := k4
@@ -6103,7 +6223,7 @@ theorem loopS_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int
   | succ k ih =>
       intro ρ hρ hvs s hD hs hm
       obtain ⟨R0, hR0⟩ : ∃ R0, R0 = (rowsBlock nov tgt as.length 0 rs a0).size := ⟨_, rfl⟩
-      obtain ⟨A, hA⟩ : ∃ A, A = argsCode2 nov as.length tgt (a0 + R0) 0 as := ⟨_, rfl⟩
+      obtain ⟨A, hA⟩ : ∃ A, A = argsCodeL nov as.length tgt (a0 + R0) 0 as := ⟨_, rfl⟩
       obtain ⟨St', hSt⟩ : ∃ St', St' = stTail nov as.length 0 as (a0 + R0 + A.size) a0 := ⟨_, rfl⟩
       have hT : loopT nov as.length tgt as (a0 + R0) a0 = A ++ St' := by
         simp only [loopT, hA, hSt]
@@ -6139,13 +6259,13 @@ theorem loopS_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int
           have hcompA : ∀ x ∈ as, ∀ a d, CompOk nov Φ Dom ρ as.length tgt P x a d := fun x hx =>
             compileS2_ok nov Φ Dom hΦ hnov ρ hρ hvs as.length tgt ar P hcall x (has x hx).1 (has x hx).2.1 (has x hx).2.2
           have hDt := hD.2 hh
-          obtain ⟨s3, h3, p3, m3, n3, k3⟩ := args2_ok nov Φ Dom ρ as.length tgt P as hcompA hDt.1
+          obtain ⟨s3, h3, p3, m3, n3, k3⟩ := args2L_ok nov Φ Dom ρ as.length tgt P as hcompA hDt.1
             (a0 + R0) 0 s1 hpc1
             (by intro j hj; rw [hm1 j hj]; exact hm j hj)
             (by rw [← hA]; exact hGA)
           rw [← hA] at p3
           obtain ⟨s4, h4, k4, hall4, hnone4⟩ := stI_ok nov Φ hΦ hnov ρ hρ hvs as.length as (fun x hx => (has x hx).1) 0
-            { s3 with pc := 0 } rfl (by intro j hj; exact m3 j hj)
+            { s3 with pc := 0 } rfl (by intro j hj hn; exact m3 j hj hn)
           have h4e := embed_at h4 P (a0 + R0 + A.size) p3 hGI
           have hs3stk : s3.stk = s.stk := by rw [k3]; exact kst
           have hs4stk : s4.stk = s3.stk := k4
@@ -6254,50 +6374,6 @@ theorem selftailS_fn_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Opt
 
 
 /-! ### 兄弟への末尾呼び(`b g`) -/
-
-/-- `b g` の実引数の前置き: 遅い字面の引数は何もしない(`argCode`) -/
-def argsCodeL (nov : AOp → E → E → Bool) (base : Nat) (tgt : Nat → Nat) : Nat → Nat → List E → Array I2
-  | _, _, [] => #[]
-  | a, d, x :: xs => argCode nov base tgt a d x ++
-      argsCodeL nov base tgt (a + (argCode nov base tgt a d x).size) (d + 1) xs
-
-theorem args2L_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
-    (ρ : Nat → Option Int) (base : Nat) (tgt : Nat → Nat) (P : Array I2) :
-    ∀ (as : List E), (∀ x ∈ as, ∀ a d, CompOk nov Φ Dom ρ base tgt P x a d) → (∀ x ∈ as, Term Φ Dom ρ x) →
-    ∀ (a d : Nat) (s : St), s.pc = a → (∀ k < base, s.m k = encode (ρ k)) →
-      (∀ k x, (argsCodeL nov base tgt a d as)[k]? = some x → P[a + k]? = some x) →
-      ∃ s', Steps2 P s s' ∧ s'.pc = a + (argsCodeL nov base tgt a d as).size ∧
-        (∀ i (h : i < as.length), lateN as[i] = none → s'.m (base + d + i) = encode (sem2 Φ ρ as[i])) ∧
-        (∀ j < base + d, s'.m j = s.m j) ∧ s'.stk = s.stk := by
-  intro as
-  induction as with
-  | nil =>
-      intro _ _ a d s hs _ _
-      exact ⟨s, Steps2.refl _, by simp [argsCodeL, hs], by simp, by simp, rfl⟩
-  | cons x xs ih =>
-      intro hc ht a d s hs hm hG
-      have hG0 : ∀ k y, (argCode nov base tgt a d x ++
-          argsCodeL nov base tgt (a + (argCode nov base tgt a d x).size) (d + 1) xs)[k]? = some y → P[a + k]? = some y := by
-        simpa [argsCodeL] using hG
-      obtain ⟨s1, h1, p1, hs1, m1, k1⟩ := argPh_ok nov Φ Dom ρ base tgt P x a d (hc x (by simp) a d) s hs hm
-        (place_left hG0) (ht x (by simp))
-      obtain ⟨s3, h3, p3, n3, m3, k3⟩ := ih (fun y hy => hc y (by simp [hy])) (fun y hy => ht y (by simp [hy]))
-        (a + (argCode nov base tgt a d x).size) (d + 1) s1 p1 (by
-          intro k hk; rw [m1 k (by omega)]; exact hm k hk)
-        (by simpa [Nat.add_assoc] using place_right hG0)
-      refine ⟨s3, h1.trans h3, ?_, ?_, ?_, ?_⟩
-      · rw [p3]; simp [argsCodeL]; omega
-      · intro i hi hn
-        cases i with
-        | zero =>
-            simp only [Nat.add_zero]
-            rw [m3 (base + d) (by omega)]; exact hs1 (by simpa using hn)
-        | succ i =>
-            have := n3 i (by simpa using hi) (by simpa using hn)
-            have e : base + d + (i + 1) = base + (d + 1) + i := by omega
-            rw [e, this]; simp
-      · intro j hj; rw [m3 j (by omega)]; exact m1 j hj
-      · rw [k3]; exact k1
 
 /-- 兄弟への末尾呼びの尾(引数を枠の `base+d+i` に置いたあと): `tailI`・`leave`・`jmp 呼び先`、引数が `!_` なら `movz x0`(落ちて関数の終わりへ)。
 `sign_asm.py` の `sib`(`@@EPILOGUE; b g`、`unit_l` の `call_unit`) -/
@@ -6564,6 +6640,17 @@ theorem tgBlock_late_code (nov : AOp → E → E → Bool) (tgt : Nat → Nat) (
   have e : lateN (.lit m) = some m := by simp only [lateN]; exact if_pos hm
   simp [tgBlock, argsCodeL, argCode, e]
 
+
+/-- 自分への末尾呼びでも、字面の実引数は枠に書かず、書き戻しで `movi x9` する -/
+theorem moveI_late (base d : Nat) (lt : Nat → Option Int) (n : Nat) (c : Int) (h : lt n = some c) :
+    moveI base d lt n = #[I.movi 9 c, I.str 9 n] := by simp [moveI, h]
+
+theorem loopT_late_code (nov : AOp → E → E → Bool) (base : Nat) (tgt : Nat → Nat) (T0 entry : Nat) (m : Int)
+    (hm : -(2 ^ 62 : Int) < m ∧ m < 2 ^ 62) :
+    argsCodeL nov base tgt T0 0 [.lit m] = #[] := by
+  have e : lateN (.lit m) = some m := by simp only [lateN]; exact if_pos hm
+  simp [argsCodeL, argCode, e]
+
 end SirZAsm
 
 #print axioms SirZAsm.compileS_ok
@@ -6639,3 +6726,7 @@ end SirZAsm
 #print axioms SirZAsm.tgTail_ok
 #print axioms SirZAsm.tailg_fn_ok
 #print axioms SirZAsm.tgBlock_late_code
+#print axioms SirZAsm.stI_ok
+#print axioms SirZAsm.loop_ok
+#print axioms SirZAsm.loopS_ok
+#print axioms SirZAsm.loopT_late_code
