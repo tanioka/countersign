@@ -1076,6 +1076,8 @@ inductive E
   | op (o : AOp) (l r : E)
   | neg (e : E)
   | cmp (c : CmpOp) (l r : E)
+  | call1 (f : Nat) (a : E)           -- 呼び(引数 1 個)。意味は `sem2`(関数表 Φ を取る)。`sem`(呼びの無い式の意味)では使わない(`E.lits` が偽)
+  | call2 (f : Nat) (a b : E)         -- 呼び(引数 2 個)
 
 /-- 意味(`!_` を含む)。変数の値は環境 `ρ` -/
 def sem (ρ : Nat → Option Int) : E → Option Int
@@ -1084,6 +1086,8 @@ def sem (ρ : Nat → Option Int) : E → Option Int
   | .op o l r => arith o (sem ρ l) (sem ρ r)
   | .neg e => (sem ρ e).map (fun a => -a)
   | .cmp c l r => cmpSem c (sem ρ l) (sem ρ r)
+  | .call1 _ _ => none                 -- 呼びは `sem2` で。ここは使わない(`E.lits` が偽)
+  | .call2 _ _ _ => none
 
 def E.lits : E → Prop
   | .lit n => -M ≤ n ∧ n ≤ M
@@ -1091,6 +1095,8 @@ def E.lits : E → Prop
   | .op _ l r => l.lits ∧ r.lits
   | .neg e => e.lits
   | .cmp _ l r => l.lits ∧ r.lits
+  | .call1 _ _ => False
+  | .call2 _ _ _ => False
 
 def E.maxVar : E → Nat
   | .lit _ => 0
@@ -1098,6 +1104,8 @@ def E.maxVar : E → Nat
   | .op _ l r => max l.maxVar r.maxVar
   | .neg e => e.maxVar
   | .cmp _ l r => max l.maxVar r.maxVar
+  | .call1 _ a => a.maxVar
+  | .call2 _ a b => max a.maxVar b.maxVar
 
 def InR (v : Option Int) : Prop := ∀ z, v = some z → -M ≤ z ∧ z ≤ M
 
@@ -1219,6 +1227,8 @@ def mb (nov : AOp → E → E → Bool) : E → Bool
   | .var _ => false
   | .neg e => mb nov e
   | .cmp _ _ _ => true
+  | .call1 _ _ => true
+  | .call2 _ _ _ => true
   | .op o l r =>
       match o with
       | .add | .sub | .mul => !nov o l r || (mb nov l && mb nov r)
@@ -1253,6 +1263,8 @@ theorem arithInt_nz (o : AOp) (a n : Int) (ha : InR (some a)) (hn : n ≠ 0) (ho
 theorem nz_sem (ρ : Nat → Option Int) (r : E) (hr : r.lits) (hf : nzlit r = true) :
     ∃ n, sem ρ r = some n ∧ n ≠ 0 ∧ -M ≤ n ∧ n ≤ M := by
   cases r with
+  | call1 f a => simp [nzlit] at hf
+  | call2 f a b => simp [nzlit] at hf
   | lit n =>
       have hn : n ≠ 0 := by simpa [nzlit] using hf
       have h2 : -M ≤ n ∧ n ≤ M := hr
@@ -1262,6 +1274,8 @@ theorem nz_sem (ρ : Nat → Option Int) (r : E) (hr : r.lits) (hf : nzlit r = t
   | cmp _ _ _ => simp [nzlit] at hf
   | neg e =>
       cases e with
+      | call1 f a => simp [nzlit] at hf
+      | call2 f a b => simp [nzlit] at hf
       | lit n =>
           have hn : n ≠ 0 := by simpa [nzlit] using hf
           have h2 : -M ≤ n ∧ n ≤ M := hr
@@ -1405,6 +1419,8 @@ def simpleR : E → Bool
   | .neg _ => false
   | .op _ _ _ => false
   | .cmp _ _ _ => false
+  | .call1 _ _ => false
+  | .call2 _ _ _ => false
 
 /-- 字面・変数を、レジスタ `d` に置く命令(`sign_asm.py` の `load`) -/
 def rldD (d : Nat) : E → I
@@ -1414,6 +1430,8 @@ def rldD (d : Nat) : E → I
   | .neg _ => I.movi d 0
   | .op _ _ _ => I.movi d 0
   | .cmp _ _ _ => I.movi d 0
+  | .call1 _ _ => I.movi d 0
+  | .call2 _ _ _ => I.movi d 0
 
 def rld (e : E) : I := rldD 10 e
 
@@ -1645,6 +1663,8 @@ def compileS (nov : AOp → E → E → Bool) (base : Nat) : Nat → E → Array
   | _, .lit n => #[I.movi 0 n]
   | _, .var k => #[I.ldr 0 k]
   | _, .neg (.lit n) => #[I.movi 0 (-n)]
+  | _, .call1 _ _ => #[]               -- 呼びは `compileS2`(`I2` の列)で。ここは使わない
+  | _, .call2 _ _ _ => #[]
   | d, .neg e => compileS nov base d e ++ negTail (mb nov e)
   | d, .cmp c l r =>
       let d1 := if simpleR l = true then d else d + 1
@@ -1664,6 +1684,8 @@ theorem rldD_ok (ρ : Nat → Option Int) (base : Nat) (d : Nat) (r : E) (hsr : 
     (step (rldD d r) t).r d = encode (sem ρ r) ∧ (step (rldD d r) t).pc = t.pc + 1 ∧
       (∀ i, i ≠ d → (step (rldD d r) t).r i = t.r i) ∧ (step (rldD d r) t).m = t.m := by
   cases r with
+  | call1 f a => simp [simpleR] at hsr
+  | call2 f a b => simp [simpleR] at hsr
   | lit n =>
       have h2 : -M ≤ n ∧ n ≤ M := hlr
       have hc : clamp n = some n := by simp [clamp, h2]
@@ -1677,6 +1699,8 @@ theorem rldD_ok (ρ : Nat → Option Int) (base : Nat) (d : Nat) (r : E) (hsr : 
   | cmp _ _ _ => simp [simpleR] at hsr
   | neg e =>
       cases e with
+      | call1 f a => simp [simpleR] at hsr
+      | call2 f a b => simp [simpleR] at hsr
       | lit n =>
           have h2 : -M ≤ n ∧ n ≤ M := hlr
           have hc : clamp n = some n := by simp [clamp, h2]
@@ -1700,6 +1724,8 @@ theorem ldOp_eq (ρ : Nat → Option Int) (base : Nat) (e : E) (dst slot : Nat) 
   by_cases h : simpleR e = true
   · simp only [ldOp, h, if_true]
     cases e with
+    | call1 f a => simp [simpleR] at h
+    | call2 f a b => simp [simpleR] at h
     | lit n =>
         have h2 : -M ≤ n ∧ n ≤ M := hl
         have hc : clamp n = some n := by simp [clamp, h2]
@@ -1711,6 +1737,8 @@ theorem ldOp_eq (ρ : Nat → Option Int) (base : Nat) (e : E) (dst slot : Nat) 
     | cmp _ _ _ => simp [simpleR] at h
     | neg e =>
         cases e with
+        | call1 f a => simp [simpleR] at h
+        | call2 f a b => simp [simpleR] at h
         | lit n =>
             have h2 : -M ≤ n ∧ n ≤ M := hl
             have hc : clamp n = some n := by simp [clamp, h2]
@@ -1759,6 +1787,8 @@ theorem compileS_ok (nov : AOp → E → E → Bool)
         s'.r 0 = encode (sem ρ e) ∧ (∀ j < base + d, s'.m j = s.m j) ∧ InR (sem ρ e) := by
   intro e
   induction e with
+  | call1 f a _ => intro d s hl; exact hl.elim
+  | call2 f a b _ _ => intro d s hl; exact hl.elim
   | lit n =>
       intro d s hl _ hs _
       have hl' : -M ≤ n ∧ n ≤ M := hl
@@ -1993,6 +2023,8 @@ def cst : E → Option Int
   | .lit n => clamp n
   | .var _ => none
   | .cmp _ _ _ => none
+  | .call1 _ _ => none
+  | .call2 _ _ _ => none
   | .neg e => (cst e).map (fun a => -a)
   | .op o l r =>
       match o with
@@ -2012,6 +2044,8 @@ theorem cst_sound (ρ : Nat → Option Int) : ∀ (e : E) (v : Int), cst e = som
   | .lit n, v, h => by simpa [cst, sem] using h
   | .var _, v, h => by simp [cst] at h
   | .cmp _ _ _, v, h => by simp [cst] at h
+  | .call1 _ _, v, h => by simp [cst] at h
+  | .call2 _ _ _, v, h => by simp [cst] at h
   | .neg e, v, h => by
       simp only [cst] at h
       cases hc : cst e with
@@ -2317,6 +2351,8 @@ theorem compileC_size (nov : AOp → E → E → Bool) (base : Nat) :
       | cmp c l r =>
           simp only [compileC, Array.size_append]
           rw [condTail_size c _ _ (fo - _) (fo' - _)]
+      | call1 f a => simp only [compileC]; split <;> simp
+      | call2 f a b => simp only [compileC]; split <;> simp
       | lit n => simp only [compileC]; split <;> simp
       | var k => simp only [compileC]; split <;> simp
       | op o l r => simp only [compileC]; split <;> simp
@@ -2339,6 +2375,8 @@ theorem compileC_val (nov : AOp → E → E → Bool) (base d fo : Nat) (e : E) 
       else compileS nov base d e := by
   cases e with
   | cmp c l r => exact absurd rfl (hnc c l r)
+  | call1 f a => simp [compileC]
+  | call2 f a b => simp [compileC]
   | lit n => simp [compileC]
   | var k => simp [compileC]
   | op o l r => simp [compileC]
