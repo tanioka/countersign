@@ -6255,31 +6255,75 @@ theorem selftailS_fn_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Opt
 
 /-! ### 兄弟への末尾呼び(`b g`) -/
 
+/-- `b g` の実引数の前置き: 遅い字面の引数は何もしない(`argCode`) -/
+def argsCodeL (nov : AOp → E → E → Bool) (base : Nat) (tgt : Nat → Nat) : Nat → Nat → List E → Array I2
+  | _, _, [] => #[]
+  | a, d, x :: xs => argCode nov base tgt a d x ++
+      argsCodeL nov base tgt (a + (argCode nov base tgt a d x).size) (d + 1) xs
+
+theorem args2L_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (ρ : Nat → Option Int) (base : Nat) (tgt : Nat → Nat) (P : Array I2) :
+    ∀ (as : List E), (∀ x ∈ as, ∀ a d, CompOk nov Φ Dom ρ base tgt P x a d) → (∀ x ∈ as, Term Φ Dom ρ x) →
+    ∀ (a d : Nat) (s : St), s.pc = a → (∀ k < base, s.m k = encode (ρ k)) →
+      (∀ k x, (argsCodeL nov base tgt a d as)[k]? = some x → P[a + k]? = some x) →
+      ∃ s', Steps2 P s s' ∧ s'.pc = a + (argsCodeL nov base tgt a d as).size ∧
+        (∀ i (h : i < as.length), lateN as[i] = none → s'.m (base + d + i) = encode (sem2 Φ ρ as[i])) ∧
+        (∀ j < base + d, s'.m j = s.m j) ∧ s'.stk = s.stk := by
+  intro as
+  induction as with
+  | nil =>
+      intro _ _ a d s hs _ _
+      exact ⟨s, Steps2.refl _, by simp [argsCodeL, hs], by simp, by simp, rfl⟩
+  | cons x xs ih =>
+      intro hc ht a d s hs hm hG
+      have hG0 : ∀ k y, (argCode nov base tgt a d x ++
+          argsCodeL nov base tgt (a + (argCode nov base tgt a d x).size) (d + 1) xs)[k]? = some y → P[a + k]? = some y := by
+        simpa [argsCodeL] using hG
+      obtain ⟨s1, h1, p1, hs1, m1, k1⟩ := argPh_ok nov Φ Dom ρ base tgt P x a d (hc x (by simp) a d) s hs hm
+        (place_left hG0) (ht x (by simp))
+      obtain ⟨s3, h3, p3, n3, m3, k3⟩ := ih (fun y hy => hc y (by simp [hy])) (fun y hy => ht y (by simp [hy]))
+        (a + (argCode nov base tgt a d x).size) (d + 1) s1 p1 (by
+          intro k hk; rw [m1 k (by omega)]; exact hm k hk)
+        (by simpa [Nat.add_assoc] using place_right hG0)
+      refine ⟨s3, h1.trans h3, ?_, ?_, ?_, ?_⟩
+      · rw [p3]; simp [argsCodeL]; omega
+      · intro i hi hn
+        cases i with
+        | zero =>
+            simp only [Nat.add_zero]
+            rw [m3 (base + d) (by omega)]; exact hs1 (by simpa using hn)
+        | succ i =>
+            have := n3 i (by simpa using hi) (by simpa using hn)
+            have e : base + d + (i + 1) = base + (d + 1) + i := by omega
+            rw [e, this]; simp
+      · intro j hj; rw [m3 j (by omega)]; exact m1 j hj
+      · rw [k3]; exact k1
+
 /-- 兄弟への末尾呼びの尾(引数を枠の `base+d+i` に置いたあと): `tailI`・`leave`・`jmp 呼び先`、引数が `!_` なら `movz x0`(落ちて関数の終わりへ)。
 `sign_asm.py` の `sib`(`@@EPILOGUE; b g`、`unit_l` の `call_unit`) -/
 def tgTail (nov : AOp → E → E → Bool) (base : Nat) (tgt : Nat → Nat) (d g : Nat) (as : List E) : Array I2 :=
-  (tailI nov base d as).map I2.base ++ #[I2.leave, I2.jmp (tgt g)] ++ (if as.any (mb nov) then #[I2.base (I.movz 0)] else #[])
+  (tailIL nov base d as).map I2.base ++ #[I2.leave, I2.jmp (tgt g)] ++ (if as.any (mb nov) then #[I2.base (I.movz 0)] else #[])
 
 theorem tgTail_pre (nov : AOp → E → E → Bool) (base : Nat) (tgt : Nat → Nat) (d g : Nat) (as : List E) (i : Nat)
-    (hi : i < (tailI nov base d as).size) :
-    (tgTail nov base tgt d g as)[i]? = some (I2.base (tailI nov base d as)[i]) := by
+    (hi : i < (tailIL nov base d as).size) :
+    (tgTail nov base tgt d g as)[i]? = some (I2.base (tailIL nov base d as)[i]) := by
   unfold tgTail; split <;> simp [Array.getElem?_append, Array.getElem?_push, hi, Nat.ne_of_lt hi]
 
 theorem tgTail_leave (nov : AOp → E → E → Bool) (base : Nat) (tgt : Nat → Nat) (d g : Nat) (as : List E) :
-    (tgTail nov base tgt d g as)[(tailI nov base d as).size]? = some I2.leave := by
+    (tgTail nov base tgt d g as)[(tailIL nov base d as).size]? = some I2.leave := by
   unfold tgTail; split <;> simp [Array.getElem?_append, Array.getElem?_push, Array.getElem_push]
 
 theorem tgTail_jmp (nov : AOp → E → E → Bool) (base : Nat) (tgt : Nat → Nat) (d g : Nat) (as : List E) :
-    (tgTail nov base tgt d g as)[(tailI nov base d as).size + 1]? = some (I2.jmp (tgt g)) := by
+    (tgTail nov base tgt d g as)[(tailIL nov base d as).size + 1]? = some (I2.jmp (tgt g)) := by
   unfold tgTail; split <;> simp [Array.getElem?_append, Array.getElem?_push, Array.getElem_push]
 
 theorem tgTail_mz (nov : AOp → E → E → Bool) (base : Nat) (tgt : Nat → Nat) (d g : Nat) (as : List E)
     (h : as.any (mb nov) = true) :
-    (tgTail nov base tgt d g as)[(tailI nov base d as).size + 2]? = some (I2.base (I.movz 0)) := by
+    (tgTail nov base tgt d g as)[(tailIL nov base d as).size + 2]? = some (I2.base (I.movz 0)) := by
   unfold tgTail; simp [h, Array.getElem?_append]
 
 theorem tgTail_size (nov : AOp → E → E → Bool) (base : Nat) (tgt : Nat → Nat) (d g : Nat) (as : List E) :
-    (tgTail nov base tgt d g as).size = (tailI nov base d as).size + 2 + (if as.any (mb nov) then 1 else 0) := by
+    (tgTail nov base tgt d g as).size = (tailIL nov base d as).size + 2 + (if as.any (mb nov) then 1 else 0) := by
   unfold tgTail; split <;> simp [*]
 
 theorem tgTail_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
@@ -6294,19 +6338,19 @@ theorem tgTail_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option In
     (hD : (∀ a ∈ as, ∃ z, sem2 Φ ρ a = some z) → Dom g (as.map (sem2 Φ ρ)))
     (hG : ∀ k x, (tgTail nov base tgt d g as)[k]? = some x → P[a' + k]? = some x)
     (S s : St) (hs : s.pc = a') (hstk : s.stk = (S.m, S.lr) :: S.stk)
-    (hslot : ∀ j (h : j < as.length), s.m (base + d + j) = encode (sem2 Φ ρ as[j])) :
+    (hslot : ∀ j (h : j < as.length), lateN as[j] = none → s.m (base + d + j) = encode (sem2 Φ ρ as[j])) :
     ∃ s', Steps2 P s s' ∧
       ((∀ a ∈ as, ∃ z, sem2 Φ ρ a = some z) →
         s'.pc = S.lr ∧ s'.r 0 = encode (Φ g (as.map (sem2 Φ ρ))) ∧ s'.m = S.m ∧ s'.lr = S.lr ∧ s'.stk = S.stk) ∧
       ((∃ a ∈ as, sem2 Φ ρ a = none) →
         s'.pc = a' + (tgTail nov base tgt d g as).size ∧ s'.r 0 = encode none ∧ s'.m = s.m ∧ s'.lr = s.lr ∧ s'.stk = s.stk) := by
-  obtain ⟨s1, h1, k1, m1, A, B⟩ := tail_ok2 nov Φ hΦ hnov ρ hρ hvs base as hl d { s with pc := 0 } rfl
-    (by intro j hj; exact hslot j hj)
-  have hT : ∀ k x, ((tailI nov base d as).map I2.base)[k]? = some x → P[a' + k]? = some x := by
+  obtain ⟨s1, h1, k1, m1, A, B⟩ := tail_okL nov Φ hΦ hnov ρ hρ hvs base as hl d { s with pc := 0 } rfl
+    (by intro j hj hn; exact hslot j hj hn)
+  have hT : ∀ k x, ((tailIL nov base d as).map I2.base)[k]? = some x → P[a' + k]? = some x := by
     intro k x hk
     apply hG
-    have hlt : k < (tailI nov base d as).size := by
-      cases Nat.lt_or_ge k (tailI nov base d as).size with
+    have hlt : k < (tailIL nov base d as).size := by
+      cases Nat.lt_or_ge k (tailIL nov base d as).size with
       | inl h => exact h
       | inr h => simp [Array.getElem?_eq_none (by simpa using h)] at hk
     rw [tgTail_pre nov base tgt d g as k hlt]
@@ -6318,17 +6362,17 @@ theorem tgTail_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option In
   have hlsl := Steps.ls_eq h1
   by_cases hall : ∀ a ∈ as, ∃ z, sem2 Φ ρ a = some z
   · obtain ⟨hpc1, hr1⟩ := A hall
-    have hu0pc : u0.pc = a' + (tailI nov base d as).size := by rw [hu0]; simp [hpc1]; omega
+    have hu0pc : u0.pc = a' + (tailIL nov base d as).size := by rw [hu0]; simp [hpc1]; omega
     have hu0stk : u0.stk = (S.m, S.lr) :: S.stk := by rw [hu0]; simp [k1, hstk]
     obtain ⟨u1, hu1⟩ : ∃ u1, u1 = step2 I2.leave u0 := ⟨_, rfl⟩
     have g1 : Steps2 P u0 u1 := by
-      rw [hu1]; exact Steps2.go' I2.leave (a' + (tailI nov base d as).size) hu0pc
+      rw [hu1]; exact Steps2.go' I2.leave (a' + (tailIL nov base d as).size) hu0pc
         (hG _ _ (tgTail_leave nov base tgt d g as)) (Steps2.refl _)
-    have hu1pc : u1.pc = a' + ((tailI nov base d as).size + 1) := by
+    have hu1pc : u1.pc = a' + ((tailIL nov base d as).size + 1) := by
       simp [hu1, step2, hu0stk, hu0pc]; omega
     obtain ⟨u2, hu2⟩ : ∃ u2, u2 = step2 (I2.jmp (tgt g)) u1 := ⟨_, rfl⟩
     have g2 : Steps2 P u1 u2 := by
-      rw [hu2]; exact Steps2.go' _ (a' + ((tailI nov base d as).size + 1)) hu1pc
+      rw [hu2]; exact Steps2.go' _ (a' + ((tailIL nov base d as).size + 1)) hu1pc
         (hG _ _ (tgTail_jmp nov base tgt d g as)) (Steps2.refl _)
     have u2pc : u2.pc = tgt g := by simp [hu2, step2]
     have u2r : u2.r = u0.r := by simp [hu2, hu1, step2, hu0stk]
@@ -6366,10 +6410,10 @@ theorem tgTail_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option In
       | false =>
           obtain ⟨z, hz⟩ := mb_sound2 nov Φ hΦ hnov ρ hρ hvs a (hl a ha) h
           rw [hn] at hz; cases hz
-    have hu0pc : u0.pc = a' + ((tailI nov base d as).size + 2) := by rw [hu0]; simp [hpc1]; omega
+    have hu0pc : u0.pc = a' + ((tailIL nov base d as).size + 2) := by rw [hu0]; simp [hpc1]; omega
     obtain ⟨u3, hu3⟩ : ∃ u3, u3 = step2 (I2.base (I.movz 0)) u0 := ⟨_, rfl⟩
     have g3 : Steps2 P u0 u3 := by
-      rw [hu3]; exact Steps2.go' _ (a' + ((tailI nov base d as).size + 2)) hu0pc
+      rw [hu3]; exact Steps2.go' _ (a' + ((tailIL nov base d as).size + 2)) hu0pc
         (hG _ _ (tgTail_mz nov base tgt d g as hany)) (Steps2.refl _)
     refine ⟨u3, hemb.trans g3, (fun h => absurd h hall), fun _ => ⟨?_, ?_, ?_, ?_, ?_⟩⟩
     · simp [hu3, step2, step, hu0pc, tgTail_size, hany]; omega
@@ -6381,7 +6425,7 @@ theorem tgTail_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option In
 
 /-- 末尾呼びの節: 実引数の評価 + `tgTail` -/
 def tgBlock (nov : AOp → E → E → Bool) (tgt : Nat → Nat) (n g : Nat) (as : List E) (a1 : Nat) : Array I2 :=
-  argsCode2 nov n tgt a1 0 as ++ tgTail nov n tgt 0 g as
+  argsCodeL nov n tgt a1 0 as ++ tgTail nov n tgt 0 g as
 
 /-- 条件つきの値の行の並び + 兄弟への末尾呼び `g(as..)` の本体の命令列(入口 `a0`、仮引数は枠の `0..n-1`) -/
 def tailBody (nov : AOp → E → E → Bool) (tgt : Nat → Nat) (n : Nat) (rs : List (Cn × E)) (g : Nat) (as : List E) (a0 : Nat) : Array I2 :=
@@ -6444,22 +6488,22 @@ theorem tailBody_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option 
       obtain ⟨hp1, hm1⟩ := hmiss hh
       rw [hRs] at hp1
       have hpc1 : s1.pc = a0 + R0 := hp1
-      have hGA : ∀ k x, (argsCode2 nov n tgt (a0 + R0) 0 as)[k]? = some x → P[(a0 + R0) + k]? = some x := by
-        have := place_left (A := argsCode2 nov n tgt (a0 + R0) 0 as) (B := tgTail nov n tgt 0 g as)
+      have hGA : ∀ k x, (argsCodeL nov n tgt (a0 + R0) 0 as)[k]? = some x → P[(a0 + R0) + k]? = some x := by
+        have := place_left (A := argsCodeL nov n tgt (a0 + R0) 0 as) (B := tgTail nov n tgt 0 g as)
           (by rw [hT] at hGT'; exact hGT')
         exact this
       have hGTg : ∀ k x, (tgTail nov n tgt 0 g as)[k]? = some x →
-          P[((a0 + R0) + (argsCode2 nov n tgt (a0 + R0) 0 as).size) + k]? = some x :=
-        place_right (A := argsCode2 nov n tgt (a0 + R0) 0 as) (B := tgTail nov n tgt 0 g as) (by rw [hT] at hGT'; exact hGT')
+          P[((a0 + R0) + (argsCodeL nov n tgt (a0 + R0) 0 as).size) + k]? = some x :=
+        place_right (A := argsCodeL nov n tgt (a0 + R0) 0 as) (B := tgTail nov n tgt 0 g as) (by rw [hT] at hGT'; exact hGT')
       have hcompA : ∀ x ∈ as, ∀ a d, CompOk nov Φ Dom ρ n tgt P x a d := fun x hx =>
         compileS2_ok nov Φ Dom hΦ hnov ρ hρ hvs n tgt ar P hcall x (has x hx).1 (has x hx).2.1 (has x hx).2.2
       have hDt := hD.2 hh
-      obtain ⟨s3, h3, p3, m3, n3, k3⟩ := args2_ok nov Φ Dom ρ n tgt P as hcompA hDt.1
+      obtain ⟨s3, h3, p3, m3, n3, k3⟩ := args2L_ok nov Φ Dom ρ n tgt P as hcompA hDt.1
         (a0 + R0) 0 s1 hpc1
         (by intro j hj; rw [hm1 j hj]; exact hm j hj) hGA
       have hs3stk : s3.stk = (S.m, S.lr) :: S.stk := by rw [k3, kst]; exact hstk
       obtain ⟨u, hu, hu1, hu2⟩ := tgTail_ok nov Φ Dom hΦ hnov ρ hρ hvs n tgt ar P hcall as (fun x hx => (has x hx).1) 0 g
-        ((a0 + R0) + (argsCode2 nov n tgt (a0 + R0) 0 as).size) har hDt.2 hGTg S s3 p3 hs3stk (fun j hj => m3 j hj)
+        ((a0 + R0) + (argsCodeL nov n tgt (a0 + R0) 0 as).size) har hDt.2 hGTg S s3 p3 hs3stk (fun j hj hn => m3 j hj hn)
       by_cases hall : ∀ x ∈ as, ∃ z, sem2 Φ ρ x = some z
       · obtain ⟨hp, hr, hmu, hlu, hku⟩ := hu1 hall
         refine ⟨u, h1.trans (h3.trans hu), Or.inr ⟨hp, ?_, hmu, hlu, hku⟩⟩
@@ -6511,6 +6555,14 @@ theorem tailg_fn_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option 
     have : envOf vs j = vs[j] := by simp [envOf, List.getElem?_eq_getElem hj', hz]
     rw [this]; exact hreg j hj'
 
+
+
+/-- `b g` でも字面の実引数は枠に書かない -/
+theorem tgBlock_late_code (nov : AOp → E → E → Bool) (tgt : Nat → Nat) (n g a1 : Nat) (m : Int)
+    (hm : -(2 ^ 62 : Int) < m ∧ m < 2 ^ 62) :
+    tgBlock nov tgt n g [.lit m] a1 = tgTail nov n tgt 0 g [.lit m] := by
+  have e : lateN (.lit m) = some m := by simp only [lateN]; exact if_pos hm
+  simp [tgBlock, argsCodeL, argCode, e]
 
 end SirZAsm
 
@@ -6584,3 +6636,6 @@ end SirZAsm
 #print axioms SirZAsm.call2_ok
 #print axioms SirZAsm.call1_late_code
 #print axioms SirZAsm.call2_late_code
+#print axioms SirZAsm.tgTail_ok
+#print axioms SirZAsm.tailg_fn_ok
+#print axioms SirZAsm.tgBlock_late_code
