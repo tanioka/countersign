@@ -81,10 +81,11 @@ def lean_rows(t):
     for c, v in reversed(t[1]): r = "(Rows.row %s %s %s)" % (lean_cn(c), lean_term(v), r)
     return r
 
-def asm_body(e, cond=None, full=False):
+def asm_body(e, cond=None, full=False, site=None):
     with tempfile.TemporaryDirectory() as d:
         p = os.path.join(d, "t.sn")
-        if e is not None and e[0] == "rows": open(p, "w").write("f : x y z ?\n%sf 8 2 1\n" % src_rows(e))
+        if site is not None: open(p, "w").write("f : p q ? p + q\ng : x y z ? (f (%s) (%s)) + 1\ng 8 2 1\n" % (src(site[0]), src(site[1])))
+        elif e is not None and e[0] == "rows": open(p, "w").write("f : x y z ?\n%sf 8 2 1\n" % src_rows(e))
         elif cond is None: open(p, "w").write("f : x y z ? %s\nf 8 2 1\n" % src(e))
         else: open(p, "w").write("f : x y z ?\n\t%s : 1\n\t0\nf 8 2 1\n" % src_cn(cond))
         buf = io.StringIO()
@@ -92,7 +93,17 @@ def asm_body(e, cond=None, full=False):
             A.main([p, "--no-peephole", "--no-opt"])
     ls = [re.sub(r"//.*", "", l).strip() for l in buf.getvalue().split("\n")]
     ls = [l for l in ls if l]
-    if full:                                # 関数 f の全体: `stp`(enter)・仮引数の str・本体・`ldp`(leave)・`ret`
+    if site is not None:                    # 呼ぶ側 g: 仮引数 3 つの str のあと、`bl f` と(あれば)`b 終わり`・`__` の行き先・終わりのラベルまで
+        a = ls.index("g:")
+        body = ls[a + 1:]
+        body = body[body.index("mov x29, sp") + 1:][3:]
+        j = next(i for i, l in enumerate(body) if l.startswith("bl "))
+        k = j + 1
+        if body[k].startswith("b "):
+            k = next(i for i in range(k, len(body)) if body[i].endswith(":") and i > k + 1)
+            k += 1
+        body = body[:k]
+    elif full:                                # 関数 f の全体: `stp`(enter)・仮引数の str・本体・`ldp`(leave)・`ret`
         a = ls.index("f:")
         body = ls[a + 1:]
         body = body[:next(i for i, l in enumerate(body) if l == "ret") + 1]
@@ -116,6 +127,7 @@ def asm_body(e, cond=None, full=False):
         if op == "stp": out.append("enter")
         elif op == "ldp": out.append("leave")
         elif op == "ret": out.append("ret")
+        elif op == "bl": out.append("bl 0")
         elif op == "movz": out.append("movz %d" % r(a[0]))
         elif op == "neg": out.append("neg %d %d" % (r(a[0]), r(a[1])))
         elif op == "movn": out.append("movi %d %d" % (r(a[0]), -int(a[1][1:], 0) - 1))
@@ -145,21 +157,28 @@ def main(n=60, seed=1):
     conds = [gen_cn(rnd, rnd.randrange(1, 4)) for _ in range(n)]
     rowss = [gen_rows(rnd) for _ in range(n)]
     funs = trees[:n // 2]                       # 関数全体(enter・仮引数・本体・leave・ret)
+    def nonlit(): 
+        while True:
+            t = gen(rnd, rnd.randrange(1, 3))
+            if t[0] != "lit" and not (t[0] == "neg" and t[1][0] == "lit"): return t
+    sites = [("site", nonlit(), nonlit()) for _ in range(n // 2)]
     items = []                                  # (見出し, 式の木か条件の木, asm の出力, 枠の底)
     skipped = 0
-    for t in trees + conds + rowss + [("fun", x) for x in funs]:
+    for t in trees + conds + rowss + [("fun", x) for x in funs] + sites:
         isc = t[0] in ("val", "and", "or")
         try:
-            if t[0] == "fun": want, base = asm_body(t[1], None, True)
+            if t[0] == "site": want, base = asm_body(None, None, False, (t[1], t[2]))
+            elif t[0] == "fun": want, base = asm_body(t[1], None, True)
             else: want, base = asm_body(None, t) if isc else asm_body(t)
         except AsmErrorLike: skipped += 1; continue
-        items.append(("関数 " + src(t[1]) if t[0] == "fun" else src_cn(t) if isc else (src_rows(t) if t[0] == "rows" else src(t)), t, isc, want, base))
+        items.append(("呼び f (%s) (%s)" % (src(t[1]), src(t[2])) if t[0] == "site" else "関数 " + src(t[1]) if t[0] == "fun" else src_cn(t) if isc else (src_rows(t) if t[0] == "rows" else src(t)), t, isc, want, base))
     with tempfile.TemporaryDirectory() as d:
         env = dict(os.environ, LEAN_PATH=d)
         subprocess.run([LEAN, "-o", os.path.join(d, "SirZAsm.olean"), os.path.join(HERE, "formal/lean/SirZAsm.lean")], check=True, capture_output=True, env=env)
         prog = HEAD + "".join(
             ("#eval let c := %s; out (compileC novR %d 0 ((compileC novR %d 0 0 c).size + 2) c)\n" % (lean_cn(t), b, b)) if isc
             else "#eval out (compileR novR %d 0 %s)\n" % (b, lean_rows(t)) if t[0] == "rows"
+            else "#eval out2 (site novR 3 [%s, %s] 0)\n" % (lean_term(t[1]), lean_term(t[2])) if t[0] == "site"
             else "#eval out2 (fcode novR 3 %s)\n" % (lean_term(t[1])) if t[0] == "fun"
             else "#eval out (compileS novR %d 0 %s)\n" % (b, lean_term(t)) for _, t, isc, _, b in items)
         f = os.path.join(d, "T.lean"); open(f, "w").write(prog)
@@ -171,7 +190,7 @@ def main(n=60, seed=1):
         if want != g:
             bad += 1
             if bad <= 3: print("食い違い:", name, "(底 %d)" % b, "\n  asm :", want, "\n  lean:", g)
-    print("式 %d 個・条件 %d 個・行 %d 個(出せない %d)、食い違い %d" % (len(trees), len(conds), len(rowss), skipped, bad)); return 1 if bad else 0
+    print("式 %d 個・条件 %d 個・行 %d 個・呼び %d 個(出せない %d)、食い違い %d" % (len(trees), len(conds), len(rowss), len(sites), skipped, bad)); return 1 if bad else 0
 
 AsmErrorLike = (A.AsmError, SystemExit, StopIteration, ValueError)
 if __name__ == "__main__":
