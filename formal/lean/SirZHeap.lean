@@ -716,13 +716,15 @@ theorem fcodeH_ok_at (a n cp cl el d : Nat) (B : Array I2) (P : Array I3) (Q : A
     (hcl : cl < n) (hel : el < n) (hcp : cp < n)
     (R : Nat → Option Int) (res : Option Int)
     (hbody : ∀ s : St, s.pc = a + 2 * n + 27 → (∀ k < n, k ≠ cp → s.m k = encode (R k)) →
+      (∃ p : Nat, p < 2 ^ 62 ∧ s.m cp = encode (some (p : Int))) →
       (∀ (k : Nat) (x : I2), B[k]? = some x → Q[a + 2 * n + 27 + k]? = some x) →
       ∃ s', Steps2 Q s s' ∧ s'.pc = a + 2 * n + 27 + B.size ∧ s'.r 0 = encode res ∧ s'.stk = s.stk)
     (x : HSt) (hs : x.s.pc = a) (hr : ∀ k < n, k ≠ cp → x.s.r k = encode (R k))
     (hn : (x.s.r cl).toNat + d * (x.s.r el).toNat < 2 ^ 50) (hd : d < 2 ^ 50)
     (hsa : (x.s.r cp).toNat % 8 = 0) (hsrc : x.sp.toNat ≤ (x.s.r cp).toNat)
     (hs64 : (x.s.r cp).toNat + 8 * (x.s.r cl).toNat < 2 ^ 64)
-    (hsp : x.sp.toNat % 16 = 0) (hroom : 8 * ((x.s.r cl).toNat + d * (x.s.r el).toNat) + 32 ≤ x.sp.toNat) :
+    (hsp : x.sp.toNat % 16 = 0) (hroom : 8 * ((x.s.r cl).toNat + d * (x.s.r el).toNat) + 32 ≤ x.sp.toNat)
+    (hsp62 : x.sp.toNat + 16 < 2 ^ 62) :
     ∃ Z : HSt, Steps3 P x Z ∧ Z.s.pc = x.s.lr ∧ Z.s.r 0 = encode res ∧ Z.s.m = x.s.m ∧ Z.s.lr = x.s.lr ∧
       Z.s.stk = x.s.stk ∧
       Z.sp.toNat = x.sp.toNat - (((8 * ((x.s.r cl).toNat + d * (x.s.r el).toNat) + 15) / 16) * 16 + 16) := by
@@ -765,6 +767,10 @@ theorem fcodeH_ok_at (a n cp cl el d : Nat) (B : Array I2) (P : Array I3) (Q : A
   obtain ⟨s', hbs, bpc, br0, bk⟩ := hbody y2.s y2pc (by
       intro k hk hkc
       rw [y2m, ymo k hkc, y1m k hk, x1r]; exact hr k hk hkc)
+    ⟨(y.s.m cp).toNat, by rw [ymcp]; omega, by
+      rw [y2m]
+      show y.s.m cp = BitVec.ofInt 64 (((y.s.m cp).toNat : Nat) : Int)
+      rw [BitVec.ofInt_natCast, BitVec.ofNat_toNat, BitVec.setWidth_eq]⟩
     (fun k x' hk => by
       have hlt : k < B.size := by
         cases Nat.lt_or_ge k B.size with
@@ -803,6 +809,70 @@ theorem fcodeH_ok_at (a n cp cl el d : Nat) (B : Array I2) (P : Array I3) (Q : A
   · simp [hZ, step3, step2, u2s]
   · simp [hZ, step3, step2, u2s]
   · simp [hZ, step3, hu2, hu, y2sp]; omega
+
+/-- 累積の枠 `cp` を作業領域の位置(Int として見える値 `p`)に差し替えた環境 -/
+def updCp (ρ : Nat → Option Int) (cp p : Nat) : Nat → Option Int := fun j => if j = cp then some (p : Int) else ρ j
+
+/-- **`fcodeH` の本体として自分への末尾呼びのループ(`loopCode`)を載せる**(`selftailA_fn_ok` の作業領域版)。
+累積の枠 `cp` は作業領域の位置が入っていて、ループの Int の式は読まない(読んでも結果は変わらない)ので、
+`updCp` で枠 `cp` に `p`(`< 2^62`)を置いた環境で、止まる条件 `LDom` と結果 `LΦ` が `p` によらない(`hD`・`hres`)ことを仮定する。
+`loop_ok` を `Q`(`growCode` の領域を `jmp 自分` で埋めた `I2` の写し)の上で使い、`fcodeH_ok_at` へ渡す。 -/
+theorem selftailH_fn_ok (nov : AOp → E → E → Bool) (Φ : Nat → List (Option Int) → Option Int) (Dom : Nat → List (Option Int) → Prop)
+    (hΦ : ∀ f vs, (∀ v ∈ vs, InR v) → InR (Φ f vs))
+    (hnov1 : ∀ o l r, nov o l r = true → ∀ ρ a b, sem ρ l = some a → sem ρ r = some b → ∃ z, arithInt o a b = some z)
+    (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem2 Φ ρ l = some a → sem2 Φ ρ r = some b → ∃ z, arithInt o a b = some z)
+    (tgt ar : Nat → Nat) (Q : Array I2)
+    (hcall : ∀ f (vs : List (Option Int)) (s : St), s.pc = tgt f → vs.length = ar f → (∀ v ∈ vs, ∃ z, v = some z) → (∀ v ∈ vs, InR v) →
+      (∀ k (h : k < vs.length), s.r k = encode vs[k]) → Dom f vs →
+      ∃ s', Steps2 Q s s' ∧ s'.pc = s.lr ∧ s'.r 0 = encode (Φ f vs) ∧ s'.m = s.m ∧ s'.lr = s.lr ∧ s'.stk = s.stk)
+    (c : Cn) (v : E) (as : List E)
+    (hc : c.lits) (hcv : c.maxVar ≤ as.length)
+    (hv : v.lits2 ∧ v.arOk ar ∧ v.maxVar ≤ as.length) (has : ∀ x ∈ as, x.lits2 ∧ x.arOk ar ∧ x.maxVar ≤ as.length)
+    (a cp cl el d : Nat) (P : Array I3)
+    (hG : ∀ (k : Nat) (x : I3), (fcodeH a as.length cp cl el d (loopCode nov tgt c v as (a + 2 * as.length + 27)))[k]? = some x → P[a + k]? = some x)
+    (hfill : ∀ k, a + 1 + as.length ≤ k → k < a + 1 + as.length + 24 → Q[k]? = some (I2.jmp k))
+    (hQP : ∀ (k : Nat) (x : I2), Q[k]? = some x → (a + 1 + as.length ≤ k ∧ k < a + 1 + as.length + 24) ∨ P[k]? = some (I3.base x))
+    (hPQ : ∀ (k : Nat) (x : I2), P[k]? = some (I3.base x) → (k < a + 1 + as.length ∨ a + 1 + as.length + 24 ≤ k) → Q[k]? = some x)
+    (hcl : cl < as.length) (hel : el < as.length) (hcp : cp < as.length)
+    (k : Nat) (vs : List (Option Int)) (hlen : vs.length = as.length) (hall : ∀ w ∈ vs, ∃ z, w = some z) (hin : ∀ w ∈ vs, InR w)
+    (res0 : Option Int)
+    (hD : ∀ p : Nat, p < 2 ^ 62 → LDom Φ Dom c v as k (updCp (envOf vs) cp p))
+    (hres : ∀ p : Nat, p < 2 ^ 62 → LΦ Φ c v as k (updCp (envOf vs) cp p) = res0)
+    (x : HSt) (hs : x.s.pc = a) (hr : ∀ j (h : j < vs.length), j ≠ cp → x.s.r j = encode vs[j])
+    (hn : (x.s.r cl).toNat + d * (x.s.r el).toNat < 2 ^ 50) (hd : d < 2 ^ 50)
+    (hsa : (x.s.r cp).toNat % 8 = 0) (hsrc : x.sp.toNat ≤ (x.s.r cp).toNat)
+    (hs64 : (x.s.r cp).toNat + 8 * (x.s.r cl).toNat < 2 ^ 64)
+    (hsp : x.sp.toNat % 16 = 0) (hroom : 8 * ((x.s.r cl).toNat + d * (x.s.r el).toNat) + 32 ≤ x.sp.toNat)
+    (hsp62 : x.sp.toNat + 16 < 2 ^ 62) :
+    ∃ Z : HSt, Steps3 P x Z ∧ Z.s.pc = x.s.lr ∧ Z.s.r 0 = encode res0 ∧ Z.s.m = x.s.m ∧ Z.s.lr = x.s.lr ∧
+      Z.s.stk = x.s.stk ∧
+      Z.sp.toNat = x.sp.toNat - (((8 * ((x.s.r cl).toNat + d * (x.s.r el).toNat) + 15) / 16) * 16 + 16) := by
+  refine fcodeH_ok_at a as.length cp cl el d _ P Q hG hfill hQP hPQ hcl hel hcp (envOf vs) res0 ?_ x hs ?_ hn hd hsa hsrc hs64 hsp hroom hsp62
+  · intro s' hs' hm ⟨p, hp, hcp'⟩ hGB
+    have hM : (p : Int) ≤ M := by unfold M; have : (2 : Int) ^ 62 ≤ 2 ^ 63 - 1 := by decide
+                                  have h2 : (p : Int) < 2 ^ 62 := by exact_mod_cast hp
+                                  omega
+    obtain ⟨u, hu, pu, ru, ku⟩ := loop_ok nov Φ Dom hΦ hnov1 hnov tgt ar Q hcall c v as hc hcv hv has (a + 2 * as.length + 27) hGB
+      k (updCp (envOf vs) cp p)
+      (fun j => by
+        unfold updCp; by_cases hj : j = cp
+        · simp [hj]; intro z hz; cases hz; unfold InR at *; constructor <;> omega
+        · simp [hj]; exact envOf_inR_gen vs hin j)
+      (fun j => by
+        unfold updCp; by_cases hj : j = cp
+        · exact ⟨p, by simp [hj]⟩
+        · simp [hj]; exact envOf_some vs j)
+      s' (hD p hp) hs'
+      (fun j hj => by
+        unfold updCp; by_cases hjc : j = cp
+        · subst hjc; simpa using hcp'
+        · simp [hjc]; exact hm j hj hjc)
+    exact ⟨u, hu, pu, by rw [ru, hres p hp], ku⟩
+  · intro j hj hjc
+    have hj' : j < vs.length := by omega
+    obtain ⟨z, hz⟩ := hall vs[j] (List.getElem_mem hj')
+    have : envOf vs j = vs[j] := by simp [envOf, List.getElem?_eq_getElem hj', hz]
+    rw [this]; exact hr j hj' hjc
 
 /-- `P` の `I2` の写し: 領域 `[g0, g1)` は `jmp 自分`、ほかは `I2.base` を外した命令(`I3` の命令が領域の外にあれば `jmp 自分`) -/
 def shadowQ (P : Array I3) (g0 g1 : Nat) : Array I2 :=
@@ -2385,5 +2455,6 @@ theorem commitS_ok (P : Array I3) (b sh w t1 t2 cur : Nat) (ds : List Nat) (hw :
 #print axioms blk_ok
 #print axioms chars_ok
 #print axioms commitS_ok
+#print axioms selftailH_fn_ok
 
 end SirZH
