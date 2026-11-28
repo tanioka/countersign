@@ -2059,7 +2059,429 @@ theorem compileS_ok_real (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hv
         s'.r 0 = encode (sem ρ e) ∧ (∀ j < base + d, s'.m j = s.m j) ∧ InR (sem ρ e) :=
   compileS_ok novR novR_sound ρ hρ hvs base
 
+/-- 条件の尾: 値の形から `vi`・`b`・`movz 0` を除き、外れは `fo`(尾の先頭から数えた飛び先)へ飛ぶ -/
+def condTail (c : CmpOp) (ml mr : Bool) (fo : Nat) : Array I :=
+  let n0 := if ml || mr then 1 else 0
+  let gl := if ml then 2 else 0
+  let gr := if mr then 2 else 0
+  (if ml || mr then #[I.movz 13] else #[])
+    ++ (if ml then #[I.cmpR 9 13, I.bc Cond.eq (fo - (n0 + 1))] else #[])
+    ++ (if mr then #[I.cmpR 10 13, I.bc Cond.eq (fo - (n0 + gl + 1))] else #[])
+    ++ #[I.cmpR 9 10, I.bc (invCond c) (fo - (n0 + gl + gr + 1))]
+
+theorem L_brk (p : Array I) (k : Nat) (c : CmpOp) (t : Nat) (hk : k + 1 < p.size)
+    (h0 : p[k] = I.cmpR 9 10) (h1 : p[k+1] = I.bc (invCond c) t)
+    (s : St) (hs : s.pc = k) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y) :
+    ∃ s', Steps p s s' ∧ s'.m = s.m ∧ (c.holds x.toInt y.toInt = true → s'.pc = k + 2) ∧
+      (c.holds x.toInt y.toInt = false → s'.pc = k + 1 + t) := by
+  obtain ⟨s1, hs1⟩ : ∃ s1, s1 = step (I.cmpR 9 10) s := ⟨_, rfl⟩
+  have e1 : s1 = ({ s with pc := s.pc + 1 } : St).flagsSub x y := by simp [hs1, step, h9, h10]
+  have e2 : s1.pc = k + 1 := by simp [e1, hs]
+  have e3 : s1.m = s.m := by simp [e1]
+  have e4 : (invCond c).holds s1 = !(c.holds x.toInt y.toInt) := by rw [e1]; exact inv_holds c _ x y
+  have hp1 : p[s1.pc]'(by omega) = I.bc (invCond c) t := by
+    have : s1.pc = k + 1 := e2
+    simp only [this]; exact h1
+  have ebt : (invCond c).holds s1 = true → step (I.bc (invCond c) t) s1 = { s1 with pc := s1.pc + t } := by
+    intro h; simp [step, h]
+  have ebf : (invCond c).holds s1 = false → step (I.bc (invCond c) t) s1 = { s1 with pc := s1.pc + 1 } := by
+    intro h; simp [step, h]
+  refine ⟨step (I.bc (invCond c) t) s1, ?_, ?_, ?_, ?_⟩
+  · exact Steps.go _ (by omega) (by simp only [hs]; exact h0)
+      (by rw [← hs1]; exact Steps.go _ (by omega) hp1 (Steps.refl _))
+  · by_cases h : (invCond c).holds s1 = true
+    · rw [ebt h]; simp [e3]
+    · rw [ebf (by simpa using h)]; simp [e3]
+  · intro hc; rw [ebf (by rw [e4, hc]; rfl)]; simp [e2]
+  · intro hc; rw [ebt (by rw [e4, hc]; rfl)]; simp [e2]
+
+theorem isSome_cmpSem (c : CmpOp) (a b : Int) : (cmpSem c (some a) (some b)).isSome = c.holds a b := by
+  simp only [cmpSem]; split <;> simp_all
+
+theorem condTail_ok (c : CmpOp) (ml mr : Bool) (fo : Nat) (hfo : (condTail c ml mr fo).size ≤ fo)
+    (s : St) (hs : s.pc = 0) (x y : W) (h9 : s.r 9 = x) (h10 : s.r 10 = y)
+    (hx : ml = false → x ≠ NICHE) (hy : mr = false → y ≠ NICHE) :
+    ∃ s', Steps (condTail c ml mr fo) s s' ∧
+      ((cmpSem c (decode x) (decode y)).isSome = true → s'.pc = (condTail c ml mr fo).size) ∧
+      ((cmpSem c (decode x) (decode y)).isSome = false → s'.pc = fo) ∧ s'.m = s.m := by
+  cases ml <;> cases mr
+  · have E : condTail c false false fo = #[I.cmpR 9 10, I.bc (invCond c) (fo - 1)] := rfl
+    obtain ⟨s', h1, m1, t1, t2⟩ := L_brk (condTail c false false fo) 0 c (fo - 1) (by simp [E]) (by simp [E]) (by simp [E])
+      s hs x y h9 h10
+    have dx := decode_ne x (hx rfl); have dy := decode_ne y (hy rfl)
+    refine ⟨s', h1, ?_, ?_, m1⟩
+    · intro h; rw [dx, dy, isSome_cmpSem] at h; have := t1 h; simpa [E] using this
+    · intro h; rw [dx, dy, isSome_cmpSem] at h; have := t2 h; simp [E] at hfo; omega
+  · have E : condTail c false true fo = #[I.movz 13, I.cmpR 10 13, I.bc Cond.eq (fo - 2), I.cmpR 9 10, I.bc (invCond c) (fo - 4)] := rfl
+    have hsz : (condTail c false true fo).size = 5 := by rw [E]; rfl
+    have hf5 : 5 ≤ fo := by omega
+    obtain ⟨s1, h1, p1, r1, o1, m1⟩ := L_movz13 (condTail c false true fo) (by simp [E]) (by simp [E]) s hs
+    obtain ⟨s2, h2, m2, r2, g1, g2⟩ := L_guard (condTail c false true fo) 1 10 (fo - 2) (by simp [E]) (by simp [E]) (by simp [E])
+      s1 p1 y (by rw [o1 10 (by omega), h10]) r1
+    by_cases hy0 : y = NICHE
+    · have pc2 := g1 hy0
+      refine ⟨s2, h1.trans h2, ?_, ?_, by rw [m2, m1]⟩
+      · intro h; rw [hy0, decode_nich] at h; simp [cmpSem] at h
+      · intro _; omega
+    · have pc2 := g2 hy0
+      have e9 : s2.r 9 = x := by rw [r2, o1 9 (by omega), h9]
+      have e10 : s2.r 10 = y := by rw [r2, o1 10 (by omega), h10]
+      obtain ⟨s3, h3, m3, t1, t2⟩ := L_brk (condTail c false true fo) 3 c (fo - 4) (by simp [E]) (by simp [E]) (by simp [E])
+        s2 (by omega) x y e9 e10
+      have dx := decode_ne x (hx rfl); have dy := decode_ne y hy0
+      refine ⟨s3, h1.trans (h2.trans h3), ?_, ?_, by rw [m3, m2, m1]⟩
+      · intro h; rw [dx, dy, isSome_cmpSem] at h; have := t1 h; omega
+      · intro h; rw [dx, dy, isSome_cmpSem] at h; have := t2 h; omega
+  · have E : condTail c true false fo = #[I.movz 13, I.cmpR 9 13, I.bc Cond.eq (fo - 2), I.cmpR 9 10, I.bc (invCond c) (fo - 4)] := rfl
+    have hsz : (condTail c true false fo).size = 5 := by rw [E]; rfl
+    have hf5 : 5 ≤ fo := by omega
+    obtain ⟨s1, h1, p1, r1, o1, m1⟩ := L_movz13 (condTail c true false fo) (by simp [E]) (by simp [E]) s hs
+    obtain ⟨s2, h2, m2, r2, g1, g2⟩ := L_guard (condTail c true false fo) 1 9 (fo - 2) (by simp [E]) (by simp [E]) (by simp [E])
+      s1 p1 x (by rw [o1 9 (by omega), h9]) r1
+    by_cases hx0 : x = NICHE
+    · have pc2 := g1 hx0
+      refine ⟨s2, h1.trans h2, ?_, ?_, by rw [m2, m1]⟩
+      · intro h; rw [hx0, decode_nich] at h; simp [cmpSem] at h
+      · intro _; omega
+    · have pc2 := g2 hx0
+      have e9 : s2.r 9 = x := by rw [r2, o1 9 (by omega), h9]
+      have e10 : s2.r 10 = y := by rw [r2, o1 10 (by omega), h10]
+      obtain ⟨s3, h3, m3, t1, t2⟩ := L_brk (condTail c true false fo) 3 c (fo - 4) (by simp [E]) (by simp [E]) (by simp [E])
+        s2 (by omega) x y e9 e10
+      have dx := decode_ne x hx0; have dy := decode_ne y (hy rfl)
+      refine ⟨s3, h1.trans (h2.trans h3), ?_, ?_, by rw [m3, m2, m1]⟩
+      · intro h; rw [dx, dy, isSome_cmpSem] at h; have := t1 h; omega
+      · intro h; rw [dx, dy, isSome_cmpSem] at h; have := t2 h; omega
+  · have E : condTail c true true fo = #[I.movz 13, I.cmpR 9 13, I.bc Cond.eq (fo - 2), I.cmpR 10 13, I.bc Cond.eq (fo - 4), I.cmpR 9 10, I.bc (invCond c) (fo - 6)] := rfl
+    have hsz : (condTail c true true fo).size = 7 := by rw [E]; rfl
+    have hf5 : 7 ≤ fo := by omega
+    obtain ⟨s1, h1, p1, r1, o1, m1⟩ := L_movz13 (condTail c true true fo) (by simp [E]) (by simp [E]) s hs
+    obtain ⟨s2, h2, m2, r2, g1, g2⟩ := L_guard (condTail c true true fo) 1 9 (fo - 2) (by simp [E]) (by simp [E]) (by simp [E])
+      s1 p1 x (by rw [o1 9 (by omega), h9]) r1
+    by_cases hx0 : x = NICHE
+    · have pc2 := g1 hx0
+      refine ⟨s2, h1.trans h2, ?_, ?_, by rw [m2, m1]⟩
+      · intro h; rw [hx0, decode_nich] at h; simp [cmpSem] at h
+      · intro _; omega
+    · have pc2 := g2 hx0
+      have r13 : s2.r 13 = NICHE := by rw [r2]; exact r1
+      obtain ⟨s4, h4, m4, r4, g3, g4⟩ := L_guard (condTail c true true fo) 3 10 (fo - 4) (by simp [E]) (by simp [E]) (by simp [E])
+        s2 (by omega) y (by rw [r2, o1 10 (by omega), h10]) r13
+      by_cases hy0 : y = NICHE
+      · have pc4 := g3 hy0
+        refine ⟨s4, h1.trans (h2.trans h4), ?_, ?_, by rw [m4, m2, m1]⟩
+        · intro h; rw [hy0, decode_nich] at h; simp [cmpSem] at h
+        · intro _; omega
+      · have pc4 := g4 hy0
+        have e9 : s4.r 9 = x := by rw [r4, r2, o1 9 (by omega), h9]
+        have e10 : s4.r 10 = y := by rw [r4, r2, o1 10 (by omega), h10]
+        obtain ⟨s5, h5, m5, t1, t2⟩ := L_brk (condTail c true true fo) 5 c (fo - 6) (by simp [E]) (by simp [E]) (by simp [E])
+          s4 (by omega) x y e9 e10
+        have dx := decode_ne x hx0; have dy := decode_ne y hy0
+        refine ⟨s5, h1.trans (h2.trans (h4.trans h5)), ?_, ?_, by rw [m5, m4, m2, m1]⟩
+        · intro h; rw [dx, dy, isSome_cmpSem] at h; have := t1 h; omega
+        · intro h; rw [dx, dy, isSome_cmpSem] at h; have := t2 h; omega
+
+
+/-! ### 条件(`false_label`)-/
+
+def cmpPre (nov : AOp → E → E → Bool) (base d : Nat) (l r : E) : Array I :=
+  opB (simpleR l) (compileS nov base d l) (base + d)
+    ++ opB (simpleR r) (compileS nov base (if simpleR l = true then d else d + 1) r)
+      (base + (if simpleR l = true then d else d + 1))
+    ++ #[ldOp l 9 (base + d), ldOp r 10 (base + (if simpleR l = true then d else d + 1))]
+
+theorem compileS_cmp (nov : AOp → E → E → Bool) (base d : Nat) (c : CmpOp) (l r : E) :
+    compileS nov base d (.cmp c l r) = cmpPre nov base d l r ++ cmpTail c (mb nov l) (mb nov r) (ldOp l 0 (base + d)) := by
+  simp [compileS, cmpPre]
+
+theorem cmpPre_ok (nov : AOp → E → E → Bool)
+    (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem ρ l = some a → sem ρ r = some b → ∃ z, arithInt o a b = some z)
+    (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z) (base : Nat) (c : CmpOp) (l r : E)
+    (ihl : ∀ (d : Nat) (s : St), l.lits → l.maxVar ≤ base → s.pc = 0 → (∀ k < base, s.m k = encode (ρ k)) →
+      ∃ s', Steps (compileS nov base d l) s s' ∧ s'.pc = (compileS nov base d l).size ∧
+        s'.r 0 = encode (sem ρ l) ∧ (∀ j < base + d, s'.m j = s.m j) ∧ InR (sem ρ l))
+    (ihr : ∀ (d : Nat) (s : St), r.lits → r.maxVar ≤ base → s.pc = 0 → (∀ k < base, s.m k = encode (ρ k)) →
+      ∃ s', Steps (compileS nov base d r) s s' ∧ s'.pc = (compileS nov base d r).size ∧
+        s'.r 0 = encode (sem ρ r) ∧ (∀ j < base + d, s'.m j = s.m j) ∧ InR (sem ρ r))
+    (d : Nat) (s : St) (hl : (E.cmp c l r).lits) (hv : (E.cmp c l r).maxVar ≤ base) (hs : s.pc = 0)
+    (hm : ∀ k < base, s.m k = encode (ρ k)) :
+    ∃ u : St, Steps (cmpPre nov base d l r) s u ∧ u.pc = (cmpPre nov base d l r).size ∧
+      u.r 9 = encode (sem ρ l) ∧ u.r 10 = encode (sem ρ r) ∧ (∀ k < base, u.m k = encode (ρ k)) ∧
+      (∀ j < base + d, u.m j = s.m j) ∧ (simpleR l = false → u.m (base + d) = encode (sem ρ l)) := by
+    obtain ⟨hll, hlr⟩ := hl
+    have hv1 : l.maxVar ≤ base := by simp only [E.maxVar] at hv; omega
+    have hv2 : r.maxVar ≤ base := by simp only [E.maxVar] at hv; omega
+    have hl_in : InR (sem ρ l) := sem_inR ρ hρ l hll
+    have hr_in : InR (sem ρ r) := sem_inR ρ hρ r hlr
+    -- 左の用意
+    obtain ⟨sA, hA, pA, mA, eA⟩ := opB_ok nov ρ hρ base d l hll (fun t ht hmt => ihl d t hll hv1 ht hmt) s hs hm
+    -- 右の用意
+    obtain ⟨sB, hB, pB, mB, eB⟩ := opB_ok nov ρ hρ base (if simpleR l = true then d else d + 1) r hlr
+      (fun t ht hmt => ihr _ t hlr hv2 ht hmt) { sA with pc := 0 } rfl (by
+        intro k hk; show sA.m k = _; rw [mA k (by omega)]; exact hm k hk)
+    have hAB := Steps.append' hA pA hB pB
+    let tB : St := { sB with pc := (opB (simpleR l) (compileS nov base d l) (base + d)
+      ++ opB (simpleR r) (compileS nov base (if simpleR l = true then d else d + 1) r)
+        (base + (if simpleR l = true then d else d + 1))).size }
+    -- 枠の中身
+    have hmB : ∀ k < base, tB.m k = encode (ρ k) := by
+      intro k hk
+      show sB.m k = _
+      rw [mB k (by split <;> omega)]; show sA.m k = _; rw [mA k (by omega)]; exact hm k hk
+    have hslotL : simpleR l = false → tB.m (base + d) = encode (sem ρ l) := by
+      intro hf
+      show sB.m (base + d) = _
+      have hd1 : (if simpleR l = true then d else d + 1) = d + 1 := by simp [hf]
+      rw [mB (base + d) (by rw [hd1]; omega)]
+      exact eA hf
+    have hslotR : simpleR r = false → tB.m (base + (if simpleR l = true then d else d + 1)) = encode (sem ρ r) := by
+      intro hf; exact eB hf
+    -- 二つの取り出し
+    have eq9 := ldOp_eq ρ base l 9 (base + d) hll hv1 { tB with pc := 0 } hmB hslotL
+    let u1 : St := step (ldOp l 9 (base + d)) { tB with pc := 0 }
+    have hu1 : u1 = ({ { tB with pc := 0 } with pc := 0 + 1 } : St).set 9 (encode (sem ρ l)) := eq9
+    have hmu1 : ∀ k < base, u1.m k = encode (ρ k) := by
+      intro k hk; rw [hu1]; simpa using hmB k hk
+    have hslotR1 : simpleR r = false → ({ u1 with pc := 0 } : St).m (base + (if simpleR l = true then d else d + 1)) = encode (sem ρ r) := by
+      intro hf; rw [hu1]; simpa using hslotR hf
+    have eq10 := ldOp_eq ρ base r 10 (base + (if simpleR l = true then d else d + 1)) hlr hv2 { u1 with pc := 0 }
+      (by intro k hk; exact hmu1 k hk) hslotR1
+    let u2 : St := step (ldOp r 10 (base + (if simpleR l = true then d else d + 1))) { u1 with pc := 0 }
+    have hu2 : u2 = ({ { u1 with pc := 0 } with pc := 0 + 1 } : St).set 10 (encode (sem ρ r)) := eq10
+    have h4 : Steps #[ldOp l 9 (base + d), ldOp r 10 (base + (if simpleR l = true then d else d + 1))]
+        { tB with pc := 0 } { u2 with pc := 2 } := by
+      have := Steps.append' (single (ldOp l 9 (base + d)) { tB with pc := 0 } rfl) (by show u1.pc = 1; rw [hu1]; rfl)
+        (single (ldOp r 10 (base + (if simpleR l = true then d else d + 1))) { u1 with pc := 0 } rfl) (by show u2.pc = 1; rw [hu2]; rfl)
+      simpa using this
+    have hABC := Steps.append' hAB (by simp [tB]) h4 (by simp [hu2])
+    refine ⟨{ u2 with pc := (cmpPre nov base d l r).size }, hABC, rfl, ?_, ?_, ?_, ?_, ?_⟩
+    · simp [hu2, hu1, St.set]
+    · simp [hu2, St.set]
+    · intro k hk; show u2.m k = _; simp [hu2, hu1, St.set]; exact hmB k hk
+    · intro j hj
+      show u2.m j = _
+      simp [hu2, hu1, St.set]
+      show sB.m j = _
+      rw [mB j (by split <;> omega)]; show sA.m j = _; exact mA j hj
+    · intro hf; show u2.m (base + d) = _; simp [hu2, hu1, St.set]; exact hslotL hf
+
+/-- 条件の式の木: 値の式、`a & b`(両方が成り立つ)、`a | b`(どちらかが成り立つ)。成り立つ = `!_` でない -/
+inductive Cn
+  | val (e : E)
+  | and (a b : Cn)
+  | or (a b : Cn)
+
+def ctruth (ρ : Nat → Option Int) : Cn → Bool
+  | .val e => (sem ρ e).isSome
+  | .and a b => ctruth ρ a && ctruth ρ b
+  | .or a b => ctruth ρ a || ctruth ρ b
+
+def Cn.lits : Cn → Prop
+  | .val e => e.lits
+  | .and a b => a.lits ∧ b.lits
+  | .or a b => a.lits ∧ b.lits
+
+def Cn.maxVar : Cn → Nat
+  | .val e => e.maxVar
+  | .and a b => max a.maxVar b.maxVar
+  | .or a b => max a.maxVar b.maxVar
+
+/-- `sign_asm.py` の `gen_cond`: 成り立たなければ(コードの頭から数えて)`fo` へ飛び、成り立てば下へ流れる -/
+def compileC (nov : AOp → E → E → Bool) (base : Nat) : Nat → Nat → Cn → Array I
+  | d, fo, .val (.cmp c l r) =>
+      cmpPre nov base d l r ++ condTail c (mb nov l) (mb nov r) (fo - (cmpPre nov base d l r).size)
+  | d, fo, .val e =>
+      if mb nov e = true then
+        compileS nov base d e ++ #[I.movz 13, I.cmpR 0 13, I.bc Cond.eq (fo - ((compileS nov base d e).size + 2))]
+      else compileS nov base d e
+  | d, fo, .and a b =>
+      compileC nov base d fo a ++ compileC nov base d (fo - (compileC nov base d fo a).size) b
+  | d, fo, .or a b =>
+      compileC nov base d ((compileC nov base d 0 a).size + 1) a
+        ++ #[I.b ((compileC nov base d (fo - ((compileC nov base d ((compileC nov base d 0 a).size + 1) a).size + 1)) b).size + 1)]
+        ++ compileC nov base d (fo - ((compileC nov base d ((compileC nov base d 0 a).size + 1) a).size + 1)) b
+
+theorem condTail_size (c : CmpOp) (ml mr : Bool) (fo fo' : Nat) :
+    (condTail c ml mr fo).size = (condTail c ml mr fo').size := by
+  cases ml <;> cases mr <;> simp [condTail]
+
+theorem compileC_size (nov : AOp → E → E → Bool) (base : Nat) :
+    ∀ (cn : Cn) (d fo fo' : Nat), (compileC nov base d fo cn).size = (compileC nov base d fo' cn).size
+  | .val e, d, fo, fo' => by
+      cases e with
+      | cmp c l r =>
+          simp only [compileC, Array.size_append]
+          rw [condTail_size c _ _ (fo - _) (fo' - _)]
+      | lit n => simp only [compileC]; split <;> simp
+      | var k => simp only [compileC]; split <;> simp
+      | op o l r => simp only [compileC]; split <;> simp
+      | neg e => simp only [compileC]; split <;> simp
+  | .and a b, d, fo, fo' => by
+      have h1 := compileC_size nov base a d fo fo'
+      have h2 := compileC_size nov base b d (fo - (compileC nov base d fo' a).size) (fo' - (compileC nov base d fo' a).size)
+      simp only [compileC, Array.size_append]
+      rw [h1, h2]
+  | .or a b, d, fo, fo' => by
+      have h2 := compileC_size nov base b d (fo - ((compileC nov base d ((compileC nov base d 0 a).size + 1) a).size + 1))
+        (fo' - ((compileC nov base d ((compileC nov base d 0 a).size + 1) a).size + 1))
+      simp only [compileC, Array.size_append, Array.size_singleton]
+      rw [h2]
+
+theorem compileC_val (nov : AOp → E → E → Bool) (base d fo : Nat) (e : E) (hnc : ∀ c l r, e ≠ E.cmp c l r) :
+    compileC nov base d fo (.val e) =
+      if mb nov e = true then
+        compileS nov base d e ++ #[I.movz 13, I.cmpR 0 13, I.bc Cond.eq (fo - ((compileS nov base d e).size + 2))]
+      else compileS nov base d e := by
+  cases e with
+  | cmp c l r => exact absurd rfl (hnc c l r)
+  | lit n => simp [compileC]
+  | var k => simp [compileC]
+  | op o l r => simp [compileC]
+  | neg e => simp [compileC]
+
+theorem compileC_ok (nov : AOp → E → E → Bool)
+    (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem ρ l = some a → sem ρ r = some b → ∃ z, arithInt o a b = some z)
+    (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z) (base : Nat) :
+    ∀ (cn : Cn) (d fo : Nat) (s : St), cn.lits → cn.maxVar ≤ base → s.pc = 0 →
+      (∀ k < base, s.m k = encode (ρ k)) → (compileC nov base d fo cn).size ≤ fo →
+      ∃ s', Steps (compileC nov base d fo cn) s s' ∧
+        (ctruth ρ cn = true → s'.pc = (compileC nov base d fo cn).size) ∧
+        (ctruth ρ cn = false → s'.pc = fo) ∧ (∀ j < base + d, s'.m j = s.m j) := by
+  intro cn
+  induction cn with
+  | val e =>
+      intro d fo s hl hv hs hm hfo
+      by_cases hc : ∃ c l r, e = E.cmp c l r
+      · obtain ⟨c, l, r, rfl⟩ := hc
+        obtain ⟨hll, hlr⟩ := hl
+        have hv1 : l.maxVar ≤ base := by simp only [Cn.maxVar, E.maxVar] at hv; omega
+        have hv2 : r.maxVar ≤ base := by simp only [Cn.maxVar, E.maxVar] at hv; omega
+        have hl_in : InR (sem ρ l) := sem_inR ρ hρ l hll
+        have hr_in : InR (sem ρ r) := sem_inR ρ hρ r hlr
+        obtain ⟨u, hu, pu, r9, r10, mk, mj, _⟩ := cmpPre_ok nov hnov ρ hρ hvs base c l r
+          (fun d s h1 h2 h3 h4 => compileS_ok nov hnov ρ hρ hvs base l d s h1 h2 h3 h4)
+          (fun d s h1 h2 h3 h4 => compileS_ok nov hnov ρ hρ hvs base r d s h1 h2 h3 h4)
+          d s ⟨hll, hlr⟩ (by simpa [Cn.maxVar] using hv) hs hm
+        have hfo' : (condTail c (mb nov l) (mb nov r) (fo - (cmpPre nov base d l r).size)).size
+            ≤ fo - (cmpPre nov base d l r).size := by
+          simp only [compileC, Array.size_append] at hfo; omega
+        obtain ⟨sT, hT, t1, t2, mT⟩ := condTail_ok c (mb nov l) (mb nov r) (fo - (cmpPre nov base d l r).size) hfo'
+          { u with pc := 0 } rfl (encode (sem ρ l)) (encode (sem ρ r)) r9 r10
+          (fun hf => by
+            obtain ⟨z, hz⟩ := mb_sound nov hnov ρ hρ hvs l hll hf
+            rw [hz]; exact encode_ne_niche z (hz ▸ hl_in))
+          (fun hf => by
+            obtain ⟨z, hz⟩ := mb_sound nov hnov ρ hρ hvs r hlr hf
+            rw [hz]; exact encode_ne_niche z (hz ▸ hr_in))
+        have hA := Steps.append hu pu hT
+        have hsz : (compileC nov base d fo (.val (E.cmp c l r))).size
+            = (cmpPre nov base d l r).size + (condTail c (mb nov l) (mb nov r) (fo - (cmpPre nov base d l r).size)).size := by
+          simp [compileC]
+        have hct : ctruth ρ (.val (E.cmp c l r)) = (cmpSem c (decode (encode (sem ρ l))) (decode (encode (sem ρ r)))).isSome := by
+          rw [decode_encode _ hl_in, decode_encode _ hr_in]; rfl
+        refine ⟨{ sT with pc := sT.pc + (cmpPre nov base d l r).size }, ?_, ?_, ?_, ?_⟩
+        · simpa [compileC] using hA
+        · intro h; rw [hct] at h; have := t1 h; simp only []; omega
+        · intro h; rw [hct] at h; have := t2 h; simp only []; omega
+        · intro j hj; show sT.m j = s.m j; rw [mT]; exact mj j hj
+      · have hnc : ∀ c l r, e ≠ E.cmp c l r := fun c l r h => hc ⟨c, l, r, h⟩
+        rw [compileC_val nov base d fo e hnc] at hfo ⊢
+        obtain ⟨s1, h1, p1, r1, m1, i1⟩ := compileS_ok nov hnov ρ hρ hvs base e d s hl hv hs hm
+        by_cases hmb : mb nov e = true
+        · simp only [hmb, if_true] at hfo ⊢
+          have hsz : (compileS nov base d e ++ #[I.movz 13, I.cmpR 0 13, I.bc Cond.eq (fo - ((compileS nov base d e).size + 2))]).size
+              = (compileS nov base d e).size + 3 := by simp
+          obtain ⟨s2, h2, p2, q2, o2, m2⟩ := L_movz13 #[I.movz 13, I.cmpR 0 13, I.bc Cond.eq (fo - ((compileS nov base d e).size + 2))] (by simp) (by simp) { s1 with pc := 0 } rfl
+          obtain ⟨s3, h3, m3, r3, g1, g2⟩ := L_guard #[I.movz 13, I.cmpR 0 13, I.bc Cond.eq (fo - ((compileS nov base d e).size + 2))] 1 0 (fo - ((compileS nov base d e).size + 2)) (by simp) (by simp) (by simp)
+            s2 p2 (encode (sem ρ e)) (by rw [o2 0 (by omega)]; exact r1) q2
+          have hA := Steps.append h1 p1 (h2.trans h3)
+          refine ⟨{ s3 with pc := s3.pc + (compileS nov base d e).size }, hA, ?_, ?_, ?_⟩
+          · intro ht
+            have hne : encode (sem ρ e) ≠ NICHE := by
+              cases hse : sem ρ e with
+              | none => simp [ctruth, hse] at ht
+              | some z => exact encode_ne_niche z (hse ▸ i1)
+            have := g2 hne; simp only []; omega
+          · intro hf
+            have hn : sem ρ e = none := by simpa [ctruth] using hf
+            have := g1 (by rw [hn]; rfl); simp only []; omega
+          · intro j hj; show s3.m j = s.m j; rw [m3, m2]; exact m1 j hj
+        · have hmb' : mb nov e = false := by simpa using hmb
+          simp only [hmb', Bool.false_eq_true, if_false] at hfo ⊢
+          obtain ⟨z, hz⟩ := mb_sound nov hnov ρ hρ hvs e hl hmb'
+          refine ⟨s1, h1, fun _ => p1, fun hf => by simp [ctruth, hz] at hf, m1⟩
+  | and a b iha ihb =>
+      intro d fo s hl hv hs hm hfo
+      obtain ⟨hla, hlb⟩ := hl
+      have hva : a.maxVar ≤ base := by simp only [Cn.maxVar] at hv; omega
+      have hvb : b.maxVar ≤ base := by simp only [Cn.maxVar] at hv; omega
+      have hsz : (compileC nov base d fo (.and a b)).size
+          = (compileC nov base d fo a).size + (compileC nov base d (fo - (compileC nov base d fo a).size) b).size := by
+        simp [compileC]
+      obtain ⟨sA, hA, tA, fA, mA⟩ := iha d fo s hla hva hs hm (by omega)
+      by_cases hta : ctruth ρ a = true
+      · have pA := tA hta
+        obtain ⟨sB, hB, tB, fB, mB⟩ := ihb d (fo - (compileC nov base d fo a).size) { sA with pc := 0 } hlb hvb rfl
+          (by intro k hk; show sA.m k = _; rw [mA k (by omega)]; exact hm k hk) (by omega)
+        have hAB := Steps.append hA pA hB
+        refine ⟨{ sB with pc := sB.pc + (compileC nov base d fo a).size }, by simpa [compileC] using hAB, ?_, ?_, ?_⟩
+        · intro h
+          have hb : ctruth ρ b = true := by simpa [ctruth, hta] using h
+          have := tB hb; simp only []; omega
+        · intro h
+          have hb : ctruth ρ b = false := by simpa [ctruth, hta] using h
+          have := fB hb; simp only []; omega
+        · intro j hj; show sB.m j = s.m j; rw [mB j hj]; show sA.m j = _; exact mA j hj
+      · have hta' : ctruth ρ a = false := by simpa using hta
+        have pA := fA hta'
+        refine ⟨sA, by simpa [compileC] using hA.left (compileC nov base d (fo - (compileC nov base d fo a).size) b), ?_, ?_, mA⟩
+        · intro h; simp [ctruth, hta'] at h
+        · intro _; exact pA
+  | or a b iha ihb =>
+      intro d fo s hl hv hs hm hfo
+      obtain ⟨hla, hlb⟩ := hl
+      have hva : a.maxVar ≤ base := by simp only [Cn.maxVar] at hv; omega
+      have hvb : b.maxVar ≤ base := by simp only [Cn.maxVar] at hv; omega
+      obtain ⟨la, hla_def⟩ : ∃ la, la = (compileC nov base d 0 a).size + 1 := ⟨_, rfl⟩
+      obtain ⟨fb, hfb⟩ : ∃ fb, fb = fo - ((compileC nov base d la a).size + 1) := ⟨_, rfl⟩
+      have hdef : compileC nov base d fo (.or a b) =
+          (compileC nov base d la a ++ #[I.b ((compileC nov base d fb b).size + 1)]) ++ compileC nov base d fb b := by
+        simp only [compileC]; rw [← hla_def, ← hfb]
+      have hSA : (compileC nov base d la a).size + 1 = la := by
+        have := compileC_size nov base a d la 0
+        omega
+      rw [hdef] at hfo ⊢
+      simp only [Array.size_append, Array.size_singleton] at hfo
+      obtain ⟨sA, hA, tA, fA, mA⟩ := iha d la s hla hva hs hm (by omega)
+      by_cases hta : ctruth ρ a = true
+      · have pA := tA hta
+        let s2 : St := step (I.b ((compileC nov base d fb b).size + 1)) { sA with pc := 0 }
+        have h2 : Steps (compileC nov base d la a ++ #[I.b ((compileC nov base d fb b).size + 1)]) s
+            { s2 with pc := s2.pc + (compileC nov base d la a).size } :=
+          Steps.append hA pA (single _ _ rfl)
+        have hpc2 : s2.pc = (compileC nov base d fb b).size + 1 := by simp [s2, step]
+        refine ⟨{ s2 with pc := s2.pc + (compileC nov base d la a).size }, h2.left _, ?_, ?_, ?_⟩
+        · intro _; show s2.pc + (compileC nov base d la a).size = _; simp only [Array.size_append, Array.size_singleton]; omega
+        · intro h; simp [ctruth, hta] at h
+        · intro j hj; show s2.m j = s.m j; simp [s2, step]; exact mA j hj
+      · have hta' : ctruth ρ a = false := by simpa using hta
+        have pA := fA hta'
+        have h1 : Steps (compileC nov base d la a ++ #[I.b ((compileC nov base d fb b).size + 1)]) s sA := hA.left _
+        obtain ⟨sB, hB, tB, fB, mB⟩ := ihb d fb { sA with pc := 0 } hlb hvb rfl
+          (by intro k hk; show sA.m k = _; rw [mA k (by omega)]; exact hm k hk) (by omega)
+        have hAB := Steps.append h1 (by simp; omega) hB
+        refine ⟨{ sB with pc := sB.pc + (compileC nov base d la a ++ #[I.b ((compileC nov base d fb b).size + 1)]).size }, hAB, ?_, ?_, ?_⟩
+        · intro h
+          have hb : ctruth ρ b = true := by simpa [ctruth, hta'] using h
+          have := tB hb; simp only [Array.size_append, Array.size_singleton] at this ⊢; omega
+        · intro h
+          have hb : ctruth ρ b = false := by simpa [ctruth, hta'] using h
+          have := fB hb; simp only [Array.size_append, Array.size_singleton] at this ⊢; omega
+        · intro j hj; show sB.m j = s.m j; rw [mB j hj]; show sA.m j = _; exact mA j hj
+
 end SirZAsm
 
 #print axioms SirZAsm.compileS_ok
 #print axioms SirZAsm.compileS_ok_real
+#print axioms SirZAsm.compileC_ok
