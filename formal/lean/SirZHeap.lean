@@ -9,6 +9,10 @@
   * `growEntry_ok`: `pre_grow`(リストの累積、食う器は 1 つ)の入口の全体。作業領域の語数 `n = ||acc|| + d × ||食う器||` から
     `sp` を `((8n+15)/16)×16 + 16` バイト下げ、先頭の 8 バイト前に `n` を置き、累積を写し、仮引数の枠を作業領域へ向ける。
     元の領域(`sp` より上)・ほかの枠・`lr`・フレームは変わらない。
+  * `fcodeH_ok_at`(`fcodeA` との接続): 入口の `alloca` を `growCode`(24 命令)に置き換えた関数 `fcodeH`(I3 の列: `enter`・仮引数の `str`・
+    `growCode`・`b 本体`・`.rec` の入口・本体 `B`・`leave`・`ret`)の契約。本体 `B` は `I2` の機械の証明(`SirZAsm` の `*_ok`)をそのまま使う
+    (`lift2`: `growCode` の領域を `jmp 自分` で埋めた `I2` の写し `Q`(`shadowQ`)での実行を `Steps3` へ持ち上げる)。結果・枠・`lr`・フレームは
+    `fcodeA_ok_at` と同じで、`sp` が `((8n+15)/16)×16+16` 下がる。`leave` のあとの `mov sp, x29` はこの模型の外。
   * 範囲: リスト(8 バイトの語)の累積 1 つ・食う器 1 つの形。文字列(1/4 バイト幅)・輪(食う器の和)・複数の累積、
     回るたびの末尾呼び出しの書き足し(append)、`gen_copy_result`(作業領域から置き場へ写す)は次。
 -/
@@ -467,7 +471,333 @@ theorem growEntry_ok (P : Array I3) (b : Nat) (cp cl el d : Nat)
   · rw [Ylr, ylr, fl]
   · rw [Ystk, ystk, fk]
 
+
+/-! ### `fcodeA` との接続: 作業領域を取る関数の全体(I3)
+
+`fcodeA` では `alloca` が見える状態を変えなかった。ここでは、入口の `alloca` を `growCode`(24 命令)に置き換えた
+関数 `fcodeH` を I3 の列として組み、`growEntry_ok` と、本体 `B`(`I2` の列。`SirZAsm` の証明がそのまま使える)をつなぐ。
+本体は `I2` の機械で動くので、I3 の列 `P` の `I2.base` でない位置(`growCode` の領域)には `jmp 自分` を置いた `I2` の写し `Q` を使い、
+`lift2` で `Steps2 Q` の実行を `Steps3 P` の実行へ持ち上げる(`jmp 自分` は動けないので、領域の外で終わる実行はそこを通らない)。 -/
+
+/-- 領域 `[g0, g1)` は I3 の命令(`jmp 自分` で埋めた写し)、それ以外は `I2.base` -/
+theorem stuck2 (Q : Array I2) (g0 g1 : Nat) (hfill : ∀ k, g0 ≤ k → k < g1 → Q[k]? = some (I2.jmp k)) :
+    ∀ (s s' : St), Steps2 Q s s' → g0 ≤ s.pc → s.pc < g1 → g0 ≤ s'.pc ∧ s'.pc < g1 := by
+  intro s s' h
+  induction h with
+  | refl s => intro h1 h2; exact ⟨h1, h2⟩
+  | step s s2 hlt hrest ih =>
+      intro h1 h2
+      have hk := hfill s.pc h1 h2
+      have hq : Q[s.pc] = I2.jmp s.pc := by
+        simpa [Array.getElem?_eq_getElem hlt] using hk
+      rw [hq] at ih
+      exact ih (by simp [step2]; omega) (by simp [step2]; omega)
+
+theorem lift2 (P : Array I3) (Q : Array I2) (g0 g1 : Nat)
+    (hfill : ∀ k, g0 ≤ k → k < g1 → Q[k]? = some (I2.jmp k))
+    (hQ : ∀ k x, Q[k]? = some x → (g0 ≤ k ∧ k < g1) ∨ P[k]? = some (I3.base x)) :
+    ∀ (s s' : St), Steps2 Q s s' → (s'.pc < g0 ∨ g1 ≤ s'.pc) → ∀ (h : Nat → W) (sp : W) (c : Bool),
+      Steps3 P ⟨s, h, sp, c⟩ ⟨s', h, sp, c⟩ := by
+  intro s s' hs
+  induction hs with
+  | refl s => intro _ h sp c; exact Steps3.refl _
+  | step s s2 hlt hrest ih =>
+      intro hend h sp c
+      have hout : s.pc < g0 ∨ g1 ≤ s.pc := by
+        by_cases hin : g0 ≤ s.pc ∧ s.pc < g1
+        · exfalso
+          have hq : Q[s.pc] = I2.jmp s.pc := by
+            simpa [Array.getElem?_eq_getElem hlt] using hfill s.pc hin.1 hin.2
+          rw [hq] at hrest
+          have := stuck2 Q g0 g1 hfill _ _ hrest (by simp [step2]; omega) (by simp [step2]; omega)
+          omega
+        · omega
+      have hP := hQ s.pc Q[s.pc] (by simp [Array.getElem?_eq_getElem hlt])
+      have hP' : P[s.pc]? = some (I3.base Q[s.pc]) := by
+        rcases hP with hP | hP
+        · omega
+        · exact hP
+      refine Steps3.go' (I3.base Q[s.pc]) s.pc rfl hP' ?_
+      exact ih hend h sp c
+
+/-- `pstore`: 仮引数をレジスタから枠へ(I3 の列の `I2.base (I.str k k)` の並び) -/
+theorem pstore3_ok (P : Array I3) (b : Nat) :
+    ∀ (n : Nat), (∀ i, i < n → P[b + i]? = some (I3.base (I2.base (I.str i i)))) →
+    ∀ (x : HSt), x.s.pc = b →
+      ∃ y : HSt, Steps3 P x y ∧ y.s.pc = b + n ∧ y.h = x.h ∧ y.sp = x.sp ∧ y.s.r = x.s.r ∧
+        (∀ k, k < n → y.s.m k = x.s.r k) ∧ (∀ j, n ≤ j → y.s.m j = x.s.m j) ∧
+        y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk := by
+  intro n
+  induction n with
+  | zero => intro _ x hx; exact ⟨x, Steps3.refl _, by simp [hx], rfl, rfl, rfl, by simp, by simp, rfl, rfl⟩
+  | succ n ih =>
+      intro hP x hx
+      obtain ⟨y, hy, p1, h1, sp1, r1, m1, o1, l1, k1⟩ := ih (fun i hi => hP i (by omega)) x hx
+      have g : Steps3 P y (step3 (I3.base (I2.base (I.str n n))) y) :=
+        Steps3.go' _ (b + n) (by rw [p1]) (hP n (by omega)) (Steps3.refl _)
+      refine ⟨_, hy.trans g, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      · simp [step3, step2, step, p1]; omega
+      · simp [step3, step2, step, h1]
+      · simp [step3, step2, step, sp1]
+      · simp [step3, step2, step, r1]
+      · intro k hk
+        by_cases hkn : k = n
+        · subst hkn; simp [step3, step2, step, r1]
+        · simp [step3, step2, step, hkn]; rw [m1 k (by omega)]
+      · intro j hj
+        have : j ≠ n := by omega
+        simp [step3, step2, step, this]; exact o1 j (by omega)
+      · simp [step3, step2, step, l1]
+      · simp [step3, step2, step, k1]
+
+theorem arr_left {α : Type} (A B : Array α) (k : Nat) (h : k < A.size) : (A ++ B)[k]? = A[k]? :=
+  Array.getElem?_append_left h
+
+theorem arr_right {α : Type} (A B : Array α) (k : Nat) : (A ++ B)[A.size + k]? = B[k]? := by
+  rw [Array.getElem?_append_right (by omega)]; simp
+
+def fcodeHE (n : Nat) : Array I3 := (#[I2.enter] ++ (pstore n).map I2.base).map I3.base
+
+def fcodeHT (n : Nat) (B : Array I2) : Array I3 := (recEntry n ++ B ++ #[I2.leave, I2.ret]).map I3.base
+
+theorem fcodeHE_size (n : Nat) : (fcodeHE n).size = 1 + n := by
+  simp [fcodeHE, pstore_size] <;> omega
+
+theorem fcodeHT_size (n : Nat) (B : Array I2) : (fcodeHT n B).size = (1 + n) + B.size + 2 := by
+  simp [fcodeHT, recEntry_size] <;> omega
+
+/-- 作業領域を取る関数(`pre_alloca`、I3): `enter`・仮引数の `str`・`growCode`・`b 本体`・`.rec` の入口・本体 `B`・`leave`・`ret`。
+`a` は先頭の絶対位置。本体は位置 `a + 2n + 27`。 -/
+def fcodeH (a n cp cl el d : Nat) (B : Array I2) : Array I3 :=
+  fcodeHE n ++ growCode cp cl el d ++ #[I3.base (I2.jmp (a + 2 * n + 27))] ++ fcodeHT n B
+
+theorem growCode_size24 (cp cl el d : Nat) : (growCode cp cl el d).size = 24 := by
+  simp [growCode, copyLoop_size, growPre_len]
+
+theorem fcodeH_E (a n cp cl el d : Nat) (B : Array I2) (k : Nat) (h : k < 1 + n) :
+    (fcodeH a n cp cl el d B)[k]? = (fcodeHE n)[k]? := by
+  have hs := growCode_size24 cp cl el d
+  unfold fcodeH
+  rw [arr_left _ _ _ (by simp [hs, fcodeHE_size]; omega), arr_left _ _ _ (by simp [hs, fcodeHE_size]; omega),
+    arr_left _ _ _ (by simp [fcodeHE_size]; omega)]
+
+theorem fcodeH_enter (a n cp cl el d : Nat) (B : Array I2) :
+    (fcodeH a n cp cl el d B)[0]? = some (I3.base I2.enter) := by
+  rw [fcodeH_E a n cp cl el d B 0 (by omega)]
+  simp [fcodeHE, Array.getElem?_append]
+
+theorem fcodeH_pstore (a n cp cl el d : Nat) (B : Array I2) (i : Nat) (hi : i < n) :
+    (fcodeH a n cp cl el d B)[1 + i]? = some (I3.base (I2.base (I.str i i))) := by
+  have hp : ∀ n, ∀ i (hi : i < n), (pstore n)[i]? = some (I.str i i) := by
+    intro n
+    induction n with
+    | zero => intro i hi; omega
+    | succ n ih =>
+        intro i hi
+        simp only [pstore, Array.getElem?_append, pstore_size]
+        by_cases h : i < n
+        · simp [h, ih i h]
+        · have : i = n := by omega
+          subst this; simp
+  rw [fcodeH_E a n cp cl el d B (1 + i) (by omega)]
+  have h1 : (fcodeHE n)[1 + i]? = ((pstore n).map I2.base)[i]?.map I3.base := by
+    simp [fcodeHE, Array.getElem?_append, Array.getElem?_map]
+  rw [h1]
+  simp [Array.getElem?_map, hp n i hi]
+
+theorem fcodeH_grow (a n cp cl el d : Nat) (B : Array I2) (k : Nat) (x : I3) (h : (growCode cp cl el d)[k]? = some x) :
+    (fcodeH a n cp cl el d B)[1 + n + k]? = some x := by
+  have hs := growCode_size24 cp cl el d
+  have hk : k < 24 := by
+    cases Nat.lt_or_ge k 24 with
+    | inl h' => exact h'
+    | inr h' => rw [Array.getElem?_eq_none (by rw [hs]; exact h')] at h; cases h
+  unfold fcodeH
+  rw [arr_left _ _ _ (by simp [hs, fcodeHE_size]; omega), arr_left _ _ _ (by simp [hs, fcodeHE_size]; omega)]
+  have := arr_right (fcodeHE n) (growCode cp cl el d) k
+  rw [fcodeHE_size] at this
+  rw [this]; exact h
+
+theorem fcodeH_jmp (a n cp cl el d : Nat) (B : Array I2) :
+    (fcodeH a n cp cl el d B)[1 + n + 24]? = some (I3.base (I2.jmp (a + 2 * n + 27))) := by
+  have hs := growCode_size24 cp cl el d
+  unfold fcodeH
+  rw [arr_left _ _ _ (by simp [hs, fcodeHE_size] <;> omega)]
+  have := arr_right (fcodeHE n ++ growCode cp cl el d) #[I3.base (I2.jmp (a + 2 * n + 27))] 0
+  rw [Array.size_append, hs, fcodeHE_size, Nat.add_zero] at this
+  rw [this]; simp
+
+theorem fcodeH_T (a n cp cl el d : Nat) (B : Array I2) (k : Nat) :
+    (fcodeH a n cp cl el d B)[1 + n + 24 + 1 + k]? = (fcodeHT n B)[k]? := by
+  have hs := growCode_size24 cp cl el d
+  unfold fcodeH
+  have := arr_right (fcodeHE n ++ growCode cp cl el d ++ #[I3.base (I2.jmp (a + 2 * n + 27))]) (fcodeHT n B) k
+  rw [Array.size_append, Array.size_append, hs, fcodeHE_size] at this
+  simp only [Array.size_singleton] at this
+  exact this
+
+theorem fcodeHT_body (n : Nat) (B : Array I2) (k : Nat) (hk : k < B.size) :
+    (fcodeHT n B)[(1 + n) + k]? = some (I3.base B[k]) := by
+  have hr := recEntry_size n
+  simp only [fcodeHT, Array.getElem?_map]
+  have : (recEntry n ++ B ++ #[I2.leave, I2.ret])[(1 + n) + k]? = some B[k] := by
+    rw [arr_left _ _ _ (by simp [hr]; omega)]
+    have := arr_right (recEntry n) B k
+    rw [hr] at this; rw [this]; simp [hk]
+  rw [this]; rfl
+
+theorem fcodeHT_leave (n : Nat) (B : Array I2) : (fcodeHT n B)[(1 + n) + B.size]? = some (I3.base I2.leave) := by
+  have hr := recEntry_size n
+  simp only [fcodeHT, Array.getElem?_map]
+  have := arr_right (recEntry n ++ B) #[I2.leave, I2.ret] 0
+  rw [Array.size_append, hr, Nat.add_zero] at this
+  rw [this]; rfl
+
+theorem fcodeHT_ret (n : Nat) (B : Array I2) : (fcodeHT n B)[(1 + n) + B.size + 1]? = some (I3.base I2.ret) := by
+  have hr := recEntry_size n
+  simp only [fcodeHT, Array.getElem?_map]
+  have := arr_right (recEntry n ++ B) #[I2.leave, I2.ret] 1
+  rw [Array.size_append, hr] at this
+  rw [this]; rfl
+
+/-- 作業領域を取る関数(`fcodeH`)の入口の契約。`fcodeA_ok_at` と同じ形(結果・枠・`lr`・フレームが元のまま)に、器の確保
+(`sp` が `((8n+15)/16)×16+16` 下がる)を足したもの。本体 `B` は `I2` の機械で動く(`Q` はその写し。`growCode` の領域は `jmp 自分`)。
+枠の `cp` の番は、作業領域を指すので、本体の前提から除く。`leave` のあとの `mov sp, x29`(`sp` を戻す)はこの模型の外で、
+`Z.sp` は確保したままの値。 -/
+theorem fcodeH_ok_at (a n cp cl el d : Nat) (B : Array I2) (P : Array I3) (Q : Array I2)
+    (hG : ∀ (k : Nat) (x : I3), (fcodeH a n cp cl el d B)[k]? = some x → P[a + k]? = some x)
+    (hfill : ∀ k, a + 1 + n ≤ k → k < a + 1 + n + 24 → Q[k]? = some (I2.jmp k))
+    (hQP : ∀ (k : Nat) (x : I2), Q[k]? = some x → (a + 1 + n ≤ k ∧ k < a + 1 + n + 24) ∨ P[k]? = some (I3.base x))
+    (hPQ : ∀ (k : Nat) (x : I2), P[k]? = some (I3.base x) → (k < a + 1 + n ∨ a + 1 + n + 24 ≤ k) → Q[k]? = some x)
+    (hcl : cl < n) (hel : el < n) (hcp : cp < n)
+    (R : Nat → Option Int) (res : Option Int)
+    (hbody : ∀ s : St, s.pc = a + 2 * n + 27 → (∀ k < n, k ≠ cp → s.m k = encode (R k)) →
+      (∀ (k : Nat) (x : I2), B[k]? = some x → Q[a + 2 * n + 27 + k]? = some x) →
+      ∃ s', Steps2 Q s s' ∧ s'.pc = a + 2 * n + 27 + B.size ∧ s'.r 0 = encode res ∧ s'.stk = s.stk)
+    (x : HSt) (hs : x.s.pc = a) (hr : ∀ k < n, k ≠ cp → x.s.r k = encode (R k))
+    (hn : (x.s.r cl).toNat + d * (x.s.r el).toNat < 2 ^ 50) (hd : d < 2 ^ 50)
+    (hsa : (x.s.r cp).toNat % 8 = 0) (hsrc : x.sp.toNat ≤ (x.s.r cp).toNat)
+    (hs64 : (x.s.r cp).toNat + 8 * (x.s.r cl).toNat < 2 ^ 64)
+    (hsp : x.sp.toNat % 16 = 0) (hroom : 8 * ((x.s.r cl).toNat + d * (x.s.r el).toNat) + 32 ≤ x.sp.toNat) :
+    ∃ Z : HSt, Steps3 P x Z ∧ Z.s.pc = x.s.lr ∧ Z.s.r 0 = encode res ∧ Z.s.m = x.s.m ∧ Z.s.lr = x.s.lr ∧
+      Z.s.stk = x.s.stk ∧
+      Z.sp.toNat = x.sp.toNat - (((8 * ((x.s.r cl).toNat + d * (x.s.r el).toNat) + 15) / 16) * 16 + 16) := by
+  -- enter
+  obtain ⟨x1, hx1⟩ : ∃ x1, x1 = step3 (I3.base I2.enter) x := ⟨_, rfl⟩
+  have g1 : Steps3 P x x1 := by
+    rw [hx1]; exact Steps3.go' _ a hs (by simpa using hG 0 _ (fcodeH_enter a n cp cl el d B)) (Steps3.refl _)
+  have x1pc : x1.s.pc = a + 1 := by simp [hx1, step3, step2, hs]
+  have x1r : x1.s.r = x.s.r := by simp [hx1, step3, step2]
+  have x1h : x1.h = x.h := by simp [hx1, step3]
+  have x1sp : x1.sp = x.sp := by simp [hx1, step3]
+  have x1k : x1.s.stk = (x.s.m, x.s.lr) :: x.s.stk := by simp [hx1, step3, step2]
+  have x1l : x1.s.lr = x.s.lr := by simp [hx1, step3, step2]
+  -- 仮引数の str
+  obtain ⟨y1, g2, y1pc, y1h, y1sp, y1r, y1m, _, y1l, y1k⟩ := pstore3_ok P (a + 1) n (fun i hi => by
+      have := hG (1 + i) _ (fcodeH_pstore a n cp cl el d B i hi)
+      simpa [Nat.add_assoc] using this) x1 x1pc
+  have mcl : y1.s.m cl = x.s.r cl := by rw [y1m cl hcl, x1r]
+  have mel : y1.s.m el = x.s.r el := by rw [y1m el hel, x1r]
+  have mcp : y1.s.m cp = x.s.r cp := by rw [y1m cp hcp, x1r]
+  -- growCode
+  obtain ⟨y, g3, ypc, ysp, ymcp, ymo, _, _, _, yl, yk⟩ := growEntry_ok P (a + 1 + n) cp cl el d
+    (fun k x' hk => by
+      have := hG (1 + n + k) x' (fcodeH_grow a n cp cl el d B k x' hk)
+      simpa [Nat.add_assoc] using this)
+    y1 (by rw [y1pc]) (by rw [mcl, mel]; exact hn) hd (by rw [mcp]; exact hsa) (by rw [mcp, y1sp, x1sp]; exact hsrc)
+    (by rw [mcp, mcl]; exact hs64) (by rw [y1sp, x1sp]; exact hsp) (by rw [mcl, mel, y1sp, x1sp]; exact hroom)
+  rw [mcl, mel, y1sp, x1sp] at ysp
+  -- jmp 本体へ
+  obtain ⟨y2, hy2⟩ : ∃ y2, y2 = step3 (I3.base (I2.jmp (a + 2 * n + 27))) y := ⟨_, rfl⟩
+  have g4 : Steps3 P y y2 := by
+    rw [hy2]
+    exact Steps3.go' _ (a + (1 + n + 24)) (by rw [ypc]; omega) (hG (1 + n + 24) _ (fcodeH_jmp a n cp cl el d B)) (Steps3.refl _)
+  have y2pc : y2.s.pc = a + 2 * n + 27 := by simp [hy2, step3, step2]
+  have y2m : y2.s.m = y.s.m := by simp [hy2, step3, step2]
+  have y2k : y2.s.stk = y.s.stk := by simp [hy2, step3, step2]
+  have y2sp : y2.sp = y.sp := by simp [hy2, step3]
+  have y2l : y2.s.lr = y.s.lr := by simp [hy2, step3, step2]
+  -- 本体
+  obtain ⟨s', hbs, bpc, br0, bk⟩ := hbody y2.s y2pc (by
+      intro k hk hkc
+      rw [y2m, ymo k hkc, y1m k hk, x1r]; exact hr k hk hkc)
+    (fun k x' hk => by
+      have hlt : k < B.size := by
+        cases Nat.lt_or_ge k B.size with
+        | inl h => exact h
+        | inr h => simp [Array.getElem?_eq_none h] at hk
+      have h1 := hG (1 + n + 24 + 1 + ((1 + n) + k)) _ (by
+        rw [fcodeH_T a n cp cl el d B]
+        exact fcodeHT_body n B k hlt)
+      have h2 : B[k] = x' := by simpa [Array.getElem?_eq_getElem hlt] using hk
+      subst h2
+      have e : a + (1 + n + 24 + 1 + ((1 + n) + k)) = a + 2 * n + 27 + k := by omega
+      rw [e] at h1
+      exact hPQ _ _ h1 (by omega))
+  have g5 := lift2 P Q (a + 1 + n) (a + 1 + n + 24) hfill hQP y2.s s' hbs (by omega) y2.h y2.sp y2.c
+  -- leave
+  have spk : s'.stk = (x.s.m, x.s.lr) :: x.s.stk := by rw [bk, y2k, yk, y1k, x1k]
+  obtain ⟨u, hu⟩ : ∃ u : HSt, u = ⟨s', y2.h, y2.sp, y2.c⟩ := ⟨_, rfl⟩
+  obtain ⟨u2, hu2⟩ : ∃ u2, u2 = step3 (I3.base I2.leave) u := ⟨_, rfl⟩
+  have g6 : Steps3 P u u2 := by
+    rw [hu2]
+    exact Steps3.go' _ (a + (1 + n + 24 + 1 + ((1 + n) + B.size))) (by rw [hu]; simp [bpc]; omega) (hG (1 + n + 24 + 1 + ((1 + n) + B.size)) _ (by
+      rw [fcodeH_T a n cp cl el d B]; exact fcodeHT_leave n B)) (Steps3.refl _)
+  have u2s : u2.s = { s' with pc := s'.pc + 1, m := x.s.m, lr := x.s.lr, stk := x.s.stk } := by
+    simp [hu2, hu, step3, step2, spk]
+  have u2pc : u2.s.pc = a + (1 + n + 24 + 1 + ((1 + n) + B.size + 1)) := by
+    rw [u2s]; simp [bpc]; omega
+  obtain ⟨Z, hZ⟩ : ∃ Z, Z = step3 (I3.base I2.ret) u2 := ⟨_, rfl⟩
+  have g7 : Steps3 P u2 Z := by
+    rw [hZ]
+    exact Steps3.go' _ _ u2pc (hG (1 + n + 24 + 1 + ((1 + n) + B.size + 1)) _ (by
+      rw [fcodeH_T a n cp cl el d B]; exact fcodeHT_ret n B)) (Steps3.refl _)
+  refine ⟨Z, g1.trans (g2.trans (g3.trans (g4.trans ((by rw [← hu] at g5; exact g5 : Steps3 P y2 u).trans (g6.trans g7))))), ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · simp [hZ, step3, step2, u2s]
+  · simp [hZ, step3, step2, u2s, br0]
+  · simp [hZ, step3, step2, u2s]
+  · simp [hZ, step3, step2, u2s]
+  · simp [hZ, step3, step2, u2s]
+  · simp [hZ, step3, hu2, hu, y2sp]; omega
+
+/-- `P` の `I2` の写し: 領域 `[g0, g1)` は `jmp 自分`、ほかは `I2.base` を外した命令(`I3` の命令が領域の外にあれば `jmp 自分`) -/
+def shadowQ (P : Array I3) (g0 g1 : Nat) : Array I2 :=
+  P.mapIdx (fun k i => if g0 ≤ k ∧ k < g1 then I2.jmp k else match i with | .base j => j | _ => I2.jmp k)
+
+theorem shadowQ_get (P : Array I3) (g0 g1 k : Nat) :
+    (shadowQ P g0 g1)[k]? = (P[k]?).map (fun i => if g0 ≤ k ∧ k < g1 then I2.jmp k else match i with | .base j => j | _ => I2.jmp k) := by
+  simp [shadowQ, Array.getElem?_mapIdx]
+
+/-- 領域の外が `I2.base` だけの `I3` の列 `P` の写しは、`fcodeH_ok_at` の `Q` の条件を満たす -/
+theorem shadowQ_spec (P : Array I3) (g0 g1 : Nat) (hlen : g1 ≤ P.size)
+    (hnb : ∀ (k : Nat) (i : I3), P[k]? = some i → ¬ (g0 ≤ k ∧ k < g1) → ∃ j, i = I3.base j) :
+    (∀ k, g0 ≤ k → k < g1 → (shadowQ P g0 g1)[k]? = some (I2.jmp k)) ∧
+    (∀ (k : Nat) (x : I2), (shadowQ P g0 g1)[k]? = some x → (g0 ≤ k ∧ k < g1) ∨ P[k]? = some (I3.base x)) ∧
+    (∀ (k : Nat) (x : I2), P[k]? = some (I3.base x) → (k < g0 ∨ g1 ≤ k) → (shadowQ P g0 g1)[k]? = some x) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro k h1 h2
+    rw [shadowQ_get, Array.getElem?_eq_getElem (by omega)]
+    simp [h1, h2]
+  · intro k x hx
+    rw [shadowQ_get] at hx
+    by_cases hin : g0 ≤ k ∧ k < g1
+    · exact Or.inl hin
+    · right
+      cases hP : P[k]? with
+      | none => simp [hP] at hx
+      | some i =>
+          obtain ⟨j, rfl⟩ := hnb k i hP hin
+          simp [hP, hin] at hx
+          rw [← hx]
+  · intro k x hx hout
+    rw [shadowQ_get, hx]
+    have : ¬ (g0 ≤ k ∧ k < g1) := by omega
+    simp [this]
+
 #print axioms copyLoop_ok
 #print axioms growEntry_ok
+#print axioms lift2
+#print axioms pstore3_ok
+#print axioms fcodeH_ok_at
 
 end SirZH
