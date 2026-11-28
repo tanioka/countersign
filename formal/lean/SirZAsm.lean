@@ -2480,8 +2480,106 @@ theorem compileC_ok (nov : AOp → E → E → Bool)
           have := fB hb; simp only [Array.size_append, Array.size_singleton] at this ⊢; omega
         · intro j hj; show sB.m j = s.m j; rw [mB j hj]; show sA.m j = _; exact mA j hj
 
+/-- 行の並び: `cond : value` を順に、最後に既定の行(あれば)。全部外れて既定が無ければ `!_` -/
+inductive Rows
+  | nil
+  | dflt (e : E)
+  | row (c : Cn) (v : E) (rest : Rows)
+
+def rowsSem (ρ : Nat → Option Int) : Rows → Option Int
+  | .nil => none
+  | .dflt e => sem ρ e
+  | .row c v rest => if ctruth ρ c then sem ρ v else rowsSem ρ rest
+
+def Rows.lits : Rows → Prop
+  | .nil => True
+  | .dflt e => e.lits
+  | .row c v rest => c.lits ∧ v.lits ∧ rest.lits
+
+def Rows.maxVar : Rows → Nat
+  | .nil => 0
+  | .dflt e => e.maxVar
+  | .row c v rest => max c.maxVar (max v.maxVar rest.maxVar)
+
+/-- `sign_asm.py` の `gen_cases`(既定の `--strict` でない形): 条件が成り立てば値を出して終わりへ、外れれば次の行 -/
+def compileR (nov : AOp → E → E → Bool) (base d : Nat) : Rows → Array I
+  | .nil => #[I.movz 0]
+  | .dflt e => compileS nov base d e
+  | .row c v rest =>
+      compileC nov base d ((compileC nov base d 0 c).size + (compileS nov base d v).size + 1) c
+        ++ compileS nov base d v
+        ++ #[I.b ((compileR nov base d rest).size + 1)]
+        ++ compileR nov base d rest
+
+theorem compileR_ok (nov : AOp → E → E → Bool)
+    (hnov : ∀ o l r, nov o l r = true → ∀ ρ a b, sem ρ l = some a → sem ρ r = some b → ∃ z, arithInt o a b = some z)
+    (ρ : Nat → Option Int) (hρ : ∀ k, InR (ρ k)) (hvs : ∀ k, ∃ z, ρ k = some z) (base d : Nat) :
+    ∀ (R : Rows) (s : St), R.lits → R.maxVar ≤ base → s.pc = 0 →
+      (∀ k < base, s.m k = encode (ρ k)) →
+      ∃ s', Steps (compileR nov base d R) s s' ∧ s'.pc = (compileR nov base d R).size ∧
+        s'.r 0 = encode (rowsSem ρ R) ∧ (∀ j < base + d, s'.m j = s.m j) ∧ InR (rowsSem ρ R) := by
+  intro R
+  induction R with
+  | nil =>
+      intro s _ _ hs _
+      refine ⟨step (I.movz 0) s, single _ s hs, ?_, ?_, ?_, ?_⟩
+      · simp [step, St.set, hs, compileR]
+      · simp [step, St.set, rowsSem, encode]
+      · intro j _; simp [step, St.set]
+      · intro z h; simp [rowsSem] at h
+  | dflt e =>
+      intro s hl hv hs hm
+      obtain ⟨s', h, p, r, m, i⟩ := compileS_ok nov hnov ρ hρ hvs base e d s hl hv hs hm
+      exact ⟨s', by simpa [compileR] using h, by simpa [compileR] using p, r, m, i⟩
+  | row c v rest ih =>
+      intro s hl hv hs hm
+      obtain ⟨hlc, hlv, hlr⟩ := hl
+      have hvc : c.maxVar ≤ base := by simp only [Rows.maxVar] at hv; omega
+      have hvv : v.maxVar ≤ base := by simp only [Rows.maxVar] at hv; omega
+      have hvr : rest.maxVar ≤ base := by simp only [Rows.maxVar] at hv; omega
+      obtain ⟨fo, hfo⟩ : ∃ fo, fo = (compileC nov base d 0 c).size + (compileS nov base d v).size + 1 := ⟨_, rfl⟩
+      have hdef : compileR nov base d (.row c v rest) =
+          ((compileC nov base d fo c ++ compileS nov base d v) ++ #[I.b ((compileR nov base d rest).size + 1)])
+            ++ compileR nov base d rest := by
+        simp only [compileR]; rw [← hfo]
+      have hCs : (compileC nov base d fo c).size = (compileC nov base d 0 c).size := compileC_size nov base c d fo 0
+      obtain ⟨sC, hC, tC, fC, mC⟩ := compileC_ok nov hnov ρ hρ hvs base c d fo s hlc hvc hs hm (by omega)
+      rw [hdef]
+      by_cases hct : ctruth ρ c = true
+      · have pC := tC hct
+        obtain ⟨sV, hV, pV, rV, mV, iV⟩ := compileS_ok nov hnov ρ hρ hvs base v d { sC with pc := 0 } hlv hvv rfl
+          (by intro k hk; show sC.m k = _; rw [mC k (by omega)]; exact hm k hk)
+        have hCV := Steps.append hC pC hV
+        let s2 : St := step (I.b ((compileR nov base d rest).size + 1)) { { sV with pc := sV.pc + (compileC nov base d fo c).size } with pc := 0 }
+        have h2 : Steps ((compileC nov base d fo c ++ compileS nov base d v) ++ #[I.b ((compileR nov base d rest).size + 1)]) s
+            { s2 with pc := s2.pc + (compileC nov base d fo c ++ compileS nov base d v).size } := by
+          refine Steps.append hCV (by simp [pV]; omega) (single _ _ rfl)
+        refine ⟨{ s2 with pc := s2.pc + (compileC nov base d fo c ++ compileS nov base d v).size }, h2.left _, ?_, ?_, ?_, ?_⟩
+        · show s2.pc + _ = _
+          simp only [s2, step, Array.size_append, Array.size_singleton]; omega
+        · show s2.r 0 = _
+          simp [s2, step, rowsSem, hct, rV]
+        · intro j hj; show s2.m j = s.m j; simp [s2, step]; rw [mV j hj]; exact mC j hj
+        · simp [rowsSem, hct]; exact iV
+      · have hcf : ctruth ρ c = false := by simpa using hct
+        have pC := fC hcf
+        have h1 : Steps ((compileC nov base d fo c ++ compileS nov base d v) ++ #[I.b ((compileR nov base d rest).size + 1)]) s sC :=
+          (hC.left (compileS nov base d v)).left _
+        obtain ⟨sR, hR, pR, rR, mR, iR⟩ := ih { sC with pc := 0 } hlr hvr rfl
+          (by intro k hk; show sC.m k = _; rw [mC k (by omega)]; exact hm k hk)
+        have hAB := Steps.append h1 (by simp; omega) hR
+        refine ⟨{ sR with pc := sR.pc + ((compileC nov base d fo c ++ compileS nov base d v) ++ #[I.b ((compileR nov base d rest).size + 1)]).size },
+          hAB, ?_, ?_, ?_, ?_⟩
+        · show sR.pc + _ = _
+          rw [pR]; simp only [Array.size_append, Array.size_singleton]; omega
+        · show sR.r 0 = _
+          simp [rowsSem, hcf, rR]
+        · intro j hj; show sR.m j = s.m j; rw [mR j hj]; show sC.m j = _; exact mC j hj
+        · simp [rowsSem, hcf]; exact iR
+
 end SirZAsm
 
 #print axioms SirZAsm.compileS_ok
 #print axioms SirZAsm.compileS_ok_real
 #print axioms SirZAsm.compileC_ok
+#print axioms SirZAsm.compileR_ok
