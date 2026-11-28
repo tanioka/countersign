@@ -13,6 +13,7 @@ VARS = ["x", "y", "z"]
 def gen(rnd, depth):
     if depth == 0 or rnd.random() < 0.25:
         return ("var", rnd.randrange(3)) if rnd.random() < 0.6 else ("lit", rnd.randrange(0, 10))
+    if rnd.random() < 0.15: return ("neg", gen(rnd, depth - 1))
     o = rnd.choice(list(OPS))
     l, r = gen(rnd, depth - 1), gen(rnd, depth - 1)
     # 字面どうしは畳み込みや値域の解析で形が変わるので、少なくとも片方に変数を含める
@@ -22,11 +23,13 @@ def gen(rnd, depth):
 def src(e):
     if e[0] == "var": return VARS[e[1]]
     if e[0] == "lit": return str(e[1])
+    if e[0] == "neg": return "-%s" % (src(e[1]) if e[1][0] in ("var", "lit") else "(%s)" % src(e[1]))
     return "(%s %s %s)" % (src(e[2]), e[1], src(e[3]))
 
 def lean_term(e):
     if e[0] == "var": return "(E.var %d)" % e[1]
     if e[0] == "lit": return "(E.lit %d)" % e[1]
+    if e[0] == "neg": return "(E.neg %s)" % lean_term(e[1])
     return "(E.op .%s %s %s)" % (OPS[e[1]], lean_term(e[2]), lean_term(e[3]))
 
 HEAD = r'''import SirZAsm
@@ -38,7 +41,7 @@ def sh : I → String
   | .cmpAsr a b s => s!"cmpAsr {a} {b} {s}" | .adds d a b => s!"adds {d} {a} {b}" | .subs d a b => s!"subs {d} {a} {b}"
   | .mul d a b => s!"mul {d} {a} {b}" | .smulh d a b => s!"smulh {d} {a} {b}" | .sdiv d a b => s!"sdiv {d} {a} {b}"
   | .msub d a b c => s!"msub {d} {a} {b} {c}" | .csel d a b c => s!"csel {d} {a} {b} {shc c}"
-  | .bc c t => s!"bc {shc c} {t}" | .b t => s!"b {t}" | .movi d n => s!"movi {d} {n}" | .str a k => s!"str {a} {k}" | .ldr d k => s!"ldr {d} {k}"
+  | .bc c t => s!"bc {shc c} {t}" | .b t => s!"b {t}" | .movi d n => s!"movi {d} {n}" | .str a k => s!"str {a} {k}" | .ldr d k => s!"ldr {d} {k}" | .neg d a => s!"neg {d} {a}"
 def out (p : Array I) : IO Unit := IO.println (String.intercalate ";" (p.toList.map sh))
 '''
 
@@ -67,6 +70,8 @@ def asm_body(e):
         op, _, rest = l.partition(" ")
         a = [x.strip() for x in rest.split(",")]
         if op == "movz": out.append("movz %d" % r(a[0]))
+        elif op == "neg": out.append("neg %d %d" % (r(a[0]), r(a[1])))
+        elif op == "movn": out.append("movi %d %d" % (r(a[0]), -int(a[1][1:], 0) - 1))
         elif op == "mov" and a[1].startswith("#"): out.append("movi %d %d" % (r(a[0]), int(a[1][1:])))
         elif op == "mov": out.append("mov %d %d" % (r(a[0]), r(a[1])))
         elif op == "str": out.append("str %d %d" % (r(a[0]), slot(rest)))
@@ -89,7 +94,7 @@ def main(n=60, seed=1):
     with tempfile.TemporaryDirectory() as d:
         env = dict(os.environ, LEAN_PATH=d)
         subprocess.run([LEAN, "-o", os.path.join(d, "SirZAsm.olean"), os.path.join(HERE, "formal/lean/SirZAsm.lean")], check=True, capture_output=True, env=env)
-        prog = HEAD + "".join("#eval out (compileS (fun _ _ _ => false) 3 0 %s)\n" % lean_term(t) for t in trees)
+        prog = HEAD + "".join("#eval out (compileS novR 3 0 %s)\n" % lean_term(t) for t in trees)
         f = os.path.join(d, "T.lean"); open(f, "w").write(prog)
         res = subprocess.run([LEAN, f], capture_output=True, text=True, env=env)
     got = [l for l in res.stdout.split("\n") if l]
