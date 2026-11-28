@@ -18,8 +18,13 @@
     入る個数の検査、末尾へ書き、仮引数 `ps`・`pl` の更新)を証明した。入らなければ溢れの行き先へ(`h`・`sp`・`lr`・フレームは元のまま)、
     入れば語 `ptr/8 + len + i` に要素が書かれ `len` が `len + k` に(`AccInv`)。`append_rounds` は、各回の要素の評価(`refill`)を挟んだ `r` 回で、
     器の内容が `L ++ (各回の要素)` になることを帰納法で示す。
-  * 範囲: リスト(8 バイトの語)の累積 1 つ・食う器 1 つの形。文字列(1/4 バイト幅)・輪(食う器の和)・複数の累積、
-    回るたびの末尾呼び出しの書き足し(append)、`gen_copy_result`(作業領域から置き場へ写す)は次。
+  * 文字列と輪(`copyLoopS_ok`・`growTailS_ok`・`growTailL_ok`・`sumPre_ok`・`ringEntryL_ok`・`ringEntryS_ok`): `HSt` にバイト単位の領域 `hb` を足し、
+    `ldrS`/`strS`(ascii 1 バイト・utf32 4 バイト)を入れた。文字列の写しのループ(`pre_grow` の `ldrb/strb`・`ldr w/str w, lsl #2`)は、
+    元と先が重ならなければ先の `[0, 長さ×幅)` バイトが元と同じ(幅 `w = 2^sh ≤ 4`)。作業領域を取る後ろ半分は `x9 = n`(要素数)から
+    `((n·w+15)/16)×16+16` バイトを取り、輪では `n = ||acc|| + d × Σ(食う器の長さ)` を `x9` に足し上げる前半(`sumPre_ok`)をつける
+    (食う器が 1 つなら `growPre` の前半と同じ)。リストの輪 `ringEntryL_ok`、文字列の輪 `ringEntryS_ok`。
+  * 範囲: 累積 1 つ。文字列の `commit_grow`(U+0000 を飛ばす append)、複数の累積、`ringcall`(`.rec` を通る関数をまたいだ累積)、
+    `gen_copy_result`(作業領域から置き場へ写す)は次。
 -/
 import SirZAsm
 open SirZAsm
@@ -33,6 +38,7 @@ structure HSt where
   h : Nat → W                          -- 語のメモリ(添字 = 番地 / 8)
   sp : W
   c : Bool                             -- 桁上がり(`cmp` の C。`b.hs` が読む)
+  hb : Nat → BitVec 8                  -- 文字列の領域(バイト単位。添字 = 番地)。リストの語のメモリ `h` とは別の領域として扱う
 
 /-- メモリを触る命令を足した命令の集合 -/
 inductive I3
@@ -52,9 +58,20 @@ inductive I3
   | addR (d a b : Nat)                 -- add xd, xa, xb
   | cmpH (a b : Nat)                   -- cmp xa, xb(続く `b.hi` が読む: 旗は「xa > xb(符号なし)」)
   | bhi (t : Nat)                      -- b.hi(旗なら今の命令から t 先へ。前向き)
+  | ldrS (sh d a i : Nat)              -- ascii(sh=0): ldrb wd,[xa,xi] / utf32(sh=2): ldr wd,[xa,xi,lsl #2]
+  | strS (sh d a i : Nat)              -- ascii: strb wd,[xa,xi] / utf32: str wd,[xa,xi,lsl #2]
 
 /-- 番地 `a + 8 i` の語の添字 -/
 def widx (a i : W) : Nat := (a + (i <<< 3)).toNat / 8
+
+/-- `p` から `w` バイトを小さい位から読んだ数(リトルエンディアン) -/
+def rdb (hb : Nat → BitVec 8) (p : Nat) : Nat → Nat
+  | 0 => 0
+  | w + 1 => (hb p).toNat + 256 * rdb hb (p + 1) w
+
+/-- `p` から `w` バイトに `v` の下位バイトを書く -/
+def wrb (hb : Nat → BitVec 8) (p w v : Nat) : Nat → BitVec 8 :=
+  fun k => if p ≤ k ∧ k < p + w then BitVec.ofNat 8 (v / 256 ^ (k - p)) else hb k
 
 def step3 (i : I3) (x : HSt) : HSt :=
   let s := x.s
@@ -74,6 +91,8 @@ def step3 (i : I3) (x : HSt) : HSt :=
   | .addR d a b => { x with s := { (s.set d (s.r a + s.r b)) with pc := s.pc + 1 } }
   | .cmpH a b => { x with c := decide ((s.r b).toNat < (s.r a).toNat), s := { s with pc := s.pc + 1 } }
   | .bhi t => if x.c then { x with s := { s with pc := s.pc + t } } else { x with s := { s with pc := s.pc + 1 } }
+  | .ldrS sh d a i => { x with s := { (s.set d (BitVec.ofNat 64 (rdb x.hb (s.r a + (s.r i <<< sh)).toNat (2 ^ sh)))) with pc := s.pc + 1 } }
+  | .strS sh d a i => { x with hb := wrb x.hb (s.r a + (s.r i <<< sh)).toNat (2 ^ sh) (s.r d).toNat, s := { s with pc := s.pc + 1 } }
   | .bhs t => if x.c then { x with s := { s with pc := s.pc + t } } else { x with s := { s with pc := s.pc + 1 } }
 
 inductive Steps3 (p : Array I3) : HSt → HSt → Prop
@@ -513,13 +532,13 @@ theorem stuck2 (Q : Array I2) (g0 g1 : Nat) (hfill : ∀ k, g0 ≤ k → k < g1 
 theorem lift2 (P : Array I3) (Q : Array I2) (g0 g1 : Nat)
     (hfill : ∀ k, g0 ≤ k → k < g1 → Q[k]? = some (I2.jmp k))
     (hQ : ∀ k x, Q[k]? = some x → (g0 ≤ k ∧ k < g1) ∨ P[k]? = some (I3.base x)) :
-    ∀ (s s' : St), Steps2 Q s s' → (s'.pc < g0 ∨ g1 ≤ s'.pc) → ∀ (h : Nat → W) (sp : W) (c : Bool),
-      Steps3 P ⟨s, h, sp, c⟩ ⟨s', h, sp, c⟩ := by
+    ∀ (s s' : St), Steps2 Q s s' → (s'.pc < g0 ∨ g1 ≤ s'.pc) → ∀ (h : Nat → W) (sp : W) (c : Bool) (hb : Nat → BitVec 8),
+      Steps3 P ⟨s, h, sp, c, hb⟩ ⟨s', h, sp, c, hb⟩ := by
   intro s s' hs
   induction hs with
-  | refl s => intro _ h sp c; exact Steps3.refl _
+  | refl s => intro _ h sp c hb; exact Steps3.refl _
   | step s s2 hlt hrest ih =>
-      intro hend h sp c
+      intro hend h sp c hb
       have hout : s.pc < g0 ∨ g1 ≤ s.pc := by
         by_cases hin : g0 ≤ s.pc ∧ s.pc < g1
         · exfalso
@@ -535,7 +554,7 @@ theorem lift2 (P : Array I3) (Q : Array I2) (g0 g1 : Nat)
         · omega
         · exact hP
       refine Steps3.go' (I3.base Q[s.pc]) s.pc rfl hP' ?_
-      exact ih hend h sp c
+      exact ih hend h sp c hb
 
 /-- `pstore`: 仮引数をレジスタから枠へ(I3 の列の `I2.base (I.str k k)` の並び) -/
 theorem pstore3_ok (P : Array I3) (b : Nat) :
@@ -751,10 +770,10 @@ theorem fcodeH_ok_at (a n cp cl el d : Nat) (B : Array I2) (P : Array I3) (Q : A
       have e : a + (1 + n + 24 + 1 + ((1 + n) + k)) = a + 2 * n + 27 + k := by omega
       rw [e] at h1
       exact hPQ _ _ h1 (by omega))
-  have g5 := lift2 P Q (a + 1 + n) (a + 1 + n + 24) hfill hQP y2.s s' hbs (by omega) y2.h y2.sp y2.c
+  have g5 := lift2 P Q (a + 1 + n) (a + 1 + n + 24) hfill hQP y2.s s' hbs (by omega) y2.h y2.sp y2.c y2.hb
   -- leave
   have spk : s'.stk = (x.s.m, x.s.lr) :: x.s.stk := by rw [bk, y2k, yk, y1k, x1k]
-  obtain ⟨u, hu⟩ : ∃ u : HSt, u = ⟨s', y2.h, y2.sp, y2.c⟩ := ⟨_, rfl⟩
+  obtain ⟨u, hu⟩ : ∃ u : HSt, u = ⟨s', y2.h, y2.sp, y2.c, y2.hb⟩ := ⟨_, rfl⟩
   obtain ⟨u2, hu2⟩ : ∃ u2, u2 = step3 (I3.base I2.leave) u := ⟨_, rfl⟩
   have g6 : Steps3 P u u2 := by
     rw [hu2]
@@ -1213,6 +1232,762 @@ theorem append_rounds (P : Array I3) (b ps pl k t1 t2 te o : Nat)
       refine ⟨w, ⟨y, g, hw⟩, wpc, ?_⟩
       simpa [accs, List.append_assoc] using wacc
 
+/-! ### 文字列と輪
+
+文字列の領域はバイト単位の `hb`(`ldrS`/`strS`。ascii は `ldrb/strb`、utf32 は `ldr w/str w, lsl #2`。リトルエンディアン)、リストの語は `h`。
+別の領域として扱う。 -/
+
+theorem rdb_lt (hb : Nat → BitVec 8) : ∀ (w p : Nat), rdb hb p w < 256 ^ w := by
+  intro w
+  induction w with
+  | zero => intro p; simp [rdb]
+  | succ w ih =>
+      intro p
+      have h1 := ih (p + 1)
+      have h2 := (hb p).isLt
+      have h3 : 256 ^ (w + 1) = 256 ^ w * 256 := Nat.pow_succ ..
+      simp only [rdb]
+      omega
+
+theorem rdb_byte (hb : Nat → BitVec 8) : ∀ (w p j : Nat), j < w → rdb hb p w / 256 ^ j % 256 = (hb (p + j)).toNat := by
+  intro w
+  induction w with
+  | zero => intro p j hj; omega
+  | succ w ih =>
+      intro p j hj
+      have h2 := (hb p).isLt
+      cases j with
+      | zero => simp only [rdb]; simp; omega
+      | succ j =>
+          have e : 256 ^ (j + 1) = 256 * 256 ^ j := by rw [Nat.pow_succ]; omega
+          have e2 : (hb p).toNat + 256 * rdb hb (p + 1) w = (hb p).toNat + 256 * rdb hb (p + 1) w := rfl
+          have e3 : ((hb p).toNat + 256 * rdb hb (p + 1) w) / 256 = rdb hb (p + 1) w := by omega
+          simp only [rdb]
+          rw [e, ← Nat.div_div_eq_div_mul, e3]
+          have := ih (p + 1) j (by omega)
+          rw [this]
+          congr 2; omega
+
+/-- 読んだ数をそのまま書き戻すと、元と同じバイトが並ぶ -/
+theorem wrb_rdb (hb : Nat → BitVec 8) (s d w : Nat) (j : Nat) (hj : j < w) :
+    wrb hb d w (rdb hb s w) (d + j) = hb (s + j) := by
+  unfold wrb
+  rw [if_pos (by omega)]
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_ofNat]
+  have : d + j - d = j := by omega
+  rw [this]
+  have := rdb_byte hb w s j hj
+  simpa using this
+
+theorem addr_nat (a i : W) (sh n : Nat) (hi : i.toNat = n) (hb : a.toNat + n * 2 ^ sh < 2 ^ 64) :
+    (a + (i <<< sh)).toNat = a.toNat + n * 2 ^ sh := by
+  rw [BitVec.toNat_add, BitVec.toNat_shiftLeft, hi, Nat.shiftLeft_eq]
+  rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
+
+
+/-! ### 文字列の写し(`pre_grow` の文字列のループ): ascii は `ldrb/strb`(sh = 0)、utf32 は `ldr w/str w, lsl #2`(sh = 2) -/
+
+def copyLoopS (sh : Nat) : Array I3 :=
+  #[I3.cmpU 14 1, I3.bhs 5, I3.ldrS sh 3 0 14, I3.strS sh 3 12 14, I3.addI 14 14 1, I3.base (I2.bk 5)]
+
+theorem copyLoopS_size (sh : Nat) : (copyLoopS sh).size = 6 := rfl
+
+theorem copyLoopS_ok (P : Array I3) (b : Nat) (sh w : Nat) (hw : 2 ^ sh = w) (hw0 : 0 < w)
+    (hP : ∀ k x, (copyLoopS sh)[k]? = some x → P[b + k]? = some x)
+    (src dst : W) (len : Nat)
+    (hs : src.toNat + len * w < 2 ^ 64) (hd : dst.toNat + len * w < 2 ^ 64)
+    (hdis : dst.toNat + len * w ≤ src.toNat ∨ src.toNat + len * w ≤ dst.toNat) (hrd : w ≤ 4) :
+    ∀ (m : Nat) (x : HSt), len - (x.s.r 14).toNat = m → x.s.pc = b → (x.s.r 14).toNat ≤ len →
+      x.s.r 0 = src → x.s.r 1 = BitVec.ofNat 64 len → x.s.r 12 = dst →
+      ∃ y, Steps3 P x y ∧ y.s.pc = b + 6 ∧ (y.s.r 14).toNat = len ∧
+        (∀ j, (x.s.r 14).toNat * w ≤ j → j < len * w → y.hb (dst.toNat + j) = x.hb (src.toNat + j)) ∧
+        (∀ k, (∀ j, (x.s.r 14).toNat * w ≤ j → j < len * w → k ≠ dst.toNat + j) → y.hb k = x.hb k) ∧
+        y.h = x.h ∧ y.sp = x.sp ∧ y.s.m = x.s.m ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk ∧ y.s.r 0 = src ∧ y.s.r 1 = BitVec.ofNat 64 len ∧
+        y.s.r 12 = dst := by
+  intro m
+  induction m with
+  | zero =>
+      intro x hm hpc hle h0 h1 h12
+      have hi : (x.s.r 14).toNat = len := by omega
+      have hl64 : len < 2 ^ 64 := by
+        have : len ≤ len * w := Nat.le_mul_of_pos_right len hw0
+        omega
+      have hlt1 : (x.s.r 1).toNat = len := by rw [h1]; simp [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hl64]
+      have g1 : Steps3 P x (step3 (I3.cmpU 14 1) x) :=
+        Steps3.go' (I3.cmpU 14 1) b hpc (by simpa using hP 0 _ (by simp [copyLoopS])) (Steps3.refl _)
+      obtain ⟨x1, hx1⟩ : ∃ x1, x1 = step3 (I3.cmpU 14 1) x := ⟨_, rfl⟩
+      have c1 : x1.c = true := by simp [hx1, step3, hlt1, hi]
+      have p1 : x1.s.pc = b + 1 := by simp [hx1, step3, hpc]
+      have s1 : x1.s.r = x.s.r := by simp [hx1, step3]
+      rw [← hx1] at g1
+      obtain ⟨x2, hx2⟩ : ∃ x2, x2 = step3 (I3.bhs 5) x1 := ⟨_, rfl⟩
+      have g2 : Steps3 P x1 x2 := by
+        rw [hx2]; exact Steps3.go' (I3.bhs 5) (b + 1) p1 (by simpa using hP 1 _ (by simp [copyLoopS])) (Steps3.refl _)
+      have hx1h : x1.h = x.h := by simp [hx1, step3]
+      have hx1b : x1.hb = x.hb := by simp [hx1, step3]
+      have hx2e : x2 = { x1 with s := { x1.s with pc := x1.s.pc + 5 } } := by rw [hx2]; simp [step3, c1]
+      have e1m : x1.s.m = x.s.m := by simp [hx1, step3]
+      have e1l : x1.s.lr = x.s.lr := by simp [hx1, step3]
+      have e1k : x1.s.stk = x.s.stk := by simp [hx1, step3]
+      have e1s : x1.sp = x.sp := by simp [hx1, step3]
+      refine ⟨x2, g1.trans g2, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      · simp [hx2e, p1]
+      · simp [hx2e, s1, hi]
+      · intro j hj1 hj2; rw [hi] at hj1; omega
+      · intro k _; simp [hx2e, hx1b]
+      · simp [hx2e, hx1h]
+      · simp [hx2e, e1s]
+      · simp [hx2e, e1m]
+      · simp [hx2e, e1l]
+      · simp [hx2e, e1k]
+      · simp [hx2e, s1, h0]
+      · simp [hx2e, s1, h1]
+      · simp [hx2e, s1, h12]
+  | succ m ih =>
+      intro x hm hpc hle h0 h1 h12
+      have hl64 : len < 2 ^ 64 := by
+        have : len ≤ len * w := Nat.le_mul_of_pos_right len hw0
+        omega
+      have hlt1 : (x.s.r 1).toNat = len := by rw [h1]; simp [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hl64]
+      have hilt : (x.s.r 14).toNat < len := by omega
+      obtain ⟨i, hi⟩ : ∃ i, i = (x.s.r 14).toNat := ⟨_, rfl⟩
+      have hiw : (i + 1) * w = i * w + w := by rw [Nat.add_mul]; simp
+      have hlw : (i + 1) * w ≤ len * w := Nat.mul_le_mul_right w (by omega : i + 1 ≤ len)
+      have g1 : Steps3 P x (step3 (I3.cmpU 14 1) x) :=
+        Steps3.go' (I3.cmpU 14 1) b hpc (by simpa using hP 0 _ (by simp [copyLoopS])) (Steps3.refl _)
+      obtain ⟨x1, hx1⟩ : ∃ x1, x1 = step3 (I3.cmpU 14 1) x := ⟨_, rfl⟩
+      have c1 : x1.c = false := by simp [hx1, step3, hlt1]; omega
+      have p1 : x1.s.pc = b + 1 := by simp [hx1, step3, hpc]
+      have f1r : x1.s.r = x.s.r := by simp [hx1, step3]
+      have f1h : x1.h = x.h := by simp [hx1, step3]
+      have f1b : x1.hb = x.hb := by simp [hx1, step3]
+      have f1sp : x1.sp = x.sp := by simp [hx1, step3]
+      have f1m : x1.s.m = x.s.m := by simp [hx1, step3]
+      have f1l : x1.s.lr = x.s.lr := by simp [hx1, step3]
+      have f1k : x1.s.stk = x.s.stk := by simp [hx1, step3]
+      rw [← hx1] at g1
+      obtain ⟨x2, hx2⟩ : ∃ x2, x2 = step3 (I3.bhs 5) x1 := ⟨_, rfl⟩
+      have g2 : Steps3 P x1 x2 := by
+        rw [hx2]; exact Steps3.go' (I3.bhs 5) (b + 1) p1 (by simpa using hP 1 _ (by simp [copyLoopS])) (Steps3.refl _)
+      have hx2e : x2 = { x1 with s := { x1.s with pc := x1.s.pc + 1 } } := by rw [hx2]; simp [step3, c1]
+      have p2 : x2.s.pc = b + 2 := by simp [hx2e, p1]
+      have f2r : x2.s.r = x.s.r := by simp [hx2e, f1r]
+      have f2h : x2.h = x.h := by simp [hx2e, f1h]
+      have f2b : x2.hb = x.hb := by simp [hx2e, f1b]
+      have f2sp : x2.sp = x.sp := by simp [hx2e, f1sp]
+      have f2m : x2.s.m = x.s.m := by simp [hx2e, f1m]
+      have f2l : x2.s.lr = x.s.lr := by simp [hx2e, f1l]
+      have f2k : x2.s.stk = x.s.stk := by simp [hx2e, f1k]
+      obtain ⟨x3, hx3⟩ : ∃ x3, x3 = step3 (I3.ldrS sh 3 0 14) x2 := ⟨_, rfl⟩
+      have g3 : Steps3 P x2 x3 := by
+        rw [hx3]; exact Steps3.go' (I3.ldrS sh 3 0 14) (b + 2) p2 (by simpa using hP 2 _ (by simp [copyLoopS])) (Steps3.refl _)
+      have hiw' : i * w ≤ len * w := Nat.mul_le_mul_right w (by omega)
+      have hadr : (x.s.r 0 + (x.s.r 14 <<< sh)).toNat = src.toNat + i * w := by
+        have := addr_nat (x.s.r 0) (x.s.r 14) sh i hi.symm (by rw [h0, hw]; omega)
+        rw [this, h0, hw]
+      have p3 : x3.s.pc = b + 3 := by simp [hx3, step3, p2]
+      have f3h : x3.h = x.h := by simp [hx3, step3, f2h]
+      have f3b : x3.hb = x.hb := by simp [hx3, step3, f2b]
+      have f3sp : x3.sp = x.sp := by simp [hx3, step3, f2sp]
+      have f3m : x3.s.m = x.s.m := by simp [hx3, step3, f2m]
+      have f3l : x3.s.lr = x.s.lr := by simp [hx3, step3, f2l]
+      have f3k : x3.s.stk = x.s.stk := by simp [hx3, step3, f2k]
+      have r3 : x3.s.r 3 = BitVec.ofNat 64 (rdb x.hb (src.toNat + i * w) w) := by
+        have e : x3.s.r 3 = BitVec.ofNat 64 (rdb x2.hb (x2.s.r 0 + (x2.s.r 14 <<< sh)).toNat (2 ^ sh)) := by
+          rw [hx3]; rfl
+        rw [e, f2r, f2b, hadr, hw]
+      have s3 : ∀ j, j ≠ 3 → x3.s.r j = x.s.r j := by
+        intro j hj; simp [hx3, step3, St.set, f2r, hj]
+      have hr3n : (x3.s.r 3).toNat = rdb x.hb (src.toNat + i * w) w := by
+        rw [r3, BitVec.toNat_ofNat]
+        apply Nat.mod_eq_of_lt
+        have := rdb_lt x.hb w (src.toNat + i * w)
+        have h256 : 256 ^ w ≤ 256 ^ 4 := Nat.pow_le_pow_right (by omega) hrd
+        have : (256 : Nat) ^ 4 < 2 ^ 64 := by decide
+        omega
+      obtain ⟨x4, hx4⟩ : ∃ x4, x4 = step3 (I3.strS sh 3 12 14) x3 := ⟨_, rfl⟩
+      have g4 : Steps3 P x3 x4 := by
+        rw [hx4]; exact Steps3.go' (I3.strS sh 3 12 14) (b + 3) p3 (by simpa using hP 3 _ (by simp [copyLoopS])) (Steps3.refl _)
+      have hadr2 : (x3.s.r 12 + (x3.s.r 14 <<< sh)).toNat = dst.toNat + i * w := by
+        rw [s3 12 (by omega), s3 14 (by omega), h12]
+        have := addr_nat dst (x.s.r 14) sh i hi.symm (by rw [hw]; omega)
+        rw [this, hw]
+      have f4b : ∀ k, x4.hb k = wrb x.hb (dst.toNat + i * w) w (rdb x.hb (src.toNat + i * w) w) k := by
+        intro k; simp only [hx4, step3, hadr2, hw, f3b, hr3n]
+      have p4 : x4.s.pc = b + 4 := by simp [hx4, step3, p3]
+      have f4r : x4.s.r = x3.s.r := by simp [hx4, step3]
+      have f4h : x4.h = x.h := by simp [hx4, step3, f3h]
+      have f4sp : x4.sp = x.sp := by simp [hx4, step3, f3sp]
+      have f4m : x4.s.m = x.s.m := by simp [hx4, step3, f3m]
+      have f4l : x4.s.lr = x.s.lr := by simp [hx4, step3, f3l]
+      have f4k : x4.s.stk = x.s.stk := by simp [hx4, step3, f3k]
+      obtain ⟨x5, hx5⟩ : ∃ x5, x5 = step3 (I3.addI 14 14 1) x4 := ⟨_, rfl⟩
+      have g5 : Steps3 P x4 x5 := by
+        rw [hx5]; exact Steps3.go' (I3.addI 14 14 1) (b + 4) p4 (by simpa using hP 4 _ (by simp [copyLoopS])) (Steps3.refl _)
+      have p5 : x5.s.pc = b + 5 := by simp [hx5, step3, p4]
+      have f5h : x5.h = x.h := by simp [hx5, step3, f4h]
+      have f5b : x5.hb = x4.hb := by simp [hx5, step3]
+      have f5sp : x5.sp = x.sp := by simp [hx5, step3, f4sp]
+      have f5m : x5.s.m = x.s.m := by simp [hx5, step3, f4m]
+      have f5l : x5.s.lr = x.s.lr := by simp [hx5, step3, f4l]
+      have f5k : x5.s.stk = x.s.stk := by simp [hx5, step3, f4k]
+      have r5 : ∀ j, j ≠ 3 → j ≠ 14 → x5.s.r j = x.s.r j := by
+        intro j hi3 hj
+        simp [hx5, step3, St.set, f4r, hj]
+        exact s3 j hi3
+      have r14 : (x5.s.r 14).toNat = i + 1 := by
+        have e14 : x5.s.r 14 = x.s.r 14 + BitVec.ofNat 64 1 := by
+          simp [hx5, step3, St.set, f4r, s3 14 (by omega)]
+        rw [e14, BitVec.toNat_add]; simp
+        omega
+      obtain ⟨x6, hx6⟩ : ∃ x6, x6 = step3 (I3.base (I2.bk 5)) x5 := ⟨_, rfl⟩
+      have g6 : Steps3 P x5 x6 := by
+        rw [hx6]; exact Steps3.go' (I3.base (I2.bk 5)) (b + 5) p5 (by simpa using hP 5 _ (by simp [copyLoopS])) (Steps3.refl _)
+      have p6 : x6.s.pc = b := by simp [hx6, step3, step2, p5]
+      have f6r : x6.s.r = x5.s.r := by simp [hx6, step3, step2]
+      have f6h : x6.h = x.h := by simp [hx6, step3, f5h]
+      have f6b : x6.hb = x5.hb := by simp [hx6, step3]
+      have f6sp : x6.sp = x.sp := by simp [hx6, step3, f5sp]
+      have f6m : x6.s.m = x.s.m := by simp [hx6, step3, step2, f5m]
+      have f6l : x6.s.lr = x.s.lr := by simp [hx6, step3, step2, f5l]
+      have f6k : x6.s.stk = x.s.stk := by simp [hx6, step3, step2, f5k]
+      have hm' : len - (x6.s.r 14).toNat = m := by rw [f6r, r14]; omega
+      have hr0 : x6.s.r 0 = src := by rw [f6r, r5 0 (by omega) (by omega), h0]
+      have hr1 : x6.s.r 1 = BitVec.ofNat 64 len := by rw [f6r, r5 1 (by omega) (by omega), h1]
+      have hr12 : x6.s.r 12 = dst := by rw [f6r, r5 12 (by omega) (by omega), h12]
+      obtain ⟨y, hy, ypc, y14, yh1, yh2, yhh, ysp, ym, ylr, ystk, y0, y1, y12⟩ :=
+        ih x6 hm' p6 (by rw [f6r, r14]; omega) hr0 hr1 hr12
+      have hx6b : ∀ k, x6.hb k = wrb x.hb (dst.toNat + i * w) w (rdb x.hb (src.toNat + i * w) w) k := by
+        intro k; rw [f6b, f5b]; exact f4b k
+      have r14x : (x6.s.r 14).toNat = i + 1 := by rw [f6r, r14]
+      rw [r14x] at yh1 yh2
+      refine ⟨y, g1.trans (g2.trans (g3.trans (g4.trans (g5.trans (g6.trans hy))))), ypc, y14, ?_, ?_, by rw [yhh, f6h], by rw [ysp, f6sp], by rw [ym, f6m],
+        by rw [ylr, f6l], by rw [ystk, f6k], y0, y1, y12⟩
+      · intro j hj1 hj2
+        rw [← hi] at hj1
+        by_cases hji : j < i * w + w
+        · rw [yh2 (dst.toNat + j) (by intro j' hj' _; omega), hx6b]
+          have hj' : j - i * w < w := by omega
+          have := wrb_rdb x.hb (src.toNat + i * w) (dst.toNat + i * w) w (j - i * w) hj'
+          have e1 : dst.toNat + i * w + (j - i * w) = dst.toNat + j := by omega
+          have e2 : src.toNat + i * w + (j - i * w) = src.toNat + j := by omega
+          rw [e1, e2] at this; exact this
+        · rw [yh1 j (by omega) hj2, hx6b]
+          unfold wrb
+          rw [if_neg]
+          intro hc
+          omega
+      · intro k hk
+        rw [yh2 k (by intro j hj1 hj2; exact hk j (by rw [← hi]; omega) hj2), hx6b]
+        unfold wrb
+        rw [if_neg]
+        intro hc
+        have := hk (k - dst.toNat) (by rw [← hi]; omega) (by omega)
+        omega
+
+
+theorem bytes_gen (nW : W) (nN sh : Nat) (h : nW.toNat = nN) (hlt : nN * 2 ^ sh < 2 ^ 50) :
+    (((((nW <<< sh) + BitVec.ofNat 64 15) >>> 4) <<< 4) + BitVec.ofNat 64 16).toNat = ((nN * 2 ^ sh + 15) / 16) * 16 + 16 := by
+  have e1 : (nW <<< sh).toNat = nN * 2 ^ sh := by
+    rw [BitVec.toNat_shiftLeft, h, Nat.shiftLeft_eq]
+    rw [Nat.mod_eq_of_lt (by omega)]
+  have e2 : ((nW <<< sh) + BitVec.ofNat 64 15).toNat = nN * 2 ^ sh + 15 := by
+    rw [BitVec.toNat_add, e1]; simp; omega
+  have e3 : (((nW <<< sh) + BitVec.ofNat 64 15) >>> 4).toNat = (nN * 2 ^ sh + 15) / 16 := by
+    rw [BitVec.toNat_ushiftRight, e2, Nat.shiftRight_eq_div_pow]
+  have e4 : ((((nW <<< sh) + BitVec.ofNat 64 15) >>> 4) <<< 4).toNat = ((nN * 2 ^ sh + 15) / 16) * 16 := by
+    rw [BitVec.toNat_shiftLeft, e3, Nat.shiftLeft_eq]
+    rw [Nat.mod_eq_of_lt (by omega)]
+  rw [BitVec.toNat_add, e4]; simp; omega
+
+/-- 作業領域を取る入口の後ろ半分: 文字数 `n` が `x9` に入っているところから(`mov x10,x9` から)。
+`n` 文字ぶんを `sh`(ascii 0・utf32 2)のバイト幅で数え、16 に切り上げ + 16 バイトを `sp` から取り、先頭の 8 バイト前に `n` を置く。 -/
+def growTail (cp cl sh : Nat) : List I3 :=
+  [I3.base (I2.base (I.mov 10 9)),
+   I3.lslI 9 9 sh, I3.addI 9 9 15, I3.lsrI 9 9 4, I3.lslI 9 9 4, I3.addI 9 9 16, I3.subSp 9, I3.spAdd 12 16,
+   I3.strN 10 12 8, I3.base (I2.base (I.ldr 0 cp)), I3.base (I2.base (I.ldr 1 cl)), I3.base (I2.base (I.movi 14 0))]
+
+def growCodeS (cp cl sh : Nat) : Array I3 :=
+  (growTail cp cl sh).toArray ++ copyLoopS sh ++ #[I3.base (I2.base (I.str 12 cp))]
+
+theorem growTail_len (cp cl sh : Nat) : (growTail cp cl sh).length = 12 := rfl
+
+theorem growTail_nobr (cp cl sh : Nat) : ∀ i ∈ growTail cp cl sh, nobr i := by
+  intro i hi
+  simp [growTail] at hi
+  rcases hi with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp [nobr]
+
+theorem growCodeS_pre (cp cl sh : Nat) (k : Nat) (hk : k < 12) :
+    (growCodeS cp cl sh)[k]? = (growTail cp cl sh)[k]? := by
+  have hA : (growTail cp cl sh).toArray.size = 12 := by simp [growTail_len]
+  unfold growCodeS
+  rw [Array.getElem?_append_left (by simp [hA, copyLoopS_size]; omega), Array.getElem?_append_left (by omega)]
+  simp
+
+theorem growCodeS_loop (cp cl sh : Nat) (k : Nat) (x : I3) (h : (copyLoopS sh)[k]? = some x) :
+    (growCodeS cp cl sh)[12 + k]? = some x := by
+  have hA : (growTail cp cl sh).toArray.size = 12 := by simp [growTail_len]
+  have hk : k < 6 := by
+    cases Nat.lt_or_ge k 6 with
+    | inl h' => exact h'
+    | inr h' => rw [Array.getElem?_eq_none (by rw [copyLoopS_size]; exact h')] at h; cases h
+  unfold growCodeS
+  rw [Array.getElem?_append_left (by simp [hA, copyLoopS_size]; omega), Array.getElem?_append_right (by omega)]
+  rw [hA, show 12 + k - 12 = k by omega]; exact h
+
+theorem growCodeS_last (cp cl sh : Nat) : (growCodeS cp cl sh)[18]? = some (I3.base (I2.base (I.str 12 cp))) := by
+  have hA : (growTail cp cl sh).toArray.size = 12 := by simp [growTail_len]
+  unfold growCodeS
+  rw [Array.getElem?_append_right (by simp [hA, copyLoopS_size])]
+  simp [hA, copyLoopS_size]
+
+
+/-- 文字列の入口の後ろ半分(`pre_grow` の文字列の枝): `x9 = n`(文字数)から作業領域を取り、累積を文字ごとに写し、仮引数を作業領域へ向ける。
+`w = 2^sh`(ascii 1・utf32 4)バイト幅。領域は `sp` から `((n·w+15)/16)×16 + 16` バイト下で、先頭の 8 バイト前(語のメモリ `h`)に `n` が入る。
+元の文字列(`sp` 以上)・`sp` 以上のバイト・ほかの枠・`lr`・フレームは変わらない。 -/
+theorem growTailS_ok (P : Array I3) (b : Nat) (cp cl sh w nN : Nat) (hw : 2 ^ sh = w) (hw0 : 0 < w) (hrd : w ≤ 4)
+    (hP : ∀ k x, (growCodeS cp cl sh)[k]? = some x → P[b + k]? = some x)
+    (x : HSt) (hpc : x.s.pc = b) (hR9 : x.s.r 9 = BitVec.ofNat 64 nN)
+    (hn : nN * w < 2 ^ 50) (hlen : (x.s.m cl).toNat ≤ nN)
+    (hsrc : x.sp.toNat ≤ (x.s.m cp).toNat)
+    (hs : (x.s.m cp).toNat + (x.s.m cl).toNat * w < 2 ^ 64)
+    (hsp : x.sp.toNat % 16 = 0) (hroom : nN * w + 32 ≤ x.sp.toNat) :
+    ∃ y, Steps3 P x y ∧ y.s.pc = b + 18 + 1 ∧
+      y.sp.toNat = x.sp.toNat - (((nN * w + 15) / 16) * 16 + 16) ∧
+      (y.s.m cp).toNat = y.sp.toNat + 16 ∧ (∀ i, i ≠ cp → y.s.m i = x.s.m i) ∧
+      y.h ((y.sp.toNat + 16) / 8 - 1) = BitVec.ofNat 64 nN ∧
+      (∀ j, j < (x.s.m cl).toNat * w → y.hb (y.sp.toNat + 16 + j) = x.hb ((x.s.m cp).toNat + j)) ∧
+      (∀ k, x.sp.toNat ≤ k → y.hb k = x.hb k) ∧
+      (∀ k, x.sp.toNat / 8 ≤ k → y.h k = x.h k) ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk := by
+  have hnlt : nN < 2 ^ 50 := by
+    have : nN ≤ nN * w := Nat.le_mul_of_pos_right nN hw0
+    omega
+  have hclw : (x.s.m cl).toNat * w ≤ nN * w := Nat.mul_le_mul_right w hlen
+  obtain ⟨x12, hx12⟩ : ∃ x12, x12 = runL (growTail cp cl sh) x := ⟨_, rfl⟩
+  obtain ⟨g1, p1⟩ := runL_ok P b (growTail cp cl sh) x 0 (by simpa using hpc) (growTail_nobr cp cl sh)
+    (fun k hk => by
+      have hk' : k < 12 := by simpa [growTail_len] using hk
+      have := hP k ((growTail cp cl sh)[k]) (by rw [growCodeS_pre cp cl sh k hk']; exact List.getElem?_eq_getElem hk)
+      exact this)
+  rw [← hx12] at g1 p1
+  simp [growTail_len] at p1
+  have fr12 : x12.s.r 12 = x.sp - ((((x.s.r 9 <<< sh) + BitVec.ofNat 64 15) >>> 4 <<< 4) + BitVec.ofNat 64 16) + BitVec.ofNat 64 16 := by
+    rw [hx12]; rfl
+  have fr0 : x12.s.r 0 = x.s.m cp := by rw [hx12]; rfl
+  have fr1 : x12.s.r 1 = x.s.m cl := by rw [hx12]; rfl
+  have fr14 : x12.s.r 14 = 0 := by rw [hx12]; rfl
+  have fsp : x12.sp = x.sp - ((((x.s.r 9 <<< sh) + BitVec.ofNat 64 15) >>> 4 <<< 4) + BitVec.ofNat 64 16) := by
+    rw [hx12]; rfl
+  have fm : x12.s.m = x.s.m := by rw [hx12]; rfl
+  have fl : x12.s.lr = x.s.lr := by rw [hx12]; rfl
+  have fk : x12.s.stk = x.s.stk := by rw [hx12]; rfl
+  have fb : x12.hb = x.hb := by rw [hx12]; rfl
+  have fh : x12.h = fun k => if k = (x12.s.r 12 - BitVec.ofNat 64 8).toNat / 8 then x.s.r 9 else x.h k := by
+    rw [hx12]; rfl
+  have hnW : (x.s.r 9).toNat = nN := by rw [hR9, BitVec.toNat_ofNat]; exact Nat.mod_eq_of_lt (by omega)
+  have hB := bytes_gen (x.s.r 9) nN sh hnW (by rw [hw]; omega)
+  obtain ⟨Bw, hBw⟩ : ∃ Bw : W, Bw = ((((x.s.r 9 <<< sh) + BitVec.ofNat 64 15) >>> 4 <<< 4) + BitVec.ofNat 64 16) := ⟨_, rfl⟩
+  rw [← hBw] at fsp fr12 hB
+  have hBn : Bw.toNat = (nN * w + 15) / 16 * 16 + 16 := by rw [hB, hw]
+  have hspN : x12.sp.toNat = x.sp.toNat - Bw.toNat := by
+    rw [fsp, BitVec.toNat_sub]; omega
+  have hdst : (x12.s.r 12).toNat = x.sp.toNat - Bw.toNat + 16 := by
+    rw [fr12, BitVec.toNat_add, BitVec.toNat_sub]
+    simp
+    omega
+  obtain ⟨y, gy, ypc, y14, yb1, yb2, yhh, ysp, ym, ylr, ystk, y0, y1, y12⟩ :=
+    copyLoopS_ok P (b + 12) sh w hw hw0
+      (fun k x' hk => by
+        have := hP (12 + k) x' (growCodeS_loop cp cl sh k x' hk)
+        rw [← Nat.add_assoc] at this; exact this)
+      (x.s.m cp) (x12.s.r 12) (x.s.m cl).toNat hs (by rw [hdst]; omega)
+      (Or.inl (by rw [hdst]; omega)) hrd _ x12 rfl (by rw [p1]) (by rw [fr14]; simp) fr0
+      (by rw [fr1]; simp) rfl
+  have g2 : Steps3 P y (step3 (I3.base (I2.base (I.str 12 cp))) y) :=
+    Steps3.go' _ (b + 18) (by rw [ypc]) (by have := hP 18 _ (growCodeS_last cp cl sh); exact this) (Steps3.refl _)
+  obtain ⟨Y, hY⟩ : ∃ Y, Y = step3 (I3.base (I2.base (I.str 12 cp))) y := ⟨_, rfl⟩
+  rw [← hY] at g2
+  have Yh : Y.h = y.h := by rw [hY]; rfl
+  have Yb : Y.hb = y.hb := by rw [hY]; rfl
+  have Ysp : Y.sp = y.sp := by rw [hY]; rfl
+  have Ym : ∀ i, Y.s.m i = if i = cp then y.s.r 12 else y.s.m i := by intro i; rw [hY]; rfl
+  have Ylr : Y.s.lr = y.s.lr := by rw [hY]; rfl
+  have Ystk : Y.s.stk = y.s.stk := by rw [hY]; rfl
+  have Ypc : Y.s.pc = b + 18 + 1 := by rw [hY]; simp [step3, step2, step, ypc]
+  have hd12 : (y.s.r 12).toNat = x.sp.toNat - Bw.toNat + 16 := by rw [y12, hdst]
+  have hysp : y.sp.toNat = x.sp.toNat - Bw.toNat := by rw [ysp, hspN]
+  have hd8 : (x12.s.r 12 - BitVec.ofNat 64 8).toNat = x.sp.toNat - Bw.toNat + 8 := by
+    rw [BitVec.toNat_sub, hdst]; simp; omega
+  have hx12h : ∀ k, x12.h k = if k = (x.sp.toNat - Bw.toNat + 8) / 8 then BitVec.ofNat 64 nN else x.h k := by
+    intro k; rw [fh]; simp only [hd8, hR9]
+  refine ⟨Y, g1.trans (gy.trans g2), Ypc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [Ysp, hysp, hBn]
+  · rw [Ym, if_pos rfl, Ysp, hd12, hysp]
+  · intro i hi; rw [Ym, if_neg hi, ym, fm]
+  · rw [Yh, Ysp, hysp, yhh]
+    have hk : (x.sp.toNat - Bw.toNat + 16) / 8 - 1 = (x.sp.toNat - Bw.toNat + 8) / 8 := by omega
+    rw [hk, hx12h]; simp
+  · intro j hj
+    rw [Yb, Ysp, hysp]
+    have := yb1 j (by rw [fr14]; simp) hj
+    rw [hdst] at this
+    rw [this, fb]
+  · intro k hk
+    rw [Yb, yb2 k (by intro j hj1 hj2; rw [hdst]; omega), fb]
+  · intro k hk
+    rw [Yh, yhh, hx12h]
+    have hne : k ≠ (x.sp.toNat - Bw.toNat + 8) / 8 := by omega
+    rw [if_neg hne]
+  · rw [Ylr, ylr, fl]
+  · rw [Ystk, ystk, fk]
+
+
+def growCodeL (cp cl : Nat) : Array I3 :=
+  (growTail cp cl 3).toArray ++ copyLoop ++ #[I3.base (I2.base (I.str 12 cp))]
+
+theorem growCodeL_pre (cp cl : Nat) (k : Nat) (hk : k < 12) :
+    (growCodeL cp cl)[k]? = (growTail cp cl 3)[k]? := by
+  have hA : (growTail cp cl 3).toArray.size = 12 := by simp [growTail_len]
+  unfold growCodeL
+  rw [Array.getElem?_append_left (by simp [hA, copyLoop_size]; omega), Array.getElem?_append_left (by omega)]
+  simp
+
+theorem growCodeL_loop (cp cl : Nat) (k : Nat) (x : I3) (h : copyLoop[k]? = some x) :
+    (growCodeL cp cl)[12 + k]? = some x := by
+  have hA : (growTail cp cl 3).toArray.size = 12 := by simp [growTail_len]
+  have hk : k < 6 := by
+    cases Nat.lt_or_ge k 6 with
+    | inl h' => exact h'
+    | inr h' => rw [Array.getElem?_eq_none (by rw [copyLoop_size]; exact h')] at h; cases h
+  unfold growCodeL
+  rw [Array.getElem?_append_left (by simp [hA, copyLoop_size]; omega), Array.getElem?_append_right (by omega)]
+  rw [hA, show 12 + k - 12 = k by omega]; exact h
+
+theorem growCodeL_last (cp cl : Nat) : (growCodeL cp cl)[18]? = some (I3.base (I2.base (I.str 12 cp))) := by
+  have hA : (growTail cp cl 3).toArray.size = 12 := by simp [growTail_len]
+  unfold growCodeL
+  rw [Array.getElem?_append_right (by simp [hA, copyLoop_size])]
+  simp [hA, copyLoop_size]
+
+/-- リストの入口の後ろ半分(`x9 = n`(要素数)から)。`growEntry_ok` の後ろ半分と同じ結論 -/
+theorem growTailL_ok (P : Array I3) (b : Nat) (cp cl nN : Nat)
+    (hP : ∀ k x, (growCodeL cp cl)[k]? = some x → P[b + k]? = some x)
+    (x : HSt) (hpc : x.s.pc = b) (hR9 : x.s.r 9 = BitVec.ofNat 64 nN)
+    (hn : nN < 2 ^ 50) (hlen : (x.s.m cl).toNat ≤ nN)
+    (hsa : (x.s.m cp).toNat % 8 = 0) (hsrc : x.sp.toNat ≤ (x.s.m cp).toNat)
+    (hs : (x.s.m cp).toNat + 8 * (x.s.m cl).toNat < 2 ^ 64)
+    (hsp : x.sp.toNat % 16 = 0) (hroom : 8 * nN + 32 ≤ x.sp.toNat) :
+    ∃ y, Steps3 P x y ∧ y.s.pc = b + 19 ∧
+      y.sp.toNat = x.sp.toNat - (((8 * nN + 15) / 16) * 16 + 16) ∧
+      (y.s.m cp).toNat = y.sp.toNat + 16 ∧ (∀ i, i ≠ cp → y.s.m i = x.s.m i) ∧
+      y.h ((y.sp.toNat + 16) / 8 - 1) = BitVec.ofNat 64 nN ∧
+      (∀ j, j < (x.s.m cl).toNat → y.h ((y.sp.toNat + 16) / 8 + j) = x.h ((x.s.m cp).toNat / 8 + j)) ∧
+      (∀ k, x.sp.toNat / 8 ≤ k → y.h k = x.h k) ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk := by
+  obtain ⟨x12, hx12⟩ : ∃ x12, x12 = runL (growTail cp cl 3) x := ⟨_, rfl⟩
+  obtain ⟨g1, p1⟩ := runL_ok P b (growTail cp cl 3) x 0 (by simpa using hpc) (growTail_nobr cp cl 3)
+    (fun k hk => by
+      have hk' : k < 12 := by simpa [growTail_len] using hk
+      have := hP k ((growTail cp cl 3)[k]) (by rw [growCodeL_pre cp cl k hk']; exact List.getElem?_eq_getElem hk)
+      exact this)
+  rw [← hx12] at g1 p1
+  simp [growTail_len] at p1
+  have fr12 : x12.s.r 12 = x.sp - ((((x.s.r 9 <<< 3) + BitVec.ofNat 64 15) >>> 4 <<< 4) + BitVec.ofNat 64 16) + BitVec.ofNat 64 16 := by
+    rw [hx12]; rfl
+  have fr0 : x12.s.r 0 = x.s.m cp := by rw [hx12]; rfl
+  have fr1 : x12.s.r 1 = x.s.m cl := by rw [hx12]; rfl
+  have fr14 : x12.s.r 14 = 0 := by rw [hx12]; rfl
+  have fsp : x12.sp = x.sp - ((((x.s.r 9 <<< 3) + BitVec.ofNat 64 15) >>> 4 <<< 4) + BitVec.ofNat 64 16) := by
+    rw [hx12]; rfl
+  have fm : x12.s.m = x.s.m := by rw [hx12]; rfl
+  have fl : x12.s.lr = x.s.lr := by rw [hx12]; rfl
+  have fk : x12.s.stk = x.s.stk := by rw [hx12]; rfl
+  have fh : x12.h = fun k => if k = (x12.s.r 12 - BitVec.ofNat 64 8).toNat / 8 then x.s.r 9 else x.h k := by
+    rw [hx12]; rfl
+  have hnW : (x.s.r 9).toNat = nN := by rw [hR9, BitVec.toNat_ofNat]; exact Nat.mod_eq_of_lt (by omega)
+  have hB := bytes_w (x.s.r 9) nN hnW hn
+  obtain ⟨Bw, hBw⟩ : ∃ Bw : W, Bw = ((((x.s.r 9 <<< 3) + BitVec.ofNat 64 15) >>> 4 <<< 4) + BitVec.ofNat 64 16) := ⟨_, rfl⟩
+  rw [← hBw] at fsp fr12 hB
+  have hBn : Bw.toNat = (8 * nN + 15) / 16 * 16 + 16 := hB
+  have hspN : x12.sp.toNat = x.sp.toNat - Bw.toNat := by
+    rw [fsp, BitVec.toNat_sub]; omega
+  have hdst : (x12.s.r 12).toNat = x.sp.toNat - Bw.toNat + 16 := by
+    rw [fr12, BitVec.toNat_add, BitVec.toNat_sub]
+    simp
+    omega
+  obtain ⟨y, gy, ypc, y14, yh1, yh2, ysp, ym, ylr, ystk, y0, y1, y12⟩ :=
+    copyLoop_ok P (b + 12) (fun k x' hk => by
+        have := hP (12 + k) x' (growCodeL_loop cp cl k x' hk)
+        rw [← Nat.add_assoc] at this; exact this)
+      (x.s.m cp) (x12.s.r 12) (x.s.m cl).toNat hsa (by rw [hdst]; omega) hs (by rw [hdst]; omega)
+      (Or.inl (by rw [hdst]; omega)) _ x12 rfl (by rw [p1]) (by rw [fr14]; simp) fr0
+      (by rw [fr1]; simp) rfl
+  have g2 : Steps3 P y (step3 (I3.base (I2.base (I.str 12 cp))) y) :=
+    Steps3.go' _ (b + 18) (by rw [ypc]) (by have := hP 18 _ (growCodeL_last cp cl); exact this) (Steps3.refl _)
+  obtain ⟨Y, hY⟩ : ∃ Y, Y = step3 (I3.base (I2.base (I.str 12 cp))) y := ⟨_, rfl⟩
+  rw [← hY] at g2
+  have Yh : Y.h = y.h := by rw [hY]; rfl
+  have Ysp : Y.sp = y.sp := by rw [hY]; rfl
+  have Ym : ∀ i, Y.s.m i = if i = cp then y.s.r 12 else y.s.m i := by intro i; rw [hY]; rfl
+  have Ylr : Y.s.lr = y.s.lr := by rw [hY]; rfl
+  have Ystk : Y.s.stk = y.s.stk := by rw [hY]; rfl
+  have Ypc : Y.s.pc = b + 19 := by rw [hY]; simp [step3, step2, step, ypc]
+  have hd12 : (y.s.r 12).toNat = x.sp.toNat - Bw.toNat + 16 := by rw [y12, hdst]
+  have hysp : y.sp.toNat = x.sp.toNat - Bw.toNat := by rw [ysp, hspN]
+  have hd8 : (x12.s.r 12 - BitVec.ofNat 64 8).toNat = x.sp.toNat - Bw.toNat + 8 := by
+    rw [BitVec.toNat_sub, hdst]; simp; omega
+  have hx12h : ∀ k, x12.h k = if k = (x.sp.toNat - Bw.toNat + 8) / 8 then BitVec.ofNat 64 nN else x.h k := by
+    intro k; rw [fh]; simp only [hd8, hR9]
+  refine ⟨Y, g1.trans (gy.trans g2), Ypc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [Ysp, hysp, hBn]
+  · rw [Ym, if_pos rfl, Ysp, hd12, hysp]
+  · intro i hi; rw [Ym, if_neg hi, ym, fm]
+  · rw [Yh, Ysp, hysp]
+    have hk : (x.sp.toNat - Bw.toNat + 16) / 8 - 1 = (x.sp.toNat - Bw.toNat + 8) / 8 := by omega
+    rw [hk, yh2 _ (by intro j hj1 hj2; omega), hx12h]; simp
+  · intro j hj
+    rw [Yh, Ysp, hysp]
+    have := yh1 j (by rw [fr14]; simp) hj
+    rw [hdst] at this
+    rw [this, hx12h]
+    have hne : (x.s.m cp).toNat / 8 + j ≠ (x.sp.toNat - Bw.toNat + 8) / 8 := by omega
+    rw [if_neg hne]
+  · intro k hk
+    rw [Yh, yh2 k (by intro j hj1 hj2; rw [hdst]; omega), hx12h]
+    have hne : k ≠ (x.sp.toNat - Bw.toNat + 8) / 8 := by omega
+    rw [if_neg hne]
+  · rw [Ylr, ylr, fl]
+  · rw [Ystk, ystk, fk]
+
+
+/-! ### 輪: 食う器が複数の入口(`pre_grow_one` の `isinstance(e, tuple)` の枝)
+
+作業領域の要素数 `n = ||acc|| + d × (食う器の長さの和)`。`x9 = ||acc||` から食う器ごとに `x10 = 長さ; x11 = d; x10 *= x11; x9 += x10` と足していき、
+そのあとは食う器 1 つのときと同じ後ろ半分(`growTail`)。食う器が 1 つなら `growPre` の前半 5 命令と同じ。 -/
+
+def eatI (e d : Nat) : List I3 :=
+  [bb (I.ldr 10 e), bb (I.movi 11 d), bb (I.mul 10 10 11), bb (I.adds 9 9 10)]
+
+def sumPre (cl d : Nat) (els : List Nat) : List I3 :=
+  bb (I.ldr 9 cl) :: els.flatMap (fun e => eatI e d)
+
+def ringW (m : Nat → W) (d : Nat) : List Nat → W → W
+  | [], a => a
+  | e :: es, a => ringW m d es (a + m e * BitVec.ofInt 64 d)
+
+theorem eatI_nobr (e d : Nat) : ∀ i ∈ eatI e d, nobr i := by
+  intro i hi
+  simp [eatI] at hi
+  rcases hi with rfl | rfl | rfl | rfl <;> simp [nobr, bb]
+
+theorem sumPre_nobr (cl d : Nat) (els : List Nat) : ∀ i ∈ sumPre cl d els, nobr i := by
+  intro i hi
+  simp only [sumPre, List.mem_cons, List.mem_flatMap] at hi
+  rcases hi with rfl | ⟨e, _, hi⟩
+  · simp [nobr, bb]
+  · exact eatI_nobr e d i hi
+
+theorem sumPre_len (cl d : Nat) (els : List Nat) : (sumPre cl d els).length = 1 + 4 * els.length := by
+  simp only [sumPre, List.length_cons, List.length_flatMap]
+  have : ∀ (l : List Nat), (l.map (fun e => (eatI e d).length)).sum = 4 * l.length := by
+    intro l; induction l with
+    | nil => simp
+    | cons a l ih => simp [eatI] at *; omega
+  rw [this]; omega
+
+theorem eat_run (e d : Nat) (y : HSt) :
+    (runL (eatI e d) y).s.r 9 = y.s.r 9 + y.s.m e * BitVec.ofInt 64 d ∧ (runL (eatI e d) y).s.m = y.s.m ∧
+    (runL (eatI e d) y).sp = y.sp ∧ (runL (eatI e d) y).h = y.h ∧ (runL (eatI e d) y).hb = y.hb ∧
+    (runL (eatI e d) y).s.lr = y.s.lr ∧ (runL (eatI e d) y).s.stk = y.s.stk ∧
+    (runL (eatI e d) y).s.pc = y.s.pc + 4 := by
+  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+theorem ring_run (d : Nat) : ∀ (els : List Nat) (y : HSt),
+    (runL (els.flatMap (fun e => eatI e d)) y).s.r 9 = ringW y.s.m d els (y.s.r 9) ∧
+    (runL (els.flatMap (fun e => eatI e d)) y).s.m = y.s.m ∧ (runL (els.flatMap (fun e => eatI e d)) y).sp = y.sp ∧
+    (runL (els.flatMap (fun e => eatI e d)) y).h = y.h ∧ (runL (els.flatMap (fun e => eatI e d)) y).hb = y.hb ∧
+    (runL (els.flatMap (fun e => eatI e d)) y).s.lr = y.s.lr ∧ (runL (els.flatMap (fun e => eatI e d)) y).s.stk = y.s.stk := by
+  intro els
+  induction els with
+  | nil => intro y; exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | cons e es ih =>
+      intro y
+      have hrun : runL ((e :: es).flatMap (fun e => eatI e d)) y = runL (es.flatMap (fun e => eatI e d)) (runL (eatI e d) y) := by
+        rw [List.flatMap_cons, runL_append]
+      rw [hrun]
+      obtain ⟨a1, a2, a3, a4, a5, a6, a7, a8⟩ := eat_run e d y
+      obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := ih (runL (eatI e d) y)
+      refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      · rw [b1, a2, a1]; rfl
+      · rw [b2, a2]
+      · rw [b3, a3]
+      · rw [b4, a4]
+      · rw [b5, a5]
+      · rw [b6, a6]
+      · rw [b7, a7]
+
+theorem ringW_nat (m : Nat → W) (d : Nat) (hd : d < 2 ^ 50) :
+    ∀ (els : List Nat) (a : W), a.toNat + d * (els.map (fun e => (m e).toNat)).sum < 2 ^ 50 →
+      (ringW m d els a).toNat = a.toNat + d * (els.map (fun e => (m e).toNat)).sum := by
+  intro els
+  induction els with
+  | nil => intro a _; simp [ringW]
+  | cons e es ih =>
+      intro a h
+      simp only [List.map_cons, List.sum_cons, Nat.mul_add] at h ⊢
+      have hEl : (m e * BitVec.ofInt 64 d).toNat = d * (m e).toNat := by
+        have : BitVec.ofInt 64 (d : Int) = BitVec.ofNat 64 d := BitVec.ofInt_natCast ..
+        have hd64 : d % 2 ^ 64 = d := Nat.mod_eq_of_lt (by omega)
+        have hlt : d * (m e).toNat < 2 ^ 64 := by omega
+        rw [this, BitVec.toNat_mul, BitVec.toNat_ofNat, hd64, Nat.mul_comm]
+        exact Nat.mod_eq_of_lt hlt
+      have hs : (a + m e * BitVec.ofInt 64 d).toNat = a.toNat + d * (m e).toNat := by
+        rw [BitVec.toNat_add, hEl]; exact Nat.mod_eq_of_lt (by omega)
+      simp only [ringW]
+      rw [ih _ (by rw [hs]; omega), hs]
+      omega
+
+
+def ringCodeL (cp cl d : Nat) (els : List Nat) : Array I3 := (sumPre cl d els).toArray ++ growCodeL cp cl
+def ringCodeS (cp cl d : Nat) (els : List Nat) (sh : Nat) : Array I3 := (sumPre cl d els).toArray ++ growCodeS cp cl sh
+
+theorem ring_pre {α : Type} (A B : Array α) (k : Nat) (hk : k < A.size) : (A ++ B)[k]? = A[k]? := arr_left A B k hk
+
+/-- 前半(食う器の長さの和を `x9` へ): 終わると `x9 = ||acc|| + d × Σ(食う器の長さ)`、メモリ・`sp`・`lr`・フレームは変わらない -/
+theorem sumPre_ok (P : Array I3) (b : Nat) (cl d : Nat) (els : List Nat)
+    (hP : ∀ k (hk : k < (sumPre cl d els).length), P[b + k]? = some (sumPre cl d els)[k])
+    (x : HSt) (hpc : x.s.pc = b) (hd : d < 2 ^ 50)
+    (hT : (x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum < 2 ^ 50) :
+    ∃ z, Steps3 P x z ∧ z.s.pc = b + (1 + 4 * els.length) ∧
+      z.s.r 9 = BitVec.ofNat 64 ((x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum) ∧
+      z.s.m = x.s.m ∧ z.sp = x.sp ∧ z.h = x.h ∧ z.hb = x.hb ∧ z.s.lr = x.s.lr ∧ z.s.stk = x.s.stk := by
+  obtain ⟨g, p⟩ := runL_ok P b (sumPre cl d els) x 0 (by simpa using hpc) (sumPre_nobr cl d els) (by simpa using hP)
+  rw [sumPre_len] at p
+  obtain ⟨x0, hx0⟩ : ∃ x0, x0 = step3 (bb (I.ldr 9 cl)) x := ⟨_, rfl⟩
+  have hrun : runL (sumPre cl d els) x = runL (els.flatMap (fun e => eatI e d)) x0 := by
+    rw [hx0]; rfl
+  have e9 : x0.s.r 9 = x.s.m cl := by rw [hx0]; rfl
+  have em : x0.s.m = x.s.m := by rw [hx0]; rfl
+  have esp : x0.sp = x.sp := by rw [hx0]; rfl
+  have eh : x0.h = x.h := by rw [hx0]; rfl
+  have eb : x0.hb = x.hb := by rw [hx0]; rfl
+  have el : x0.s.lr = x.s.lr := by rw [hx0]; rfl
+  have ek : x0.s.stk = x.s.stk := by rw [hx0]; rfl
+  obtain ⟨r1, r2, r3, r4, r5, r6, r7⟩ := ring_run d els x0
+  rw [← hrun] at r1 r2 r3 r4 r5 r6 r7
+  refine ⟨runL (sumPre cl d els) x, g, by simpa using p, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [r1, e9, em]
+    apply BitVec.eq_of_toNat_eq
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+    exact ringW_nat x.s.m d hd els (x.s.m cl) hT
+  · rw [r2, em]
+  · rw [r3, esp]
+  · rw [r4, eh]
+  · rw [r5, eb]
+  · rw [r6, el]
+  · rw [r7, ek]
+
+
+theorem ringCodeL_sum (cp cl d : Nat) (els : List Nat) (k : Nat) (hk : k < (sumPre cl d els).length) :
+    (ringCodeL cp cl d els)[k]? = some (sumPre cl d els)[k] := by
+  unfold ringCodeL
+  rw [arr_left _ _ _ (by simpa using hk)]; simp [List.getElem?_eq_getElem hk]
+
+theorem ringCodeL_grow (cp cl d : Nat) (els : List Nat) (k : Nat) :
+    (ringCodeL cp cl d els)[(1 + 4 * els.length) + k]? = (growCodeL cp cl)[k]? := by
+  unfold ringCodeL
+  have : (sumPre cl d els).toArray.size = 1 + 4 * els.length := by simp [sumPre_len]
+  rw [← this]; exact arr_right _ _ _
+
+theorem ringCodeS_sum (cp cl d : Nat) (els : List Nat) (sh k : Nat) (hk : k < (sumPre cl d els).length) :
+    (ringCodeS cp cl d els sh)[k]? = some (sumPre cl d els)[k] := by
+  unfold ringCodeS
+  rw [arr_left _ _ _ (by simpa using hk)]; simp [List.getElem?_eq_getElem hk]
+
+theorem ringCodeS_grow (cp cl d : Nat) (els : List Nat) (sh k : Nat) :
+    (ringCodeS cp cl d els sh)[(1 + 4 * els.length) + k]? = (growCodeS cp cl sh)[k]? := by
+  unfold ringCodeS
+  have : (sumPre cl d els).toArray.size = 1 + 4 * els.length := by simp [sumPre_len]
+  rw [← this]; exact arr_right _ _ _
+
+/-- 輪(リスト): 食う器が `els`(長さの枠の並び)の入口の全体。作業領域の要素数 `T = ||acc|| + d × Σ(食う器の長さ)` -/
+theorem ringEntryL_ok (P : Array I3) (b : Nat) (cp cl d : Nat) (els : List Nat)
+    (hP : ∀ k x, (ringCodeL cp cl d els)[k]? = some x → P[b + k]? = some x)
+    (x : HSt) (hpc : x.s.pc = b) (hd : d < 2 ^ 50)
+    (hn : (x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum < 2 ^ 50)
+    (hsa : (x.s.m cp).toNat % 8 = 0) (hsrc : x.sp.toNat ≤ (x.s.m cp).toNat)
+    (hs : (x.s.m cp).toNat + 8 * (x.s.m cl).toNat < 2 ^ 64)
+    (hsp : x.sp.toNat % 16 = 0)
+    (hroom : 8 * ((x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum) + 32 ≤ x.sp.toNat) :
+    ∃ y, Steps3 P x y ∧ y.s.pc = b + (1 + 4 * els.length) + 19 ∧
+      y.sp.toNat = x.sp.toNat - (((8 * ((x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum) + 15) / 16) * 16 + 16) ∧
+      (y.s.m cp).toNat = y.sp.toNat + 16 ∧ (∀ i, i ≠ cp → y.s.m i = x.s.m i) ∧
+      y.h ((y.sp.toNat + 16) / 8 - 1) = BitVec.ofNat 64 ((x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum) ∧
+      (∀ j, j < (x.s.m cl).toNat → y.h ((y.sp.toNat + 16) / 8 + j) = x.h ((x.s.m cp).toNat / 8 + j)) ∧
+      (∀ k, x.sp.toNat / 8 ≤ k → y.h k = x.h k) ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk := by
+  obtain ⟨z, gz, zpc, z9, zm, zsp, zh, zhb, zl, zk⟩ := sumPre_ok P b cl d els
+    (fun k hk => hP k _ (ringCodeL_sum cp cl d els k hk)) x hpc hd hn
+  obtain ⟨y, gy, ypc, ysp, ym, yo, yhead, ycopy, yabove, ylr, ystk⟩ := growTailL_ok P (b + (1 + 4 * els.length)) cp cl
+    ((x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum)
+    (fun k x' hk => by
+      have := hP ((1 + 4 * els.length) + k) x' (by rw [ringCodeL_grow]; exact hk)
+      rw [← Nat.add_assoc] at this; exact this)
+    z zpc z9 hn (by rw [zm]; omega) (by rw [zm]; exact hsa) (by rw [zsp, zm]; exact hsrc) (by rw [zm]; exact hs)
+    (by rw [zsp]; exact hsp) (by rw [zsp]; exact hroom)
+  refine ⟨y, gz.trans gy, ypc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [ysp, zsp]
+  · exact ym
+  · intro i hi; rw [yo i hi, zm]
+  · exact yhead
+  · intro j hj
+    rw [ycopy j (by rw [zm]; exact hj), zm, zh]
+  · intro k hk
+    rw [yabove k (by rw [zsp]; exact hk), zh]
+  · rw [ylr, zl]
+  · rw [ystk, zk]
+
+
+/-- 輪(文字列): 食う器が `els` の入口の全体。`sh`(ascii 0・utf32 2)のバイト幅 `w = 2^sh`、文字数 `T = ||acc|| + d × Σ(食う器の長さ)` -/
+theorem ringEntryS_ok (P : Array I3) (b : Nat) (cp cl d : Nat) (els : List Nat) (sh w : Nat) (hw : 2 ^ sh = w) (hw0 : 0 < w) (hrd : w ≤ 4)
+    (hP : ∀ k x, (ringCodeS cp cl d els sh)[k]? = some x → P[b + k]? = some x)
+    (x : HSt) (hpc : x.s.pc = b) (hd : d < 2 ^ 50)
+    (hn : (x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum < 2 ^ 50)
+    (hnw : ((x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum) * w < 2 ^ 50)
+    (hsrc : x.sp.toNat ≤ (x.s.m cp).toNat)
+    (hs : (x.s.m cp).toNat + (x.s.m cl).toNat * w < 2 ^ 64)
+    (hsp : x.sp.toNat % 16 = 0)
+    (hroom : ((x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum) * w + 32 ≤ x.sp.toNat)
+    (hlen : (x.s.m cl).toNat ≤ (x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum) :
+    ∃ y, Steps3 P x y ∧ y.s.pc = b + (1 + 4 * els.length) + 18 + 1 ∧
+      y.sp.toNat = x.sp.toNat - (((((x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum) * w + 15) / 16) * 16 + 16) ∧
+      (y.s.m cp).toNat = y.sp.toNat + 16 ∧ (∀ i, i ≠ cp → y.s.m i = x.s.m i) ∧
+      y.h ((y.sp.toNat + 16) / 8 - 1) = BitVec.ofNat 64 ((x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum) ∧
+      (∀ j, j < (x.s.m cl).toNat * w → y.hb (y.sp.toNat + 16 + j) = x.hb ((x.s.m cp).toNat + j)) ∧
+      (∀ k, x.sp.toNat ≤ k → y.hb k = x.hb k) ∧
+      (∀ k, x.sp.toNat / 8 ≤ k → y.h k = x.h k) ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk := by
+  obtain ⟨z, gz, zpc, z9, zm, zsp, zh, zhb, zl, zk⟩ := sumPre_ok P b cl d els
+    (fun k hk => hP k _ (ringCodeS_sum cp cl d els sh k hk)) x hpc hd hn
+  obtain ⟨y, gy, ypc, ysp, ym, yo, yhead, ycopy, yabove, yh, ylr, ystk⟩ := growTailS_ok P (b + (1 + 4 * els.length)) cp cl sh w
+    ((x.s.m cl).toNat + d * (els.map (fun e => (x.s.m e).toNat)).sum) hw hw0 hrd
+    (fun k x' hk => by
+      have := hP ((1 + 4 * els.length) + k) x' (by rw [ringCodeS_grow]; exact hk)
+      rw [← Nat.add_assoc] at this; exact this)
+    z zpc z9 hnw (by rw [zm]; exact hlen) (by rw [zsp, zm]; exact hsrc) (by rw [zm]; exact hs)
+    (by rw [zsp]; exact hsp) (by rw [zsp]; exact hroom)
+  refine ⟨y, gz.trans gy, ypc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [ysp, zsp]
+  · exact ym
+  · intro i hi; rw [yo i hi, zm]
+  · exact yhead
+  · intro j hj
+    rw [ycopy j (by rw [zm]; exact hj), zm, zhb]
+  · intro k hk
+    rw [yabove k (by rw [zsp]; exact hk), zhb]
+  · intro k hk
+    rw [yh k (by rw [zsp]; exact hk), zh]
+  · rw [ylr, zl]
+  · rw [ystk, zk]
+
 #print axioms copyLoop_ok
 #print axioms growEntry_ok
 #print axioms lift2
@@ -1222,5 +1997,11 @@ theorem append_rounds (P : Array I3) (b ps pl k t1 t2 te o : Nat)
 #print axioms append_ok
 #print axioms append_inv
 #print axioms append_rounds
+#print axioms copyLoopS_ok
+#print axioms growTailS_ok
+#print axioms growTailL_ok
+#print axioms sumPre_ok
+#print axioms ringEntryL_ok
+#print axioms ringEntryS_ok
 
 end SirZH
