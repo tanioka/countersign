@@ -83,7 +83,7 @@ def sh : I → String
   | .msub d a b c => s!"msub {d} {a} {b} {c}" | .csel d a b c => s!"csel {d} {a} {b} {shc c}"
   | .bc c t => s!"bc {shc c} {t}" | .b t => s!"b {t}" | .movi d n => s!"movi {d} {n}" | .str a k => s!"str {a} {k}" | .ldr d k => s!"ldr {d} {k}" | .neg d a => s!"neg {d} {a}"
 def sh2 : I2 → String
-  | .base i => sh i | .enter => "enter" | .leave => "leave" | .bl t => s!"bl {t}" | .ret => "ret"
+  | .base i => sh i | .enter => "enter" | .leave => "leave" | .bl t => s!"bl {t}" | .ret => "ret" | .bk t => s!"bk {t}"
 def sh2b : I2 → String
   | .bl _ => "bl 0" | i => sh2 i
 def outc (p : Array I2) : IO Unit := IO.println (String.intercalate ";" (p.toList.map sh2b))
