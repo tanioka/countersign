@@ -204,7 +204,7 @@ theorem mod_core (x y : W) (hx : x ≠ NICHE) :
 
 /-! ## 機械(AArch64 の部分集合) -/
 
-inductive Cond | ne | eq | vs
+inductive Cond | ne | eq | vs | lt | ge | gt | le
   deriving DecidableEq
 
 inductive I
@@ -231,6 +231,7 @@ structure St where
   r : Nat → W
   m : Nat → W                          -- フレームの枠(x29 からの位置 k)
   z : Bool
+  n : Bool
   v : Bool
   pc : Nat
 
@@ -241,6 +242,10 @@ def Cond.holds (c : Cond) (s : St) : Bool :=
   | .ne => !s.z
   | .eq => s.z
   | .vs => s.v
+  | .lt => s.n != s.v
+  | .ge => s.n == s.v
+  | .gt => !s.z && (s.n == s.v)
+  | .le => s.z || (s.n != s.v)
 
 /-- 即値(simp が具体的な 64 ビットの値を展開しないよう、別の名前にしておく) -/
 @[irreducible] def immW (n : Nat) : W := BitVec.ofNat 64 n
@@ -251,7 +256,7 @@ theorem immW_zero : immW 0 = (0 : W) := by unfold immW; rfl
 @[irreducible] def cmpV (a b : W) : Bool := a.ssubOverflow b
 
 /-- 減算の旗(cmp・subs): Z は差が 0、V は符号つきの溢れ -/
-def St.flagsSub (s : St) (a b : W) : St := { s with z := decide (a = b), v := cmpV a b }
+def St.flagsSub (s : St) (a b : W) : St := { s with z := decide (a = b), n := (a - b).msb, v := cmpV a b }
 
 def step (i : I) (s : St) : St :=
   let s' := { s with pc := s.pc + 1 }
@@ -261,8 +266,8 @@ def step (i : I) (s : St) : St :=
   | .cmpR a b => s'.flagsSub (s.r a) (s.r b)
   | .cmpI a n => s'.flagsSub (s.r a) (immW n)
   | .cmpAsr a b sh => s'.flagsSub (s.r a) ((s.r b).sshiftRight sh)
-  | .adds d a b => { (s'.set d (s.r a + s.r b)) with z := decide (s.r a + s.r b = 0), v := (s.r a).saddOverflow (s.r b) }
-  | .subs d a b => { (s'.set d (s.r a - s.r b)) with z := decide (s.r a - s.r b = 0), v := (s.r a).ssubOverflow (s.r b) }
+  | .adds d a b => { (s'.set d (s.r a + s.r b)) with z := decide (s.r a + s.r b = 0), n := (s.r a + s.r b).msb, v := (s.r a).saddOverflow (s.r b) }
+  | .subs d a b => { (s'.set d (s.r a - s.r b)) with z := decide (s.r a - s.r b = 0), n := (s.r a - s.r b).msb, v := (s.r a).ssubOverflow (s.r b) }
   | .mul d a b => s'.set d (s.r a * s.r b)
   | .smulh d a b => s'.set d (smulh (s.r a) (s.r b))
   | .sdiv d a b => s'.set d (sdivW (s.r a) (s.r b))
@@ -280,7 +285,67 @@ def run (p : Array I) : Nat → St → St
   | 0, s => s
   | n + 1, s => if h : s.pc < p.size then run p n (step p[s.pc] s) else s
 
-def init (x y : W) : St := { r := fun i => if i = 9 then x else if i = 10 then y else 0, m := fun _ => 0, z := false, v := false, pc := 0 }
+def init (x y : W) : St := { r := fun i => if i = 9 then x else if i = 10 then y else 0, m := fun _ => 0, z := false, n := false, v := false, pc := 0 }
+
+/-- 符号つきの `<` は、`cmp` の旗の N と V が違うこと -/
+theorem flag_lt (a b : BitVec 64) : ((a - b).msb != a.ssubOverflow b) = decide (a.toInt < b.toInt) := by
+  have h1 := BitVec.le_toInt a
+  have h2 := BitVec.toInt_lt (x := a)
+  have h3 := BitVec.le_toInt b
+  have h4 := BitVec.toInt_lt (x := b)
+  simp only [BitVec.msb_eq_toInt, BitVec.toInt_sub, BitVec.ssubOverflow]
+  simp at h1 h2 h3 h4
+  generalize a.toInt = A at *
+  generalize b.toInt = B at *
+  have e0 : -9223372036854775808 ≤ A - B → A - B < 9223372036854775808 → (A - B).bmod 18446744073709551616 = A - B := fun h h' =>
+    Int.bmod_eq_of_le (by omega) (by omega)
+  have e1 : A - B ≥ 9223372036854775808 → (A - B).bmod 18446744073709551616 = A - B - 18446744073709551616 := by
+    intro h; simp only [Int.bmod]; split <;> omega
+  have e2 : A - B < -9223372036854775808 → (A - B).bmod 18446744073709551616 = A - B + 18446744073709551616 := by
+    intro h; simp only [Int.bmod]; split <;> omega
+  have p : (2 : Int) ^ (64 - 1) = 9223372036854775808 := by decide
+  have p2 : (2 : Int) ^ 64 = 18446744073709551616 := by decide
+  simp only [p, p2]
+  rw [← Bool.decide_or]
+  by_cases c1 : A - B ≥ 9223372036854775808
+  · rw [e1 c1]
+    by_cases hR : A < B <;> by_cases hX : A - B - 18446744073709551616 < 0 <;> simp [hR, hX] <;> omega
+  · by_cases c2 : A - B < -9223372036854775808
+    · rw [e2 c2]
+      by_cases hR : A < B <;> by_cases hX : A - B + 18446744073709551616 < 0 <;> simp [hR, hX] <;> omega
+    · rw [e0 (by omega) (by omega)]
+      by_cases hR : A < B <;> by_cases hX : A - B < 0 <;> simp [hR, hX] <;> omega
+
+
+theorem hold_lt (s : St) (a b : W) : Cond.lt.holds (s.flagsSub a b) = decide (a.toInt < b.toInt) := by
+  simp only [Cond.holds, St.flagsSub, cmpV]; exact flag_lt a b
+
+theorem hold_ge (s : St) (a b : W) : Cond.ge.holds (s.flagsSub a b) = decide (b.toInt ≤ a.toInt) := by
+  have h := flag_lt a b
+  simp only [Cond.holds, St.flagsSub, cmpV]
+  cases hm : (a - b).msb <;> cases ho : a.ssubOverflow b <;> simp [hm, ho] at h ⊢ <;> omega
+
+theorem hold_gt (s : St) (a b : W) : Cond.gt.holds (s.flagsSub a b) = decide (b.toInt < a.toInt) := by
+  have h := flag_lt a b
+  have hab : (a = b) ↔ a.toInt = b.toInt := ⟨fun e => by rw [e], fun e => BitVec.eq_of_toInt_eq e⟩
+  simp only [Cond.holds, St.flagsSub, cmpV]
+  cases hm : (a - b).msb <;> cases ho : a.ssubOverflow b <;> by_cases he : a = b <;> simp [hm, ho, he] at h hab ⊢ <;> omega
+
+theorem hold_le (s : St) (a b : W) : Cond.le.holds (s.flagsSub a b) = decide (a.toInt ≤ b.toInt) := by
+  have h := flag_lt a b
+  have hab : (a = b) ↔ a.toInt = b.toInt := ⟨fun e => by rw [e], fun e => BitVec.eq_of_toInt_eq e⟩
+  simp only [Cond.holds, St.flagsSub, cmpV]
+  cases hm : (a - b).msb <;> cases ho : a.ssubOverflow b <;> by_cases he : a = b <;> simp [hm, ho, he] at h hab ⊢ <;> omega
+
+theorem hold_eq (s : St) (a b : W) : Cond.eq.holds (s.flagsSub a b) = decide (a.toInt = b.toInt) := by
+  have hab : (a = b) ↔ a.toInt = b.toInt := ⟨fun e => by rw [e], fun e => BitVec.eq_of_toInt_eq e⟩
+  simp only [Cond.holds, St.flagsSub]
+  by_cases he : a = b <;> simp [he] at hab ⊢ <;> omega
+
+theorem hold_ne (s : St) (a b : W) : Cond.ne.holds (s.flagsSub a b) = decide (a.toInt ≠ b.toInt) := by
+  have hab : (a = b) ↔ a.toInt = b.toInt := ⟨fun e => by rw [e], fun e => BitVec.eq_of_toInt_eq e⟩
+  simp only [Cond.holds, St.flagsSub]
+  by_cases he : a = b <;> simp [he] at hab ⊢ <;> omega
 
 -- BEGIN GENERATED
 def tpl_add : Array I := #[
