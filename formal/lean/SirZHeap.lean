@@ -42,6 +42,11 @@ inductive I3
   | strN (d a : Nat) (n : Nat)         -- str xd, [xa, #-n]
   | cmpU (a b : Nat)                   -- cmp xa, xb(符号なしの比べ: C = (xa ≥ xb))
   | bhs (t : Nat)                      -- b.hs(C なら今の命令から t 先へ。前向き)
+  | ldrN (d a : Nat) (n : Nat)         -- ldr xd, [xa, #-n]
+  | strP (d a : Nat) (n : Nat)         -- str xd, [xa, #n]
+  | addR (d a b : Nat)                 -- add xd, xa, xb
+  | cmpH (a b : Nat)                   -- cmp xa, xb(続く `b.hi` が読む: 旗は「xa > xb(符号なし)」)
+  | bhi (t : Nat)                      -- b.hi(旗なら今の命令から t 先へ。前向き)
 
 /-- 番地 `a + 8 i` の語の添字 -/
 def widx (a i : W) : Nat := (a + (i <<< 3)).toNat / 8
@@ -59,6 +64,11 @@ def step3 (i : I3) (x : HSt) : HSt :=
   | .strX d a i => { x with h := fun k => if k = widx (s.r a) (s.r i) then s.r d else x.h k, s := { s with pc := s.pc + 1 } }
   | .strN d a n => { x with h := fun k => if k = (s.r a - BitVec.ofNat 64 n).toNat / 8 then s.r d else x.h k, s := { s with pc := s.pc + 1 } }
   | .cmpU a b => { x with c := decide ((s.r b).toNat ≤ (s.r a).toNat), s := { s with pc := s.pc + 1 } }
+  | .ldrN d a n => { x with s := { (s.set d (x.h ((s.r a - BitVec.ofNat 64 n).toNat / 8))) with pc := s.pc + 1 } }
+  | .strP d a n => { x with h := fun k => if k = (s.r a + BitVec.ofNat 64 n).toNat / 8 then s.r d else x.h k, s := { s with pc := s.pc + 1 } }
+  | .addR d a b => { x with s := { (s.set d (s.r a + s.r b)) with pc := s.pc + 1 } }
+  | .cmpH a b => { x with c := decide ((s.r b).toNat < (s.r a).toNat), s := { s with pc := s.pc + 1 } }
+  | .bhi t => if x.c then { x with s := { s with pc := s.pc + t } } else { x with s := { s with pc := s.pc + 1 } }
   | .bhs t => if x.c then { x with s := { s with pc := s.pc + t } } else { x with s := { s with pc := s.pc + 1 } }
 
 inductive Steps3 (p : Array I3) : HSt → HSt → Prop
@@ -267,6 +277,7 @@ def runL (l : List I3) (x : HSt) : HSt := l.foldl (fun y i => step3 i y) x
 
 def nobr : I3 → Prop
   | .bhs _ => False
+  | .bhi _ => False
   | .base (I2.base (I.b _)) => False
   | .base (I2.base (I.bc _ _)) => False
   | .base .enter => False
@@ -285,6 +296,7 @@ theorem step3_pc (i : I3) (hi : nobr i) (x : HSt) : (step3 i x).s.pc = x.s.pc + 
       | alloca => simp [step3, step2]
       | _ => simp [nobr] at hi
   | bhs t => simp [nobr] at hi
+  | bhi t => simp [nobr] at hi
   | _ => simp [step3, St.set]
 
 theorem runL_ok (P : Array I3) (b : Nat) :
@@ -794,10 +806,310 @@ theorem shadowQ_spec (P : Array I3) (g0 g1 : Nat) (hlen : g1 ≤ P.size)
     have : ¬ (g0 ≤ k ∧ k < g1) := by omega
     simp [this]
 
+/-! ### ループの中の append(`commit_grow`)
+
+`sign_asm.py` の自分への末尾呼びで、累積(リスト。語の並び)の末尾へ `k` 個の要素を足す部分: 実引数の評価(要素を枠の `te+i` へ)のあと、
+`t1 = ptr`・`t2 = len + k`(setup)、入る個数の検査(`ldr x10,[x9,#-8]; cmp x11,x10; b.hi 溢れ`)、末尾へ書く(`commit`)、
+仮引数 `ps`(ptr)・`ps+1`(len)の更新(moves)。枠の番号は `ps`・`pl`・`t1`・`t2`・`te+i`。 -/
+
+def bb (i : I) : I3 := I3.base (I2.base i)
+
+def appSetup (ps pl k t1 t2 : Nat) : List I3 :=
+  [bb (I.ldr 0 ps), bb (I.ldr 1 pl), I3.addI 1 1 k, bb (I.str 0 t1), bb (I.str 1 t2)]
+
+def appGuard (ps pl k : Nat) : List I3 :=
+  [bb (I.ldr 9 ps), I3.ldrN 10 9 8, bb (I.ldr 11 pl), I3.addI 11 11 k, I3.cmpH 11 10]
+
+def appPre (ps pl : Nat) : List I3 :=
+  [bb (I.ldr 10 ps), bb (I.ldr 11 pl), I3.lslI 11 11 3, I3.addR 10 10 11]
+
+def commitL (te : Nat) : Nat → List I3
+  | 0 => []
+  | k + 1 => commitL te k ++ [bb (I.ldr 9 (te + k)), I3.strP 9 10 (8 * k)]
+
+def appMoves (ps pl t1 t2 : Nat) : List I3 :=
+  [bb (I.ldr 9 t1), bb (I.str 9 ps), bb (I.ldr 9 t2), bb (I.str 9 pl)]
+
+theorem commitL_length (te k : Nat) : (commitL te k).length = 2 * k := by
+  induction k with
+  | zero => rfl
+  | succ k ih => simp [commitL, ih]; omega
+
+theorem commitL_nobr (te k : Nat) : ∀ i ∈ commitL te k, nobr i := by
+  induction k with
+  | zero => simp [commitL]
+  | succ k ih =>
+      intro i hi
+      simp [commitL] at hi
+      rcases hi with hi | rfl | rfl
+      · exact ih i hi
+      · simp [bb, nobr]
+      · simp [nobr]
+
+theorem runL_append (l1 l2 : List I3) (x : HSt) : runL (l1 ++ l2) x = runL l2 (runL l1 x) := by
+  simp [runL, List.foldl_append]
+
+/-- 書く部分: 末尾 `E`(語の番地。8 の倍数)から `k` 語へ、枠の `te+i` を書く -/
+theorem commitL_facts (te : Nat) :
+    ∀ (k : Nat) (x : HSt) (E : W), x.s.r 10 = E → E.toNat % 8 = 0 → E.toNat + 8 * k < 2 ^ 64 →
+      (runL (commitL te k) x).s.pc = x.s.pc + 2 * k ∧ (runL (commitL te k) x).s.r 10 = E ∧
+      (runL (commitL te k) x).s.m = x.s.m ∧ (runL (commitL te k) x).s.lr = x.s.lr ∧
+      (runL (commitL te k) x).s.stk = x.s.stk ∧ (runL (commitL te k) x).sp = x.sp ∧ (runL (commitL te k) x).c = x.c ∧
+      (∀ w, (runL (commitL te k) x).h w =
+        if E.toNat / 8 ≤ w ∧ w < E.toNat / 8 + k then x.s.m (te + (w - E.toNat / 8)) else x.h w) := by
+  intro k
+  induction k with
+  | zero =>
+      intro x E h10 _ _
+      simp [commitL, runL]
+      exact ⟨h10, fun w a b => by omega⟩
+  | succ k ih =>
+      intro x E h10 hE hlt
+      obtain ⟨p1, r1, m1, l1, k1, sp1, c1, hh1⟩ := ih x E h10 hE (by omega)
+      obtain ⟨y, hy⟩ : ∃ y, y = runL (commitL te k) x := ⟨_, rfl⟩
+      rw [← hy] at p1 r1 m1 l1 k1 sp1 c1 hh1
+      have hrun : runL (commitL te (k + 1)) x = step3 (I3.strP 9 10 (8 * k)) (step3 (bb (I.ldr 9 (te + k))) y) := by
+        rw [commitL, runL_append, ← hy]; simp [runL]
+      rw [hrun]
+      have e1 : (E + BitVec.ofNat 64 (8 * k)).toNat = E.toNat + 8 * k := by
+        rw [BitVec.toNat_add, BitVec.toNat_ofNat]
+        rw [Nat.mod_eq_of_lt (by omega : 8 * k < 2 ^ 64)]
+        exact Nat.mod_eq_of_lt (by omega)
+      refine ⟨by simp [step3, bb, step2, step, St.set, p1]; omega, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      · simp [step3, bb, step2, step, St.set, r1]
+      · simp [step3, bb, step2, step, St.set, m1]
+      · simp [step3, bb, step2, step, St.set, l1]
+      · simp [step3, bb, step2, step, St.set, k1]
+      · simp [step3, bb, step2, step, St.set, sp1]
+      · simp [step3, bb, step2, step, St.set, c1]
+      · intro w
+        obtain ⟨u1, hu1⟩ : ∃ u1, u1 = step3 (bb (I.ldr 9 (te + k))) y := ⟨_, rfl⟩
+        rw [← hu1] at hrun ⊢
+        have hr : u1.s.r 10 = E := by rw [hu1]; simp [step3, bb, step2, step, St.set, r1]
+        have hr9 : u1.s.r 9 = x.s.m (te + k) := by rw [hu1]; simp [step3, bb, step2, step, St.set, m1]
+        have hh : u1.h = y.h := by rw [hu1]; rfl
+        have hfin : (step3 (I3.strP 9 10 (8 * k)) u1).h w =
+            if w = (u1.s.r 10 + BitVec.ofNat 64 (8 * k)).toNat / 8 then u1.s.r 9 else u1.h w := rfl
+        rw [hfin, hr, hr9, e1, hh, hh1 w]
+        by_cases hw : w = (E.toNat + 8 * k) / 8
+        · have hk8 : (E.toNat + 8 * k) / 8 = E.toNat / 8 + k := by omega
+          have h1 : E.toNat / 8 ≤ w := by omega
+          have h2 : w < E.toNat / 8 + (k + 1) := by omega
+          rw [if_pos hw, if_pos ⟨h1, h2⟩]
+          have : w - E.toNat / 8 = k := by omega
+          rw [this]
+        · rw [if_neg hw]
+          by_cases hin : E.toNat / 8 ≤ w ∧ w < E.toNat / 8 + k
+          · rw [if_pos hin, if_pos (by omega)]
+          · rw [if_neg hin, if_neg (by omega)]
+
+theorem appSetup_facts (ps pl k t1 t2 : Nat) (x : HSt) :
+    (runL (appSetup ps pl k t1 t2) x).s.pc = x.s.pc + 5 ∧
+    (runL (appSetup ps pl k t1 t2) x).s.m = (fun j => if j = t2 then x.s.m pl + BitVec.ofNat 64 k
+        else if j = t1 then x.s.m ps else x.s.m j) ∧
+    (runL (appSetup ps pl k t1 t2) x).h = x.h ∧ (runL (appSetup ps pl k t1 t2) x).sp = x.sp ∧
+    (runL (appSetup ps pl k t1 t2) x).c = x.c ∧ (runL (appSetup ps pl k t1 t2) x).s.lr = x.s.lr ∧
+    (runL (appSetup ps pl k t1 t2) x).s.stk = x.s.stk := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+    simp [appSetup, runL, step3, bb, step2, step, St.set]
+
+theorem appGuard_facts (ps pl k : Nat) (x : HSt) (h8 : 8 ≤ (x.s.m ps).toNat) (h64 : (x.s.m ps).toNat < 2 ^ 64) :
+    (runL (appGuard ps pl k) x).s.pc = x.s.pc + 5 ∧
+    (runL (appGuard ps pl k) x).s.r 10 = x.h (((x.s.m ps).toNat - 8) / 8) ∧
+    (runL (appGuard ps pl k) x).s.r 11 = x.s.m pl + BitVec.ofNat 64 k ∧
+    (runL (appGuard ps pl k) x).c = decide ((x.h (((x.s.m ps).toNat - 8) / 8)).toNat < (x.s.m pl + BitVec.ofNat 64 k).toNat) ∧
+    (runL (appGuard ps pl k) x).s.m = x.s.m ∧ (runL (appGuard ps pl k) x).h = x.h ∧ (runL (appGuard ps pl k) x).sp = x.sp ∧
+    (runL (appGuard ps pl k) x).s.lr = x.s.lr ∧ (runL (appGuard ps pl k) x).s.stk = x.s.stk := by
+  have hsub : (x.s.m ps - BitVec.ofNat 64 8).toNat = (x.s.m ps).toNat - 8 := by
+    rw [BitVec.toNat_sub, BitVec.toNat_ofNat]; omega
+  have hmod : (18446744073709551608 + (x.s.m ps).toNat) % 18446744073709551616 = (x.s.m ps).toNat - 8 := by omega
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+    simp [appGuard, runL, step3, bb, step2, step, St.set, hmod]
+
+theorem appPre_facts (ps pl : Nat) (x : HSt) :
+    (runL (appPre ps pl) x).s.pc = x.s.pc + 4 ∧
+    (runL (appPre ps pl) x).s.r 10 = x.s.m ps + (x.s.m pl <<< 3) ∧
+    (runL (appPre ps pl) x).s.m = x.s.m ∧ (runL (appPre ps pl) x).h = x.h ∧ (runL (appPre ps pl) x).sp = x.sp ∧
+    (runL (appPre ps pl) x).c = x.c ∧ (runL (appPre ps pl) x).s.lr = x.s.lr ∧ (runL (appPre ps pl) x).s.stk = x.s.stk := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+    simp [appPre, runL, step3, bb, step2, step, St.set]
+
+theorem appMoves_facts (ps pl t1 t2 : Nat) (x : HSt) (h1 : t1 ≠ ps) (h2 : t2 ≠ pl) (h3 : ps ≠ pl) (h4 : t1 ≠ pl) (h5 : t2 ≠ ps) :
+    (runL (appMoves ps pl t1 t2) x).s.pc = x.s.pc + 4 ∧
+    (runL (appMoves ps pl t1 t2) x).s.m = (fun j => if j = pl then x.s.m t2 else if j = ps then x.s.m t1 else x.s.m j) ∧
+    (runL (appMoves ps pl t1 t2) x).h = x.h ∧ (runL (appMoves ps pl t1 t2) x).sp = x.sp ∧
+    (runL (appMoves ps pl t1 t2) x).s.lr = x.s.lr ∧ (runL (appMoves ps pl t1 t2) x).s.stk = x.s.stk := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+    simp [appMoves, runL, step3, bb, step2, step, St.set]
+  funext j
+  by_cases hp : j = pl <;> by_cases hq : j = ps <;> simp [hp, hq, h1, h2, h3, h4, h5]
+
+/-- ループの 1 回の累積の append 全体: setup・検査・`b.hi 溢れ`・末尾の計算・書き・仮引数の更新 -/
+def appendCode (ps pl k t1 t2 te o : Nat) : List I3 :=
+  appSetup ps pl k t1 t2 ++ (appGuard ps pl k ++ ([I3.bhi o] ++ (appPre ps pl ++ (commitL te k ++ appMoves ps pl t1 t2))))
+
+theorem appendCode_length (ps pl k t1 t2 te o : Nat) : (appendCode ps pl k t1 t2 te o).length = 19 + 2 * k := by
+  simp [appendCode, appSetup, appGuard, appPre, appMoves, commitL_length]; omega
+
+theorem seg_of {L : List I3} {P : Array I3} {b : Nat} (hP : ∀ i (hi : i < L.length), P[b + i]? = some L[i])
+    (A S Z : List I3) (hL : L = A ++ (S ++ Z)) : ∀ i (hi : i < S.length), P[b + A.length + i]? = some S[i] := by
+  intro i hi
+  subst hL
+  have := hP (A.length + i) (by simp; omega)
+  rw [← Nat.add_assoc] at this
+  rw [this]
+  simp [List.getElem_append_right, hi]
+
+theorem append_nobr : (∀ i ∈ appSetup ps pl k t1 t2, nobr i) ∧ (∀ i ∈ appGuard ps pl k, nobr i) ∧
+    (∀ i ∈ appPre ps pl, nobr i) ∧ (∀ i ∈ appMoves ps pl t1 t2, nobr i) := by
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> intro i hi
+  · simp [appSetup] at hi; rcases hi with rfl | rfl | rfl | rfl | rfl <;> simp [bb, nobr]
+  · simp [appGuard] at hi; rcases hi with rfl | rfl | rfl | rfl | rfl <;> simp [bb, nobr]
+  · simp [appPre] at hi; rcases hi with rfl | rfl | rfl | rfl <;> simp [bb, nobr]
+  · simp [appMoves] at hi; rcases hi with rfl | rfl | rfl | rfl <;> simp [bb, nobr]
+
+/-- ループの中の append(`commit_grow`)の契約。累積の器 `ptr`(枠 `ps`)・長さ `len`(枠 `pl`)・入る個数 `x.h (ptr/8 - 1)`、足す `k` 個の要素は
+枠の `te+i`。入らなければ(`cap < len + k`)`bhi` で溢れの行き先(`b + 10 + o`)へ、`h`・`sp`・`lr`・フレームは元のまま。入れば、語 `ptr/8 + len + i`
+に要素が書かれ(ほかの語は元のまま)、仮引数の `ps`(ptr)は元のまま、`pl`(len)は `len + k` になる。 -/
+theorem append_ok (P : Array I3) (b ps pl k t1 t2 te o : Nat)
+    (hP : ∀ i (hi : i < (appendCode ps pl k t1 t2 te o).length), P[b + i]? = some (appendCode ps pl k t1 t2 te o)[i])
+    (x : HSt) (hpc : x.s.pc = b)
+    (h1 : t1 ≠ ps) (h2 : t2 ≠ pl) (h3 : ps ≠ pl) (h4 : t1 ≠ pl) (h5 : t2 ≠ ps) (h12 : t1 ≠ t2)
+    (hte : ∀ i, i < k → te + i ≠ t1 ∧ te + i ≠ t2)
+    (hal : (x.s.m ps).toNat % 8 = 0) (h8 : 8 ≤ (x.s.m ps).toNat)
+    (hlen : (x.s.m pl).toNat + k < 2 ^ 50) (hptr : (x.s.m ps).toNat + 8 * ((x.s.m pl).toNat + k) < 2 ^ 64) :
+    ∃ y : HSt, Steps3 P x y ∧ y.sp = x.sp ∧ y.s.lr = x.s.lr ∧ y.s.stk = x.s.stk ∧
+      (((x.h (((x.s.m ps).toNat - 8) / 8)).toNat < (x.s.m pl).toNat + k ∧ y.s.pc = b + 10 + o ∧ y.h = x.h) ∨
+       ((x.s.m pl).toNat + k ≤ (x.h (((x.s.m ps).toNat - 8) / 8)).toNat ∧ y.s.pc = b + 19 + 2 * k ∧
+        (∀ w, y.h w = if (x.s.m ps).toNat / 8 + (x.s.m pl).toNat ≤ w ∧ w < (x.s.m ps).toNat / 8 + (x.s.m pl).toNat + k
+          then x.s.m (te + (w - ((x.s.m ps).toNat / 8 + (x.s.m pl).toNat))) else x.h w) ∧
+        y.s.m ps = x.s.m ps ∧ y.s.m pl = x.s.m pl + BitVec.ofNat 64 k)) := by
+  have hC := appendCode_length ps pl k t1 t2 te o
+  obtain ⟨hnS, hnG, hnP, hnM⟩ := (append_nobr (ps := ps) (pl := pl) (k := k) (t1 := t1) (t2 := t2))
+  have hSegS := seg_of hP [] (appSetup ps pl k t1 t2)
+    (appGuard ps pl k ++ ([I3.bhi o] ++ (appPre ps pl ++ (commitL te k ++ appMoves ps pl t1 t2)))) (by simp [appendCode])
+  have hSegG := seg_of hP (appSetup ps pl k t1 t2) (appGuard ps pl k)
+    ([I3.bhi o] ++ (appPre ps pl ++ (commitL te k ++ appMoves ps pl t1 t2))) (by simp [appendCode])
+  have hSegB := seg_of hP (appSetup ps pl k t1 t2 ++ appGuard ps pl k) [I3.bhi o]
+    (appPre ps pl ++ (commitL te k ++ appMoves ps pl t1 t2)) (by simp [appendCode])
+  have hSegP := seg_of hP (appSetup ps pl k t1 t2 ++ appGuard ps pl k ++ [I3.bhi o]) (appPre ps pl)
+    (commitL te k ++ appMoves ps pl t1 t2) (by simp [appendCode])
+  have hSegC := seg_of hP (appSetup ps pl k t1 t2 ++ appGuard ps pl k ++ [I3.bhi o] ++ appPre ps pl) (commitL te k)
+    (appMoves ps pl t1 t2) (by simp [appendCode])
+  have hSegM := seg_of hP (appSetup ps pl k t1 t2 ++ appGuard ps pl k ++ [I3.bhi o] ++ appPre ps pl ++ commitL te k)
+    (appMoves ps pl t1 t2) [] (by simp [appendCode])
+  have lS : (appSetup ps pl k t1 t2).length = 5 := rfl
+  have lG : (appGuard ps pl k).length = 5 := rfl
+  have lP : (appPre ps pl).length = 4 := rfl
+  have lM : (appMoves ps pl t1 t2).length = 4 := rfl
+  have lC := commitL_length te k
+  -- setup
+  obtain ⟨gS, pS⟩ := runL_ok P b (appSetup ps pl k t1 t2) x 0 (by simpa using hpc) hnS (fun i hi => by
+    have := hSegS i hi; simpa using this)
+  obtain ⟨y1, hy1⟩ : ∃ y1, y1 = runL (appSetup ps pl k t1 t2) x := ⟨_, rfl⟩
+  rw [← hy1] at gS pS
+  simp only [lS, Nat.add_zero, Nat.zero_add] at pS
+  obtain ⟨s1p, s1m, s1h, s1sp, s1c, s1l, s1k⟩ := appSetup_facts ps pl k t1 t2 x
+  rw [← hy1] at s1p s1m s1h s1sp s1c s1l s1k
+  have m1ps : y1.s.m ps = x.s.m ps := by rw [s1m]; simp [h5.symm, h1.symm]
+  have m1pl : y1.s.m pl = x.s.m pl := by rw [s1m]; simp [h2.symm, h4.symm]
+  have h64 : (x.s.m ps).toNat < 2 ^ 64 := (x.s.m ps).isLt
+  -- 検査
+  obtain ⟨gG, pG⟩ := runL_ok P b (appGuard ps pl k) y1 5 (by rw [s1p]; omega) hnG (fun i hi => by
+    have := hSegG i hi; simp only [lS] at this
+    rw [show b + 5 + i = b + 5 + i from rfl]; exact this)
+  obtain ⟨y2, hy2⟩ : ∃ y2, y2 = runL (appGuard ps pl k) y1 := ⟨_, rfl⟩
+  rw [← hy2] at gG pG
+  rw [lG] at pG
+  obtain ⟨s2p, s2r10, s2r11, s2c, s2m, s2h, s2sp, s2l, s2k⟩ := appGuard_facts ps pl k y1 (by rw [m1ps]; exact h8) (by rw [m1ps]; exact h64)
+  rw [← hy2] at s2p s2r10 s2r11 s2c s2m s2h s2sp s2l s2k
+  rw [m1ps, s1h] at s2r10 s2c
+  rw [m1pl] at s2r11 s2c
+  have hkW : (x.s.m pl + BitVec.ofNat 64 k).toNat = (x.s.m pl).toNat + k := by
+    rw [BitVec.toNat_add, BitVec.toNat_ofNat]
+    rw [Nat.mod_eq_of_lt (by omega : k < 2 ^ 64)]
+    exact Nat.mod_eq_of_lt (by omega)
+  rw [hkW] at s2c
+  -- b.hi
+  obtain ⟨y3, hy3⟩ : ∃ y3, y3 = step3 (I3.bhi o) y2 := ⟨_, rfl⟩
+  have g3 : Steps3 P y2 y3 := by
+    rw [hy3]
+    exact Steps3.go' _ (b + 10) (by rw [pG]) (by
+      have := hSegB 0 (by simp)
+      simp only [List.length_append, lS, lG] at this
+      simpa [Nat.add_assoc] using this) (Steps3.refl _)
+  have y3sp : y3.sp = x.sp := by rw [hy3]; cases hcc : y2.c <;> simp [step3, hcc, s2sp, s1sp]
+  have y3l : y3.s.lr = x.s.lr := by rw [hy3]; cases hcc : y2.c <;> simp [step3, hcc, s2l, s1l]
+  have y3k : y3.s.stk = x.s.stk := by rw [hy3]; cases hcc : y2.c <;> simp [step3, hcc, s2k, s1k]
+  by_cases hov : (x.h (((x.s.m ps).toNat - 8) / 8)).toNat < (x.s.m pl).toNat + k
+  · have hc : y2.c = true := by rw [s2c]; simp [hov]
+    refine ⟨y3, gS.trans (gG.trans g3), y3sp, y3l, y3k, Or.inl ⟨hov, ?_, ?_⟩⟩
+    · rw [hy3]; simp [step3, hc, pG]
+    · rw [hy3]; simp [step3, hc, s2h, s1h]
+  · have hc : y2.c = false := by rw [s2c]; simp; omega
+    have y3pc : y3.s.pc = b + 11 := by rw [hy3]; simp [step3, hc, pG]
+    have y3m : y3.s.m = y1.s.m := by rw [hy3]; simp [step3, hc, s2m]
+    have y3h : y3.h = x.h := by rw [hy3]; simp [step3, hc, s2h, s1h]
+    -- 末尾の計算
+    obtain ⟨gP, pP⟩ := runL_ok P b (appPre ps pl) y3 11 (by rw [y3pc]) hnP (fun i hi => by
+      have := hSegP i hi; simp only [List.length_append, List.length_singleton, lS, lG] at this
+      rw [show b + 11 + i = b + (5 + 5 + 1) + i by omega]; exact this)
+    obtain ⟨y4, hy4⟩ : ∃ y4, y4 = runL (appPre ps pl) y3 := ⟨_, rfl⟩
+    rw [← hy4] at gP pP
+    rw [lP] at pP
+    obtain ⟨s4p, s4r10, s4m, s4h, s4sp, s4c, s4l, s4k⟩ := appPre_facts ps pl y3
+    rw [← hy4] at s4p s4r10 s4m s4h s4sp s4c s4l s4k
+    rw [y3m, m1ps, m1pl] at s4r10
+    have hshl : (x.s.m pl <<< 3).toNat = (x.s.m pl).toNat * 8 := by
+      rw [BitVec.toNat_shiftLeft, Nat.shiftLeft_eq]
+      exact Nat.mod_eq_of_lt (by omega)
+    have hE : (y4.s.r 10).toNat = (x.s.m ps).toNat + 8 * (x.s.m pl).toNat := by
+      rw [s4r10, BitVec.toNat_add, hshl]
+      exact (Nat.mod_eq_of_lt (by omega)).trans (by omega)
+    -- 書く
+    obtain ⟨gC, pC⟩ := runL_ok P b (commitL te k) y4 15 (by rw [s4p, y3pc]) (commitL_nobr te k) (fun i hi => by
+      have := hSegC i hi; simp only [List.length_append, List.length_singleton, lS, lG, lP] at this
+      rw [show b + 15 + i = b + (5 + 5 + 1 + 4) + i by omega]; exact this)
+    obtain ⟨cp, cr, cm, cl, ck, csp, cc, chh⟩ := commitL_facts te k y4 (y4.s.r 10) rfl (by omega) (by omega)
+    obtain ⟨y5, hy5⟩ : ∃ y5, y5 = runL (commitL te k) y4 := ⟨_, rfl⟩
+    rw [← hy5] at gC pC cp cr cm cl ck csp cc chh
+    rw [lC] at pC
+    -- 仮引数の更新
+    obtain ⟨gM, pM⟩ := runL_ok P b (appMoves ps pl t1 t2) y5 (15 + 2 * k) (by rw [cp, s4p, y3pc]; omega) hnM (fun i hi => by
+      have := hSegM i hi; simp only [List.length_append, List.length_singleton, lS, lG, lP, lC] at this
+      rw [show b + (15 + 2 * k) + i = b + (5 + 5 + 1 + 4 + 2 * k) + i by omega]; exact this)
+    obtain ⟨y6, hy6⟩ : ∃ y6, y6 = runL (appMoves ps pl t1 t2) y5 := ⟨_, rfl⟩
+    rw [← hy6] at gM pM
+    rw [lM] at pM
+    obtain ⟨s6p, s6m, s6h, s6sp, s6l, s6k⟩ := appMoves_facts ps pl t1 t2 y5 h1 h2 h3 h4 h5
+    rw [← hy6] at s6p s6m s6h s6sp s6l s6k
+    have y5m : y5.s.m = y1.s.m := by rw [cm, s4m, y3m]
+    refine ⟨y6, gS.trans (gG.trans (g3.trans (gP.trans (gC.trans gM)))), ?_, ?_, ?_, Or.inr ⟨by omega, ?_, ?_, ?_, ?_⟩⟩
+    · rw [s6sp, csp, s4sp, y3sp]
+    · rw [s6l, cl, s4l, y3l]
+    · rw [s6k, ck, s4k, y3k]
+    · rw [s6p, cp, s4p, y3pc]; omega
+    · intro w
+      rw [s6h, chh w, hE, s4h, y3h]
+      have e8 : ((x.s.m ps).toNat + 8 * (x.s.m pl).toNat) / 8 = (x.s.m ps).toNat / 8 + (x.s.m pl).toNat := by omega
+      rw [e8]
+      by_cases hw : (x.s.m ps).toNat / 8 + (x.s.m pl).toNat ≤ w ∧ w < (x.s.m ps).toNat / 8 + (x.s.m pl).toNat + k
+      · rw [if_pos hw, if_pos hw]
+        have hi : w - ((x.s.m ps).toNat / 8 + (x.s.m pl).toNat) < k := by omega
+        obtain ⟨ha, hb⟩ := hte _ hi
+        rw [s4m, y3m, s1m]; simp [ha, hb]
+      · rw [if_neg hw, if_neg hw]
+    · rw [s6m, y5m, s1m]
+      simp [h3, h12]
+    · rw [s6m, y5m, s1m]
+      simp
+
 #print axioms copyLoop_ok
 #print axioms growEntry_ok
 #print axioms lift2
 #print axioms pstore3_ok
 #print axioms fcodeH_ok_at
+#print axioms commitL_facts
+#print axioms append_ok
 
 end SirZH
